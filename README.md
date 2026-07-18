@@ -13,6 +13,15 @@ references through a `.node` addon or a narrow `node:smol-*` builtin contract.
   canonical implementation; future `node:smol-tui` integration must run its
   shared fixture corpus before a pin advances.
 
+`upstream/contracts.mts` is the code-as-law record for those pins: Rust crate,
+N-API addon crate, fixture corpus, ABI schema version, and supported target
+triples. Verify it after initializing submodules and whenever an upstream pin
+changes:
+
+```sh
+node scripts/repo/check-upstream-contracts.mts
+```
+
 ## Development
 
 ```sh
