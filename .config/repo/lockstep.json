@@ -1,0 +1,7 @@
+{
+  "$schema": "../fleet/lockstep.schema.json",
+  "area": "node-smol",
+  "description": "Lock-step manifest. node-smol vendors upstream/ trees (stuie, decmpfs) via .gitmodules release pins rather than file-fork mirrors, so no @lockstep-mirror rows exist yet — empty rows is the current state. Present so the lockstep-mirror-markers gate and sync-scaffolding resolve a manifest; future file-fork rows have a home here.",
+  "upstreams": {},
+  "rows": []
+}
