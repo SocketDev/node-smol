@@ -12,6 +12,9 @@ references through a `.node` addon or a narrow `node:smol-*` builtin contract.
 - `upstream/stuie` — terminal UI and ANSI mouse parsing. The Rust crate is the
   canonical implementation; future `node:smol-tui` integration must run its
   shared fixture corpus before a pin advances.
+- `upstream/decmpfs` — transparent filesystem compression and executable
+  packing. The existing Rust/N-API addon is the first consumer; a C++ inverse
+  port remains deliberately out of scope until it has a shared corpus.
 
 `upstream/contracts.mts` is the code-as-law record for those pins: Rust crate,
 N-API addon crate, fixture corpus, ABI schema version, and supported target

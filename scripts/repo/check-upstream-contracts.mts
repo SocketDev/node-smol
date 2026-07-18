@@ -21,7 +21,11 @@ function requiredPaths(name: string): readonly string[] {
   if (!contract) {
     return []
   }
-  return [contract.crate, contract.addonCrate, contract.fixture]
+  return [
+    contract.crate,
+    contract.addonCrate,
+    ...(contract.fixture ? [contract.fixture] : []),
+  ]
 }
 
 export function collectContractErrors(root = repoRoot): string[] {

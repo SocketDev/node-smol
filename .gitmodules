@@ -2,3 +2,7 @@
 	path = upstream/stuie
 	url = git@github.com:SocketDev/stuie.git
 	branch = main
+[submodule "upstream/decmpfs"]
+	path = upstream/decmpfs
+	url = git@github.com:decmpfs/decmpfs.git
+	branch = main

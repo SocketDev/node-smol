@@ -38,7 +38,10 @@ test('reports a drifted upstream revision', () => {
 test('reports a missing upstream checkout', () => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'node-smol-contract-'))
   try {
-    assert.deepEqual(collectContractErrors(root), ['stuie: missing upstream checkout'])
+    assert.deepEqual(collectContractErrors(root), [
+      'decmpfs: missing upstream checkout',
+      'stuie: missing upstream checkout',
+    ])
   } finally {
     rmSync(root, { force: true, recursive: true })
   }
