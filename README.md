@@ -1,0 +1,23 @@
+# node-smol
+
+node-smol is Socket's customized Node.js distribution. It owns the Node source
+patches, builtins, SEA packaging, platform artifacts, and release assembly.
+
+Reusable native capabilities remain Rust-canonical in their owner repositories.
+`upstream/` holds shallow, pinned source references; adapters consume those
+references through a `.node` addon or a narrow `node:smol-*` builtin contract.
+
+## Upstream contracts
+
+- `upstream/stuie` — terminal UI and ANSI mouse parsing. The Rust crate is the
+  canonical implementation; future `node:smol-tui` integration must run its
+  shared fixture corpus before a pin advances.
+
+## Development
+
+```sh
+git submodule update --init --depth 1
+```
+
+The first extraction wave moves the Node-specific builder and release surfaces
+from socket-btm without changing public package names.
