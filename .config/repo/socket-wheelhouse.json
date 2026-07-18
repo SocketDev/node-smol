@@ -1,0 +1,16 @@
+{
+  "$schema": "./socket-wheelhouse-schema.json",
+  "schemaVersion": 1,
+  "repoName": "node-smol",
+  "repo": {
+    "type": "solo"
+  },
+  "build": {
+    "from": "github-release",
+    "type": "binary"
+  },
+  "fuzz": {
+    "exempt": true,
+    "reason": "No first-party parser/decoder surface to fuzz yet: repo is fleet tooling plus vendored upstream/ native trees (stuie, decmpfs) that carry their own test tiers upstream. Revisit when node-smol grows first-party parsing code."
+  }
+}
