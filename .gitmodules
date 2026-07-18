@@ -1,0 +1,4 @@
+[submodule "upstream/stuie"]
+	path = upstream/stuie
+	url = git@github.com:SocketDev/stuie.git
+	branch = main
