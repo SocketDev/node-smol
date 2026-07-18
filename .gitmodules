@@ -1,4 +1,6 @@
+# stuie-main-HEAD
 [submodule "upstream/stuie"]
+	ignore = dirty
 	path = upstream/stuie
 	url = git@github.com:SocketDev/stuie.git
 	branch = main
