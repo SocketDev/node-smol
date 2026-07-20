@@ -7,14 +7,14 @@ settings:
 catalogs:
   default:
     '@sinclair/typebox':
-      specifier: 0.34.50
-      version: 0.34.50
+      specifier: 0.34.52
+      version: 0.34.52
     '@socketregistry/packageurl-js-stable':
       specifier: npm:@socketregistry/packageurl-js@1.4.2
       version: 1.4.2
     '@socketsecurity/lib-stable':
-      specifier: npm:@socketsecurity/lib@6.0.10
-      version: 6.0.10
+      specifier: npm:@socketsecurity/lib@6.1.0
+      version: 6.1.0
     '@socketsecurity/sdk-stable':
       specifier: npm:@socketsecurity/sdk@4.0.1
       version: 4.0.1
@@ -35,8 +35,8 @@ catalogs:
       version: 1.10.0
 
 overrides:
-  '@socketregistry/packageurl-js': 1.4.2
-  '@socketsecurity/lib': 6.0.10
+  '@socketregistry/packageurl-js': 1.4.4
+  '@socketsecurity/lib': 6.1.0
   '@socketsecurity/registry': 2.0.2
   '@socketsecurity/sdk': 4.0.1
   chalk@>=5: 5.6.2
@@ -91,7 +91,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -101,7 +101,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -141,7 +141,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -167,7 +167,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       shell-quote:
         specifier: 'catalog:'
         version: 1.10.0
@@ -210,7 +210,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -219,7 +219,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -237,7 +237,7 @@ importers:
         version: '@socketregistry/packageurl-js@1.4.2'
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@socketsecurity/sdk-stable':
         specifier: 'catalog:'
         version: '@socketsecurity/sdk@4.0.1'
@@ -278,7 +278,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -294,7 +294,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -303,7 +303,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -370,7 +370,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -379,7 +379,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -517,7 +517,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
 
   .claude/hooks/fleet/immutable-release-guard:
     devDependencies:
@@ -545,7 +545,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -570,7 +570,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -598,7 +598,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -644,7 +644,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -675,7 +675,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -691,7 +691,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -707,7 +707,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -733,7 +733,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -797,7 +797,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -828,7 +828,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -847,7 +847,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -901,7 +901,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -911,7 +911,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -950,7 +950,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -1009,7 +1009,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -1062,7 +1062,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1078,7 +1078,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1094,7 +1094,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1214,7 +1214,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1242,7 +1242,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1262,7 +1262,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -1277,7 +1277,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1287,7 +1287,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -1306,7 +1306,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -1327,7 +1327,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -1336,7 +1336,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -1345,7 +1345,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -1354,7 +1354,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -1363,13 +1363,13 @@ importers:
     dependencies:
       '@sinclair/typebox':
         specifier: 'catalog:'
-        version: 0.34.50
+        version: 0.34.52
       '@socketregistry/packageurl-js-stable':
         specifier: 'catalog:'
         version: '@socketregistry/packageurl-js@1.4.2'
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
 
   .claude/hooks/fleet/setup-signing:
     devDependencies:
@@ -1413,7 +1413,7 @@ importers:
     dependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1479,7 +1479,7 @@ importers:
     devDependencies:
       '@socketsecurity/lib-stable':
         specifier: 'catalog:'
-        version: '@socketsecurity/lib@6.0.10'
+        version: '@socketsecurity/lib@6.1.0'
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
@@ -1515,6 +1515,12 @@ importers:
         version: 26.1.1
 
   .claude/hooks/fleet/vitest-vs-node-test-guard:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.1.1
+
+  .claude/hooks/fleet/wheelhouse-drift-guard:
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1747,15 +1753,15 @@ importers:
 
 packages:
 
-  '@sinclair/typebox@0.34.50':
-    resolution: {integrity: sha512-ydBWw0G6WFwWHzh9RK4B5c690UkreOG0llq0r+DaI7LgKgxigf8mhHzIPI3S0850g1BPkq/zpuCfrq4QFgUlTQ==}
+  '@sinclair/typebox@0.34.52':
+    resolution: {integrity: sha512-XiMQh7qqVlxZzcVD+kkGMNGMzcTrDMLWI7S4x7z1MkCkbDPrekpZXEUK0eZqZFMuHQg2a2DZOcDIh9o5v3Gonw==}
 
   '@socketregistry/packageurl-js@1.4.2':
     resolution: {integrity: sha512-yt9UfUzD02wZ7kwb67oe4jxG2D9JtgPqjrK/ans2BovFyeie0w8hvRR0MuOWM4mUt2371oFPp7NB6O5ZjYJmlw==}
     engines: {node: '>=18.20.8', pnpm: '>=11.0.0-rc.0'}
 
-  '@socketsecurity/lib@6.0.10':
-    resolution: {integrity: sha512-SQF1tnF34kHguCfRNrfqOUUio0Rrnts6uuw5XoH6S0KdE7v922DYlUJ/gG0vclBc3AjuEQQU8Vex/oa2GNQ90A==}
+  '@socketsecurity/lib@6.1.0':
+    resolution: {integrity: sha512-zWyQ6/7Z95NkKTn10GckOzqHYKT0Z82Jpc7jIUyVnptltxNCd8v8yccp7/KoEdnC25vOqHyZhlkWcYSctvN7Ng==}
     engines: {node: '>=22', npm: '>=12.0.0', pnpm: '>=11.0.5'}
     hasBin: true
     peerDependencies:
@@ -1808,11 +1814,11 @@ packages:
 
 snapshots:
 
-  '@sinclair/typebox@0.34.50': {}
+  '@sinclair/typebox@0.34.52': {}
 
   '@socketregistry/packageurl-js@1.4.2': {}
 
-  '@socketsecurity/lib@6.0.10': {}
+  '@socketsecurity/lib@6.1.0': {}
 
   '@socketsecurity/sdk@4.0.1': {}
 
