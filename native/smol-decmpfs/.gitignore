@@ -1,0 +1,5 @@
+# Build + fuzz artifacts — machine-local and derived, never tracked. The
+# committed shared corpus lives at fuzz/decmpfs/corpus/; the reader sources,
+# binding.gyp, and harness scripts here ARE tracked.
+/build/
+node_modules/

@@ -1,0 +1,25 @@
+{
+  "name": "@socketbin/smol-decmpfs.node",
+  "version": "0.0.0",
+  "private": true,
+  "description": "C++ inverse reader for napi --compress hybrids (node:smol-decmpfs builtin surface) — a lock-step port of the Rust decmpfs::addon reference.",
+  "license": "MIT",
+  "main": "index.cjs",
+  "types": "index.d.cts",
+  "gypfile": true,
+  "files": [
+    "binding.gyp",
+    "include",
+    "index.cjs",
+    "index.d.cts",
+    "src"
+  ],
+  "scripts": {
+    "build": "node-gyp rebuild",
+    "differential": "node scripts/differential.mts",
+    "fuzz": "node scripts/fuzz.mts"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
