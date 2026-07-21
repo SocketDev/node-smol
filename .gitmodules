@@ -1,10 +1,13 @@
-# stuie-main-HEAD
+# stuie-main-HEAD sha256:1fe6544611d6574d03524c0f4ddf7d280b5e529553d84341ad4cc76ab704c0aa
 [submodule "upstream/stuie"]
 	ignore = dirty
 	path = upstream/stuie
 	url = git@github.com:SocketDev/stuie.git
 	branch = main
+	ref = 6ccd9166fb9f892aeeaf0642c56bbe4cb648cc97
+# decmpfs-3f173ff sha256:9f51523fa428c4be470e04113963bcdcf87675553f35a9a8e3cd2e7e136ec3cf
 [submodule "upstream/decmpfs"]
+	ref = 3f173ff2df6443d850c5f3ed10207256316e689b
 	path = upstream/decmpfs
 	url = git@github.com:decmpfs/decmpfs.git
 	branch = main
