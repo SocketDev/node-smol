@@ -102,3 +102,6 @@ npm-debug.log
 pnpm-debug.log
 *.tgz
 # </fleet-canonical>
+
+# clangd/build compilation database (generated per-machine by node-gyp/CMake)
+compile_commands.json

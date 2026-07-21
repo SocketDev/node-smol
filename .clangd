@@ -1,0 +1,12 @@
+# clangd config for the first-party C++ (native/smol-decmpfs + fuzz/). The
+# authoritative build is binding.gyp (node-gyp) for the addon and scripts/fuzz.mts
+# for the libFuzzer harness; both pass -std=c++20 and the include dirs below.
+# clangd has no compile_commands.json until a build generates one, so without
+# this it reports spurious "file not found" / "no std::vector" errors on freshly
+# added sources. The generated compile_commands.json (gitignored) supersedes this
+# and additionally resolves the external headers (zstd via Homebrew/CMake, node
+# via the node-gyp header cache) that a portable committed config can't hardcode.
+CompileFlags:
+  Add:
+    - -std=c++20
+    - -Inative/smol-decmpfs/include
