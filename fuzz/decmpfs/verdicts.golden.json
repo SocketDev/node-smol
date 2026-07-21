@@ -1,0 +1,14 @@
+{
+  "_comment": "Golden verdicts minted from the canonical Rust reference (decmpfs::addon). accept = Some(bytes) with sha512 of decoded output; reject = None. The C++ inverse reader MUST reproduce every entry. Regenerate with scripts/differential.mts --update-golden.",
+  "read_hybrid/craft-elf-magic": "reject",
+  "read_hybrid/craft-elf-with-pressed-section": "accept 132 365da76c1e9cf56f36e0729485be7bd8ad519f83ceef2855f52e74cfadb1e63b90844aae1ff92d2b580497d139a604d5cf1d41adf1596a23dbcc829d757d0ec5",
+  "read_hybrid/craft-empty": "reject",
+  "read_hybrid/craft-macho-magic": "reject",
+  "read_hybrid/craft-pe-magic": "reject",
+  "decode_pressed/craft-empty": "reject",
+  "decode_pressed/craft-header-truncated": "reject",
+  "decode_pressed/craft-huge-uncompressed": "reject",
+  "decode_pressed/craft-magic-only": "reject",
+  "decode_pressed/craft-valid": "accept 132 365da76c1e9cf56f36e0729485be7bd8ad519f83ceef2855f52e74cfadb1e63b90844aae1ff92d2b580497d139a604d5cf1d41adf1596a23dbcc829d757d0ec5",
+  "decode_pressed/craft-valid-config": "accept 132 365da76c1e9cf56f36e0729485be7bd8ad519f83ceef2855f52e74cfadb1e63b90844aae1ff92d2b580497d139a604d5cf1d41adf1596a23dbcc829d757d0ec5"
+}
