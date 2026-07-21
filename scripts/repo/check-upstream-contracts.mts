@@ -16,18 +16,6 @@ function gitHead(directory: string): string {
   }).trim()
 }
 
-function requiredPaths(name: string): readonly string[] {
-  const contract = UPSTREAM_CONTRACTS.find(value => value.name === name)
-  if (!contract) {
-    return []
-  }
-  return [
-    contract.crate,
-    contract.addonCrate,
-    ...(contract.fixture ? [contract.fixture] : []),
-  ]
-}
-
 export function collectContractErrors(root = repoRoot): string[] {
   const errors: string[] = []
   for (let i = 0, { length } = UPSTREAM_CONTRACTS; i < length; i += 1) {
@@ -43,12 +31,19 @@ export function collectContractErrors(root = repoRoot): string[] {
         `${contract.name}: pinned ${actualRevision}, expected ${contract.revision}`,
       )
     }
-    const paths = requiredPaths(contract.name)
-    for (let j = 0, { length: pathCount } = paths; j < pathCount; j += 1) {
-      const relativePath = paths[j]!
+    // The crate + addon crate live inside the pinned upstream checkout
+    // (submodule-relative). The fixture is node-smol-owned shared substrate —
+    // a corpus that cannot live in the pinned submodule without advancing its
+    // revision — so it resolves from the repo root instead.
+    const upstreamPaths = [contract.crate, contract.addonCrate]
+    for (let j = 0, { length: pathCount } = upstreamPaths; j < pathCount; j += 1) {
+      const relativePath = upstreamPaths[j]!
       if (!existsSync(path.join(upstreamRoot, relativePath))) {
         errors.push(`${contract.name}: missing required path ${relativePath}`)
       }
+    }
+    if (contract.fixture && !existsSync(path.join(root, contract.fixture))) {
+      errors.push(`${contract.name}: missing fixture ${contract.fixture}`)
     }
   }
   return errors
