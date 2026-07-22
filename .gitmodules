@@ -7,6 +7,7 @@
 	ref = 6ccd9166fb9f892aeeaf0642c56bbe4cb648cc97
 # decmpfs-3f173ff sha256:9f51523fa428c4be470e04113963bcdcf87675553f35a9a8e3cd2e7e136ec3cf
 [submodule "upstream/decmpfs"]
+	ignore = dirty
 	ref = 3f173ff2df6443d850c5f3ed10207256316e689b
 	path = upstream/decmpfs
 	url = git@github.com:decmpfs/decmpfs.git
