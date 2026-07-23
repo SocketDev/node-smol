@@ -1,5 +1,5 @@
 {
-  "$schema": "../socket-wheelhouse-schema.json",
+  "$schema": "./socket-wheelhouse-schema.json",
   "schemaVersion": 1,
   "repoName": "node-smol",
   "repo": {
@@ -8,5 +8,26 @@
   "build": {
     "from": "github-release",
     "type": "binary"
+  },
+  "docker": {
+    "prebakes": {
+      "registry": "ghcr.io/socketdev",
+      "prebakes": [
+        {
+          "name": "node-smol-base",
+          "status": "active",
+          "from": "ghcr.io/socketdev/c-base:latest",
+          "dockerfile": "docker/repo/node-smol-base.Dockerfile",
+          "installs": ["python3.12 (V8 build)", "ccache config"],
+          "libc": ["glibc", "musl"],
+          "platforms": ["linux/amd64", "linux/arm64"],
+          "tagFrom": "node-smol-toolchain-hash",
+          "consumers": [
+            "node-smol builder (+ COPY --from=ghcr.io/socketdev/node-base for the .mts driver)"
+          ],
+          "purpose": "The heavy Node.js/V8 compile environment, on top of the wheelhouse c-base. Split into its own layer for CACHE LOCALITY: the toolchain rarely changes, the Node source changes every version bump. The .mts driver's node comes via COPY --from=node-base, not a baked runtime."
+        }
+      ]
+    }
   }
 }
