@@ -1,0 +1,37 @@
+{
+  "$schema": "./socket-wheelhouse-schema.json",
+  "schemaVersion": 1,
+  "repoName": "node-smol",
+  "repo": {
+    "type": "solo"
+  },
+  "build": {
+    "from": "github-release",
+    "type": "binary"
+  },
+  "docker": {
+    "prebakes": {
+      "registry": "ghcr.io/socketdev",
+      "prebakes": [
+        {
+          "name": "node-smol/base",
+          "status": "active",
+          "from": "ghcr.io/socketdev/socket-wheelhouse/c-base:latest",
+          "dockerfile": "docker/repo/node-smol-base.Dockerfile",
+          "installs": ["python3.12 (V8 build)", "ccache config"],
+          "libc": ["glibc", "musl"],
+          "platforms": ["linux/amd64", "linux/arm64"],
+          "tagFrom": "node-smol-toolchain-hash",
+          "consumers": [
+            "node-smol builder (+ COPY --from=ghcr.io/socketdev/socket-wheelhouse/node-base for the .mts driver)"
+          ],
+          "purpose": "The heavy Node.js/V8 compile environment, on top of the wheelhouse c-base. Split into its own layer for CACHE LOCALITY: the toolchain rarely changes, the Node source changes every version bump. The .mts driver's node comes via COPY --from=node-base, not a baked runtime."
+        }
+      ]
+    }
+  },
+  "fuzz": {
+    "exempt": true,
+    "reason": "No first-party parser/decoder surface to fuzz yet: repo is fleet tooling plus vendored upstream/ native trees (stuie, decmpfs) that carry their own test tiers upstream. Revisit when node-smol grows first-party parsing code."
+  }
+}
