@@ -17,7 +17,7 @@ import { normalizePath } from '@socketsecurity/lib-stable/paths/normalize'
 // auto-lander nor a human commits them by hand; their generator owns them.
 export const GENERATED_PATTERNS = [
   /(?:^|\/)pnpm-lock\.yaml$/,
-  /(?:^|\/)_dispatch\/bundle\.cjs$/,
+  /(?:^|\/)_shared\/bundle\.cjs$/,
   /(?:^|\/)(?:build|dist|coverage|coverage-isolated)\//,
 ]
 

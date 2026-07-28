@@ -80,7 +80,7 @@ export function parseGithubReleaseArgs(
 }
 
 /**
- * The `workflow_dispatch` inputs for github-release.yml. Pure. Always sends
+ * The `workflow_shared` inputs for github-release.yml. Pure. Always sends
  * `release` (false = the CI dry-run default); forwards `tag` and
  * `bundle-dry-run` ONLY when set (GitHub rejects a dispatch carrying an
  * input the target workflow doesn't declare — `tag` is a base-preset input

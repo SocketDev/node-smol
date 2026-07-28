@@ -70,8 +70,8 @@ gh aw trial ./.github/workflows/weekly-update.md \
 
 Four requirements, each learned the hard way:
 
-- **`workflow_dispatch` trigger.** `gh aw trial` (and `gh aw run`) reject a
-  workflow without one. Every fleet gh-aw workflow carries `workflow_dispatch`
+- **`workflow_shared` trigger.** `gh aw trial` (and `gh aw run`) reject a
+  workflow without one. Every fleet gh-aw workflow carries `workflow_shared`
   alongside its `schedule:` crons so it stays trial-able + manually runnable.
 - **`--yes`.** The trial is interactive without it (a continue prompt + an
   "enable Actions permissions" prompt).

@@ -178,7 +178,7 @@ export function parseIgnoreGlobs(content: string): string[] {
 // The GENERATED / VENDORED / dep-0 path segments — artifacts a bundler, codegen
 // step, or upstream owns, never hand-written. These are dropped from the gate in
 // EVERY scope, even under template/ (which otherwise stays gated as the
-// wheelhouse canon): the built bootstrap/fleet.mjs, the _dispatch hook bundle, and the build/vendor/upstream trees
+// wheelhouse canon): the built bootstrap/fleet.mjs, the _shared hook bundle, and the build/vendor/upstream trees
 // live
 // beside hand-written template sources but must never be format- or lint-gated.
 // The MIRROR exclusions (.claude / .agents / **/fleet/**) are deliberately NOT
@@ -199,7 +199,7 @@ export const NEVER_GATED_SEGMENTS: ReadonlySet<string> = new Set([
 /**
  * Whether `unixPath` is a generated / vendored / dep-0 artifact that must never
  * be format- or lint-gated in any scope — the built dep-0 fetcher bundle, a
- * `_dispatch/` hook bundle, a gh-aw `*.lock.yml`, a `.d.ts` type declaration,
+ * `_shared/` hook bundle, a gh-aw `*.lock.yml`, a `.d.ts` type declaration,
  * or anything under a {@link NEVER_GATED_SEGMENTS} directory. Applied BEFORE
  * the `template/**` keep so those artifacts drop out even inside the wheelhouse
  * canon.
@@ -217,7 +217,7 @@ export function isNeverGated(filePath: string): boolean {
     return true
   }
   if (
-    p.includes('/_dispatch/') ||
+    p.includes('/_shared/') ||
     p.includes('/hooks/fleet/_dist/') ||
     p.endsWith('/hooks/fleet/index.cjs') ||
     p.endsWith('.lock.yml')

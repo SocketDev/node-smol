@@ -1,9 +1,9 @@
 /**
  * @file Rolldown build for the fleet hook dispatch bundle. Bundles the
- *   dispatcher entry (`_dispatch/dispatch-entry.mts`), the generated static
+ *   dispatcher entry (`_shared/dispatch-entry.mts`), the generated static
  *   dispatch table, every bundle-safe hook it imports, the `_shared/` helpers,
  *   and only the reachable slices of `@socketsecurity/lib-stable` into a single
- *   CJS `_dist/bundle.cjs`. Lives under `.config/fleet/rolldown/`
+ *   CJS `_dist/fleet-pack.cjs`. Lives under `.config/fleet/rolldown/`
  *   mandatory tier, not `.config/repo/rolldown/`, opt-in tier:
  *   `scripts/fleet/build-hook-bundle.mts` is a mandatory `scripts/fleet` script
  *   every fleet repo carries, so it needs this config unconditionally —
@@ -40,7 +40,7 @@ const config: RolldownOptions = {
     // Force a SINGLE chunk. A bundled hook may use a lazy runtime `import()`
     // (`judgment-nudge` does `await import('compromise')` inside its check fn) —
     // rolldown's default code-splits that into a second chunk, but `index.cjs`
-    // requires ONE `bundle.cjs`, so a multi-chunk output fails the build
+    // requires ONE `fleet-pack.cjs`, so a multi-chunk output fails the build
     // (`output.dir must be used, not output.file`). `codeSplitting: false` inlines
     // every dynamic import into the one chunk. (The compile-cache path eval's at
     // require time, not snapshot-build, so the inlined module just loads normally.)
@@ -71,7 +71,7 @@ const config: RolldownOptions = {
     // `new Comparator(">=0.0.0-0")` at module-eval, and once `codeSplitting: false`
     // INLINES the semver tree into the one chunk the circular `comparator → SemVer`
     // require resolves to an incomplete export — `TypeError: SemVer is not a
-    // constructor` at `require('./bundle.cjs')` time (the loader fails open, silently
+    // constructor` at `require('./fleet-pack.cjs')` time (the loader fails open, silently
     // dropping every hook). No bundled hook calls a semver fn on the dispatch path
     // (alpha-sort-nudge only wants `naturalCompare`), so a lazy Proxy that defers the
     // real `require('semver')` to first ACCESS keeps the module importable while the

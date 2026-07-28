@@ -527,7 +527,7 @@ export async function runHook(
 export function isGuardRunContext(moduleUrl: string | undefined): boolean {
   // A snapshot BUILD pass is never a run context. A bundled hook's `runHook`
   // sits in the snapshot bundle's top-level eval graph, and when
-  // `node --build-snapshot <bundle.cjs>` is given an ABSOLUTE entry path,
+  // `node --build-snapshot <fleet-pack.cjs>` is given an ABSOLUTE entry path,
   // `process.argv[1]` equals the bundle's `pathToFileURL(__filename).href` — so
   // the entrypoint test below would hold and `runGuard` would `await
   // readPayload()` on never-closing stdin during the build, hanging it. Gating

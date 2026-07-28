@@ -58,11 +58,11 @@ export function buildHookAndDocSteps(forwardedArgs: string[]): CheckStep[] {
     // `enforcement:` disposition when a local memory store exists; skips clean
     // in CI. See memory→code-is-law (#240).
     () => run('node', ['scripts/fleet/check/memories-are-codified.mts']),
-    // The _dispatch/dispatch-table.mts matches a fresh regen over the tree's hook
+    // The _shared/dispatch-table.mts matches a fresh regen over the tree's hook
     // dirs — catches a hook added/removed without rebuilding, or a byte-cascaded
     // table referencing an absent hook dir, the concurrent-cargo dangle.
     () => run('node', ['scripts/fleet/check/dispatch-table-is-current.mts']),
-    // The BUILT artifacts (bundle.cjs, snapshot-bundle.cjs, excluded-bundle.cjs,
+    // The BUILT artifacts (fleet-pack.cjs, snapshot-fleet-pack.cjs, excluded-fleet-pack.cjs,
     // and the snapshot-blob.path pin) carry the routing of a fresh table regen.
     // dispatch-table-is-current stops at the table; a table can be current and
     // verified while the executing artifact serves older routing — and the
@@ -156,6 +156,11 @@ export function buildHookAndDocSteps(forwardedArgs: string[]): CheckStep[] {
     // external-tools.json, the single source; this gate fails on drift.
     () =>
       run('node', ['scripts/fleet/check/package-manager-pins-are-synced.mts']),
+    // A FLEET tool belongs in scripts/fleet/setup/external-tools.json beside
+    // its installer; .config/repo/external-tools.json is for tools only this
+    // repo needs. Two copies meant the pin depended on which file you opened.
+    () =>
+      run('node', ['scripts/fleet/check/external-tools-are-declared-once.mts']),
     // A lint config's `!` re-include must never re-expose vendored files to
     // lint/--fix, the acorn wasm-bindgen glue break. Fails when a vendored glob
     // is left before the last negation.

@@ -3,7 +3,7 @@
  *   bundle. Identical to `hook-bundle.config.mts` except the input is the
  *   snapshot build entry (`dispatch-snapshot-entry.mts`), which registers a
  *   V8 deserialize-main fn instead of running the CLI at module eval, and the
- *   output is `_dispatch/snapshot-bundle.cjs` — the CJS file fed to
+ *   output is `_shared/snapshot-fleet-pack.cjs` — the CJS file fed to
  *   `node --build-snapshot`. SPIKE: lives alongside the production config; if
  *   the snapshot path lands, fold the two configs into one parametrized maker.
  */
@@ -23,7 +23,7 @@ import { createLibStubPlugin } from '../../repo/rolldown/lib-stub.mts'
 // entry) to the snapshot-SAFE table variant: hooks tagged
 // `@dispatch-snapshot-exclude` must not reach the build pass — their
 // module-eval graphs hold native [Foreign] handles V8 refuses to serialize
-// (CheckGlobalAndEternalHandles fatal). They ship in excluded-bundle.cjs,
+// (CheckGlobalAndEternalHandles fatal). They ship in excluded-fleet-pack.cjs,
 // spliced in at runtime by deserialize-main.
 function createSnapshotTableAliasPlugin() {
   return {
@@ -45,7 +45,7 @@ const config: RolldownOptions = {
   external: [/^node:/],
   input: path.join(DISPATCH_DIR, 'dispatch-snapshot-entry.mts'),
   output: {
-    file: path.join(DISPATCH_DIR, 'snapshot-bundle.cjs'),
+    file: path.join(DISPATCH_DIR, 'snapshot-fleet-pack.cjs'),
     // BUILD-PASS-ONLY global shim, prepended before any module-eval. V8's
     // `--build-snapshot` builder context does NOT expose `SharedArrayBuffer` as a
     // global, but `@socketsecurity/lib`'s `primordials/globals.js` captures it

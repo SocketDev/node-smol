@@ -4,14 +4,14 @@
 # web-flow-signed safe-output PR). This workflow runs the SAME update as a plain
 # job via `pnpm run weekly-update` (scripts/fleet/weekly-update.mts), for when
 # gh-aw is unavailable or a human wants to trigger it by hand. It is
-# workflow_dispatch-only on purpose: it must NOT compete with the gh-aw schedule.
+# workflow_shared-only on purpose: it must NOT compete with the gh-aw schedule.
 #
 # Byte-identical across the fleet (cascaded). The agentic /updating step runs
 # only if ANTHROPIC_API_KEY is present; without it the runner does the
 # deterministic update and still opens the PR (degraded but useful).
 name: 🔁 Weekly Update (plain fallback)
 on:
-  workflow_dispatch:
+  workflow_shared:
     inputs:
       test-setup-script:
         description: 'Command to run before tests'

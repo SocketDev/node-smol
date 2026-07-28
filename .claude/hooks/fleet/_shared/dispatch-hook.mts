@@ -155,7 +155,7 @@ export interface DispatchHookEntry {
 
 /**
  * The single-hook addressing protocol version. The literal is embedded in the
- * built bundle (`_dist/bundle.cjs`), so a name-scoped caller — the user-global
+ * built bundle (`_dist/fleet-pack.cjs`), so a name-scoped caller — the user-global
  * `~/.claude/hooks/wheelhouse-dispatch.mts` — can grep the bundle bytes to
  * learn the bundle understands `index.cjs <Event> <hook-name>` before relying
  * on it. An older bundle without the literal would IGNORE argv[3] and run the

@@ -262,13 +262,13 @@ export const FLEET_HOOKS_DIR = path.join(REPO_ROOT, '.claude', 'hooks', 'fleet')
  * generated tables. Built artifacts land in `DIST_DIR`; the hand-written
  * loader sits at `FLEET_HOOK_INDEX_PATH` above both.
  */
-export const DISPATCH_DIR = path.join(FLEET_HOOKS_DIR, '_dispatch')
+export const DISPATCH_DIR = path.join(FLEET_HOOKS_DIR, '_shared')
 
 /**
- * Built hook artifacts, rolldown output. This dir plus the loader is the
- * ENTIRE hook payload a member receives: `.claude/hooks/fleet/index.cjs` +
- * `.claude/hooks/fleet/_dist/bundle.cjs`. Underscore-prefixed so the hook-dir
- * scanners skip it, like `_shared/` and `_dispatch/`.
+ * Built hook artifacts, rolldown output. This dir plus the loader is the ENTIRE
+ * hook payload a member receives: `.claude/hooks/fleet/index.cjs` +
+ * `.claude/hooks/fleet/_dist/fleet-pack.cjs`. Underscore-prefixed so the
+ * hook-dir scanners skip it, like `_shared/` and `_shared/`.
  */
 export const DIST_DIR = path.join(FLEET_HOOKS_DIR, '_dist')
 
@@ -295,18 +295,18 @@ export const DISPATCH_TABLE_EXCLUDED_PATH = path.join(
   'dispatch-table-excluded.mts',
 )
 // Snapshot-experiment artifact (spliced in by the V8 deserialize path only —
-// the full `bundle.cjs` already carries every hook). Wheelhouse-only, never
-// shipped, so it stays beside its tables in `_dispatch/`.
+// the full `fleet-pack.cjs` already carries every hook). Wheelhouse-only, never
+// shipped, so it stays beside its tables in `_shared/`.
 export const EXCLUDED_BUNDLE_PATH = path.join(
   DISPATCH_DIR,
-  'excluded-bundle.cjs',
+  'excluded-fleet-pack.cjs',
 )
 
 /**
  * The GENERATED dispatch manifest the dep-0 bootstrap dispatcher
  * (`_shared/dispatch.mts`) routes off. Emitted by gen/hook-dispatch alongside
  * the dispatch tables — never hand-maintained. Lives in `_shared/` (not
- * `_dispatch/`) because the bootstrap runtime path reads it directly.
+ * `_shared/`) because the bootstrap runtime path reads it directly.
  */
 export const DISPATCH_MANIFEST_PATH = path.join(
   FLEET_HOOKS_DIR,
@@ -322,7 +322,7 @@ export const DISPATCH_ENTRY_PATH = path.join(DISPATCH_DIR, 'dispatch-entry.mts')
 /**
  * The CJS hook bundle (rolldown output; release-shipped, gitignored).
  */
-export const HOOK_BUNDLE_PATH = path.join(DIST_DIR, 'bundle.cjs')
+export const HOOK_BUNDLE_PATH = path.join(DIST_DIR, 'fleet-pack.cjs')
 
 /**
  * The fleet oxlint plugin source dir + its rolldown-bundled artifact. Members

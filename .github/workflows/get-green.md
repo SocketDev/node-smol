@@ -8,8 +8,8 @@
 # workflows because gh-aw is one engine/model per workflow.
 on:
   # Dispatched by weekly-update's `dispatch-workflow` safe output on test
-  # failure (gh-aw dispatch fires workflow_dispatch, not workflow_call).
-  workflow_dispatch:
+  # failure (gh-aw dispatch fires workflow_shared, not workflow_call).
+  workflow_shared:
     inputs:
       branch:
         description: 'The update branch with the failing changes to fix'

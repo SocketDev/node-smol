@@ -71,7 +71,7 @@ runs needs the `actions: write` permission.
 ## Scheduled caller
 
 `.github/workflows/prune-workflow-runs.yml` runs it weekly (Sundays 04:00 UTC)
-and on `workflow_dispatch` (with `days` / `dry-run` inputs). The job grants
+and on `workflow_shared` (with `days` / `dry-run` inputs). The job grants
 `actions: write` + `contents: read` and runs the script via the fleet
 `setup-and-install` action. Both the script and the workflow are cascaded
 byte-identical across the fleet — edit the `template/base/` copies and

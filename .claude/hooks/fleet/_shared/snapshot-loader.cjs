@@ -35,7 +35,7 @@ const event = process.argv[2]
 // edit (new bundle → new hash) misses cleanly instead of booting stale logic.
 // Hashing the bundle is sub-millisecond against the hundreds of ms a hit saves.
 function currentBlobPath() {
-  const src = fs.readFileSync(path.join(DIR, 'snapshot-bundle.cjs'))
+  const src = fs.readFileSync(path.join(DIR, 'snapshot-fleet-pack.cjs'))
   const sha = crypto.createHash('sha256').update(src).digest('hex').slice(0, 16)
   return blobPath('dispatch', sha)
 }

@@ -37,7 +37,7 @@ const REGISTRY_PATH = path.join(
 const FLEET_HOOKS_DIR = path.join(REPO_ROOT, '.claude', 'hooks', 'fleet')
 
 // Bullet shape: `- \`<name>\` — description`. Captures the backticked hook id.
-// A leading underscore admits the infrastructure dirs (`_dispatch`) so they
+// A leading underscore admits the infrastructure dirs (`_shared`) so they
 // can be registered like any hook instead of reading as omitted forever.
 const REGISTRY_BULLET_RE = /^- `(_?[a-z0-9-]+)`/gm
 
@@ -115,7 +115,7 @@ function main(): void {
     logger.success('No hook-registry.md to check.')
     return
   }
-  // A bundle-only member runs hooks from _dist/bundle.cjs — the per-hook
+  // A bundle-only member runs hooks from _dist/fleet-pack.cjs — the per-hook
   // SOURCE dirs the registry bullets name live only in the wheelhouse.
   if (!hasFleetHookSource(REPO_ROOT)) {
     logger.success(

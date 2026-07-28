@@ -23,7 +23,7 @@
 //      discipline `locking-down-claude` requires for headless `claude`.
 //
 // Untrusted triggers: issues, issue_comment, pull_request_target, pull_request.
-// A workflow gated only on push / workflow_dispatch / schedule processes no
+// A workflow gated only on push / workflow_shared / schedule processes no
 // attacker input, so it is not blocked (it can still hold secrets — the Rule of
 // Two needs only one leg gated, and "no untrusted input" is that leg).
 //
@@ -116,7 +116,7 @@ export const check = editGuard((filePath, content, payload) => {
       '  A prompt-injected issue/PR can steer the agent into exfiltrating the',
       "  runner's secrets (the claude-code-action env-exfil incident, MSFT",
       '  2026-06-05). Pin the agent surface + scope the token, or gate the',
-      '  trigger off untrusted input (push / workflow_dispatch / schedule).',
+      '  trigger off untrusted input (push / workflow_shared / schedule).',
       '',
       `  Bypass: type "${BYPASS_PHRASE}" in a recent message, then retry.`,
     ].join('\n'),

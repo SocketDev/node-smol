@@ -38,7 +38,7 @@ const SOURCE_FILE_RE = /\.(?:[cm]?tsx?|ts)$/
 // Bundled / generated directories to skip.
 // require-regex-comment: skip generated bundle, vendor, and node_modules dirs.
 const SKIP_DIR_RE =
-  /_dispatch\/(?:bundle|snapshot-bundle)\.cjs|\/node_modules\/|\/vendor\/|\/third_party\/|\/upstream\/|\/build\//
+  /_shared\/(?:bundle|snapshot-bundle)\.cjs|\/node_modules\/|\/vendor\/|\/third_party\/|\/upstream\/|\/build\//
 
 // Path-like variable name heuristics, same shape as the lint rule.
 // require-regex-comment: path-like variable name suffix/prefix patterns.

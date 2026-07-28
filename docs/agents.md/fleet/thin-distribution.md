@@ -31,7 +31,7 @@ sibling (`.claude/hooks/repo/`, `.config/repo/`, the member's own
 ## The ref pin
 
 A thin member pins which bundle to fetch in its wheelhouse settings file:
-`.config/socket-wheelhouse.json` → `"bundle": { "ref": "fleet-<sha>" }`. That
+`.config/socket-wheelhouse.json` → `"bundle": { "ref": "fleet-pack-<sha>" }`. That
 file is the single member-owned config surface. The bootstrap defaults its
 `--ref` from there, so the pin lives in exactly one place.
 
@@ -107,7 +107,7 @@ mechanisms prune what a new release dropped:
   record. The cascade fixer `safeDelete`s each path in every member, AND
   `make-release-bundle` ships the same list in the bundle manifest as
   `removedPaths`, which both installers (`scripts/repo/gen/bootstrap/src/install.mts`
-  `removeTombstonedPaths()` + `scripts/fleet/fetch-fleet-bundle.mts`) delete
+  `removeTombstonedPaths()` + `scripts/fleet/fetch-fleet-pack.mts`) delete
   after placement — so a moved/retired path heals on the next refresh even
   with no applied-files record. A move must ship its deletion: retire a path,
   add its tombstone in the same change. Belt on both legs: a tombstone the
@@ -140,7 +140,7 @@ Everything else arrives via the belt fetch on the next `pnpm install`.
 
 ## Commands
 
-- `node scripts/repo/bootstrap/fleet.mjs --ref fleet-<sha> --thin --wire` — convert a repo to
+- `node scripts/repo/bootstrap/fleet.mjs --ref fleet-pack-<sha> --thin --wire` — convert a repo to
   thin: fetch + apply, untrack the payload, write the belt.
 - `node scripts/repo/bootstrap/fleet.mjs --if-current` — the belt/CI fetch (idempotent, ref
   from settings).

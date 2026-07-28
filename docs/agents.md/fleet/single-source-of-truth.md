@@ -18,7 +18,7 @@ ships before anyone notices.
   duplication, and bundle code never reads the file at runtime.
 
 - **The DRY violation is hand-maintained copies, not the bundler.** "Three lists
-  that happen to match" is the bug. "One JSON the bundler bakes into `bundle.cjs`"
+  that happen to match" is the bug. "One JSON the bundler bakes into `fleet-pack.cjs`"
   is correct and preferred. Inlining into a bundle is fine.
 
 - **Settle the canonical location before you cascade.** Decide where the one

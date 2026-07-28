@@ -34,7 +34,7 @@ const logger = getDefaultLogger()
 // git is unavailable / this isn't a repo (the guard then fails open — a
 // non-git checkout can't be diffed, so it's un-guardable, not a violation).
 // --porcelain omits gitignored paths, so a check that rebuilds a gitignored
-// artifact (the _dispatch/*.cjs bundles, coverage/) is NOT a false positive;
+// artifact (the _shared/*.cjs bundles, coverage/) is NOT a false positive;
 // only TRACKED-file mutations count.
 function gitPorcelain(): string | undefined {
   // oxlint-disable-next-line socket/prefer-async-spawn -- main() is a sync CLI runner; the tree snapshot must complete inline before/after the sequential gate loop.
@@ -119,7 +119,7 @@ const RELEASE_TIER_REPO_CHECKS: ReadonlySet<string> = new Set([
   // Wheelhouse dogfood law: dispatch must be on the snapshot fast path. Held to
   // the release tier (pre-push / --release) rather than the interactive inner
   // loop because the per-host launcher binary is gitignored + can be reaped
-  // between runs (a cascade/dogfood quarantine of untracked _dispatch files), so
+  // between runs (a cascade/dogfood quarantine of untracked _shared files), so
   // a hard interactive gate would flap. Enforced where it's stable: before a push.
   'hook-snapshot-is-active.mts',
 ])

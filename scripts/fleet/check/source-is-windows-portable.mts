@@ -51,7 +51,7 @@ const SCAN_ROOTS = [
 ]
 
 const SKIP_SEGMENTS = new Set([
-  '_dispatch',
+  '_shared',
   '_dist',
   'build',
   'coverage',

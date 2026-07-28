@@ -20,7 +20,7 @@ import { logger, rootPath, runInherit } from './shared.mts'
 /**
  * A `gh workflow run` dispatch: the workflow file, the optional target repo
  * (`--repo owner/name`) + git ref (`--ref branch|tag`), and the
- * `workflow_dispatch` inputs (each becomes a `-f key=value`).
+ * `workflow_shared` inputs (each becomes a `-f key=value`).
  */
 export interface WorkflowDispatchSpec {
   readonly workflow: string

@@ -209,7 +209,7 @@ export function operatorBypassPresent(
  * Per-trigger semantics: a single `Allow X bypass` authorizes exactly one
  * action of the gated shape. To do a second, the user types the phrase again.
  *
- * For workflow_dispatch and similar "name the target" bypasses, the phrase
+ * For workflow_shared and similar "name the target" bypasses, the phrase
  * format is `Allow <action> bypass: <target>` and the caller passes only
  * target-matching phrases.
  */
@@ -237,7 +237,7 @@ export function bypassPhraseRemaining(
  * string[]`) each contribute their own count.
  *
  * Use with `bypassPhraseRemaining(...) > 0` to gate one-time bypasses where the
- * hook also tracks prior consumption (e.g. count of prior workflow_dispatch
+ * hook also tracks prior consumption (e.g. count of prior workflow_shared
  * invocations of the same workflow in the assistant tool-use history).
  */
 export function countBypassPhrases(

@@ -232,7 +232,7 @@ evidence, never a rubber stamp.
 WHY: a version can end up skipped — 1.4.3 between a live 1.4.2 and 1.4.4 —
 and the normal path can't fill it: the bump gate anchors to registry latest
 and refuses anything at-or-below it, and a historical branch can't be
-dispatched because `workflow_dispatch` needs `npm-publish.yml` on the
+dispatched because `workflow_shared` needs `npm-publish.yml` on the
 dispatched ref. Backfill is the sanctioned gap-fill: dispatch
 `npm-publish.yml` from MAIN — the workflow definition always exists there —
 with `backfill-version` naming the gap and `checkout-ref` naming the content
