@@ -1,0 +1,8 @@
+# stuie-main-HEAD
+# no-release-tag: stuie publishes no release tags (git ls-remote --tags is empty)
+[submodule "upstream/stuie"]
+	ignore = dirty
+	path = upstream/stuie
+	url = git@github.com:SocketDev/stuie.git
+	branch = main
+	shallow = true
