@@ -27,7 +27,7 @@ name: 📦 npm publish
 # version) — see scripts/fleet/publish-infra/npm/backfill.mts.
 
 on:
-  workflow_shared:
+  workflow_dispatch:
     inputs:
       publish:
         description: 'Publish for real (false = dry-run, the default).'

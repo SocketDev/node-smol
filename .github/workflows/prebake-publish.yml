@@ -15,7 +15,7 @@ name: 🧱 prebake publish
 # (declared manifest order is bottom-up); empty bakes everything declared.
 
 on:
-  workflow_shared:
+  workflow_dispatch:
     inputs:
       only:
         description: 'Comma-separated image-name list (empty = all declared).'

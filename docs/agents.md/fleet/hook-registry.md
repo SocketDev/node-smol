@@ -6,8 +6,7 @@ Companion to the `### Hook registry` section in `CLAUDE.md`. Full enforcement li
 
 - **`.claude/hooks/fleet/<name>/`** — fleet-canonical hooks. Edited only in `template/.claude/hooks/fleet/<name>/`; cascade pushes to every fleet repo. Citation gate (`new-hook-claude-md-guard`) requires each hook to have a matching `(enforced by ...)` mention somewhere in CLAUDE.md or the linked fleet docs.
 - **`.claude/hooks/repo/<name>/`** — host-repo-only hooks. Live in the downstream repo; exempt from the citation gate. Mirrors `docs/agents.md/repo/` + `scripts/repo/`.
-- **`.claude/hooks/fleet/_shared/`** — utilities imported by hooks (`transcript.mts`, `stop-nudge.mts`, `shell-command.mts`, `acorn/`, etc.). Also fleet-canonical.
-- `_shared` (**`.claude/hooks/fleet/_shared/`**) — the single-process fleet hook dispatcher (rolldown-bundled). Claude Code invokes the dispatcher once per event instead of spawning one process per hook, running every bundled hook for that event from the static dispatch table. Not a policy hook itself: the runtime the policy hooks above execute inside.
+- **`.claude/hooks/fleet/_shared/`** — utilities imported by hooks (`transcript.mts`, `stop-nudge.mts`, `shell-command.mts`, `acorn/`, etc.), plus the single-process fleet hook dispatcher (rolldown-bundled): Claude Code invokes the dispatcher once per event instead of spawning one process per hook, running every bundled hook for that event from the static dispatch table. Also fleet-canonical.
 
 ## Currently enforced (fleet)
 

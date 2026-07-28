@@ -14,7 +14,7 @@ on:
   schedule:
     # Sundays at 04:00 UTC — off-peak, clear of the daily/weekly update runs.
     - cron: '0 4 * * 0'
-  workflow_shared:
+  workflow_dispatch:
     inputs:
       days:
         description: 'Optional retention window in days for present workflows (empty = keep-count policy only)'

@@ -29,7 +29,7 @@ on:
     # Every 30 minutes, offset from the top of the hour. The gap job is two
     # unauthenticated-grade network reads on the no-gap path — near-free.
     - cron: '13,43 * * * *'
-  workflow_shared:
+  workflow_dispatch:
     inputs:
       dry-run:
         description: 'Walk the reconcile without pushing a tag or cutting a release.'

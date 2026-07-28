@@ -18,7 +18,7 @@ name: 🚀 GitHub release
 # (private, github-release-only) skip the gate.
 
 on:
-  workflow_shared:
+  workflow_dispatch:
     inputs:
       release:
         description: 'Cut the release for real (false = dry-run plan, the default).'
