@@ -109,5 +109,5 @@
 ## 🏗️ node-smol-Specific
 
 - node-smol owns Socket's customized Node.js distribution: source patches, builtins, SEA packaging, platform artifacts, and release assembly; binaries ship as GitHub release assets, never npm.
-- Reusable native capabilities stay Rust-canonical in their owner repos — `upstream/<name>` holds shallow, pinned source references (`.gitmodules` `ref`+`sha256:` pins), and adapters consume them through a `.node` addon or a narrow `node:smol-*` builtin contract.
+- Reusable native capabilities stay Rust-canonical in their owner repos — `upstream/<name>` holds shallow single-branch source references, and adapters consume them through a `.node` addon or a narrow `node:smol-*` builtin contract. ACTUAL pin shape today: `.gitmodules` carries `branch = main` + `shallow = true` only (stuie publishes no release tags, so there is no `ref` and no `sha256:` yet). TODO: adopt the intended `ref`+`sha256:` pin contract (set via `gen/gitmodules-hash --set`) once stuie ships a taggable release — until then, do not describe the pins as content-addressed.
 - The Node runtime pin cascades from the wheelhouse (`.node-version` + the fleet setup-action defaults + the node-base builder image) — never hand-edit it here; bump via `cascade-fleet.mts --node`.
