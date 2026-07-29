@@ -15,12 +15,25 @@ references through a `.node` addon or a narrow `node:smol-*` builtin contract.
 
 ## Install
 
-Binaries ship as GitHub release assets — download the artifact for your
-platform from the releases page.
+**There are no releases yet** — this repo has published zero GitHub releases,
+so there is nothing to download today. Once the first release is cut, binaries
+will ship as GitHub release assets:
 
 ```sh
+# Not functional yet: SocketDev/node-smol has no releases (checked 2026-07-28).
 gh release download --repo SocketDev/node-smol
 ```
+
+Until then, the build lane is `scripts/repo/build.mts`:
+
+```sh
+node scripts/repo/build.mts --dry-run          # print the exact build plan
+node scripts/repo/build.mts                    # bake the compile-environment image
+node scripts/repo/build.mts --target binary    # fails loud: the binary lane is not ported yet
+```
+
+Release assembly lives in `scripts/repo/release.mts` (dry-run by default;
+`--publish` cuts a draft release via `gh release create --draft`).
 
 ## Usage
 

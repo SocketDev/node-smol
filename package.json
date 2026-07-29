@@ -16,6 +16,7 @@
   },
   "scripts": {
     "build": "node scripts/fleet/build-hook-bundle.mts",
+    "build:repo": "node scripts/repo/build.mts",
     "check": "node scripts/fleet/check.mts",
     "check:paths": "node scripts/fleet/check/paths-are-canonical.mts",
     "ci:local": "node scripts/fleet/agent-ci-skip-locks.mts run --all --quiet --pause-on-failure --github-token",
@@ -30,6 +31,7 @@
     "lockstep:emit-mirror-globs": "node scripts/fleet/lockstep-emit-mirror-globs.mts",
     "lockstep:emit-schema": "node scripts/fleet/lockstep-emit-schema.mts",
     "prepare": "node scripts/fleet/install-git-hooks.mts && node scripts/fleet/prepare.mts",
+    "release": "node scripts/repo/release.mts",
     "security": "node scripts/fleet/security.mts",
     "sync-package-manager-pins": "node scripts/fleet/sync-package-manager-pins.mts",
     "test": "node scripts/fleet/test.mts",
