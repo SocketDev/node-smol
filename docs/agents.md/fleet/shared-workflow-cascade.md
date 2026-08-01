@@ -2,7 +2,7 @@
 
 How the fleet's AI-assisted workflows propagate on [GitHub Agentic
 Workflows](https://github.github.com/gh-aw/) (gh-aw). Companion to the
-`### Drift watch` rule in `template/CLAUDE.md` and to the inlined-workflow
+`### Drift watch` rule in `template/base/CLAUDE.md` and to the inlined-workflow
 model in [`drift-watch.md`](drift-watch.md).
 
 ## The model: per-repo copies, cascaded byte-identical
@@ -10,7 +10,7 @@ model in [`drift-watch.md`](drift-watch.md).
 Every gh-aw workflow is authored ONCE in the wheelhouse template and cascaded
 whole to every member — each repo runs its own scheduled copy. There is no
 cross-repo reusable and no delegator pinned to another repo's SHA
-(`template/base/.github/workflows/weekly-update.md:2-5` states the contract).
+(`template/base/.github/workflows/weekly-update.md` lines 2-5 state the contract).
 The unit that cascades is a pair plus a shared lock:
 
 1. **Source `.md`.** `.github/workflows/<name>.md` is the gh-aw source:
@@ -70,8 +70,8 @@ gh aw trial ./.github/workflows/weekly-update.md \
 
 Four requirements, each learned the hard way:
 
-- **`workflow_shared` trigger.** `gh aw trial` (and `gh aw run`) reject a
-  workflow without one. Every fleet gh-aw workflow carries `workflow_shared`
+- **`workflow_dispatch` trigger.** `gh aw trial` (and `gh aw run`) reject a
+  workflow without one. Every fleet gh-aw workflow carries `workflow_dispatch`
   alongside its `schedule:` crons so it stays trial-able + manually runnable.
 - **`--yes`.** The trial is interactive without it (a continue prompt + an
   "enable Actions permissions" prompt).

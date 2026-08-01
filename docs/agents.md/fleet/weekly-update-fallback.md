@@ -4,7 +4,7 @@ The fleet's weekly dependency update runs two ways. The gh-aw workflow is the pr
 
 ## Primary: the gh-aw workflow
 
-`socket-registry/.github/workflows/weekly-update.lock.yml` (compiled from `weekly-update.md`) runs the update as a GitHub Agentic Workflow. It adds three things a plain job can't: a per-run and 24h AI-credit budget, a firewall egress allowlist for the agent, and a web-flow-signed safe-output PR. The 12 fleet delegators `uses:` it on a schedule. This is what runs in production.
+socket-registry's `.github/workflows/weekly-update.lock.yml` (compiled from `weekly-update.md`) runs the update as a GitHub Agentic Workflow. It adds three things a plain job can't: a per-run and 24h AI-credit budget, a firewall egress allowlist for the agent, and a web-flow-signed safe-output PR. The 12 fleet delegators `uses:` it on a schedule. This is what runs in production.
 
 ## Fallback: `pnpm run weekly-update` (plain, non-gh-aw)
 
@@ -51,6 +51,6 @@ To use it, toggle it with `scripts/fleet/weekly-update-workflow.mts`:
 | `… disable` | remove the live copy (back to dormant) |
 | `… run` (= `pnpm run weekly-update:ci`) | enable → run it via Agent CI → re-disable, even on failure |
 
-The enabled `…non-gh-aw.yml` copy is gitignored, so it is transient and never committed — the `.disabled` file stays canonical. When live, the workflow is `workflow_shared`-only (it must not compete with the gh-aw schedule): it checks out, sets up via the fleet `setup-and-install` action, and runs `pnpm run weekly-update` with the dispatch inputs. The agentic step runs only if `ANTHROPIC_API_KEY` is set; without it the job does the deterministic update and (if `open-pr`) still opens the PR.
+The enabled `…non-gh-aw.yml` copy is gitignored, so it is transient and never committed — the `.disabled` file stays canonical. When live, the workflow is `workflow_dispatch`-only (it must not compete with the gh-aw schedule): it checks out, sets up via the fleet `setup-and-install` action, and runs `pnpm run weekly-update` with the dispatch inputs. The agentic step runs only if `ANTHROPIC_API_KEY` is set; without it the job does the deterministic update and (if `open-pr`) still opens the PR.
 
 `run` is also how Agent CI exercises the fallback: Agent CI can't see a `.disabled` file (GitHub ignores it too), so the workflow must be enabled for the run and re-hidden after. (Agent CI also can't simulate the gh-aw `.lock.yml` — this fallback is the plain workflow it CAN run.)

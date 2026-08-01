@@ -14,7 +14,7 @@
  *        writing the blob into the ephemeral snapshot cache.
  *
  *   The blob path comes from the SHARED `snapshot-cache-path.cjs` — the same key
- *   derivation the loader uses — so it lands in `node_modules/.cache/fleet/
+ *   derivation the loader uses — so it lands in `.cache/fleet/
  *   node-snapshot-cache/<node-ver × arch × V8tag × uid>/<entry>-<content-hash>.blob`.
  *   The runtime tag means a node/arch/V8 change writes a fresh dir (never a
  *   refuse-to-boot blob in the active path); the content hash means a bundle edit
@@ -187,7 +187,7 @@ function main(): void {
   // Content-key on the built bundle — the loader hashes snapshot-fleet-pack.cjs the
   // same way (sha256, first 16 hex), so the blob written here is exactly the one
   // the loader looks for. A bundle change → new hash → new blob; the stale one is
-  // an orphan that node_modules/.cache never OS-reaps, so it is pruned below.
+  // an orphan that .cache never OS-reaps, so it is pruned below.
   const sourceHash = computeSourceHash(readFileSync(SNAPSHOT_BUNDLE))
   const blobOut = blobPath('dispatch', sourceHash)
   mkdirSync(path.dirname(blobOut), { recursive: true })

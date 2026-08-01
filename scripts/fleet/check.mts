@@ -157,12 +157,11 @@ export async function main(): Promise<void> {
   // shared import graph (lib-stable errors/message + logger/default + paths.mts
   // + is-main-module.mts) and the tsc step reuses compiled typescript.js. Env
   // var — not the API call — because only the var propagates to children (Node
-  // >= 22.8). node_modules/.cache is gitignored; pure perf, uncached is correct,
+  // >= 22.8). .cache is gitignored; pure perf, uncached is correct,
   // so a sandbox that forbids the dir just prints a warning and runs cold.
   if (!process.env['NODE_COMPILE_CACHE']) {
     process.env['NODE_COMPILE_CACHE'] = path.join(
       REPO_ROOT,
-      'node_modules',
       '.cache',
       'fleet',
       'fleet-checks',

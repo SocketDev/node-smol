@@ -72,11 +72,9 @@ if (!blob || !hasBlobFile(blob)) {
 } else {
   // The snapshot-booted process reads the event from argv[1] (no script path in
   // a snapshot-booted argv), so pass the event as the sole arg after the flag.
-  const res = spawnSync(
-    process.execPath,
-    ['--snapshot-blob', blob, event],
-    { stdio: 'inherit' },
-  )
+  const res = spawnSync(process.execPath, ['--snapshot-blob', blob, event], {
+    stdio: 'inherit',
+  })
   if (res.error) {
     // The blob failed to load (a version/arch/V8 mismatch slipped past the key,
     // or corruption — Node refuse-to-boots either) — fall back, don't wedge.

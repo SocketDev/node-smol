@@ -14,7 +14,7 @@
  *   minified, fleet hard rule, no source maps, no `.d.ts`. node: built-ins
  *   stay external, the bundle runs under Node, which has them. Heavy
  *   unreachable lib subgraphs are stubbed via the fleet-canonical
- *   `createLibStubPlugin`.
+ *   `createBundleStubPlugin`.
  */
 
 import type { RolldownOptions } from 'rolldown'
@@ -23,10 +23,10 @@ import {
   DISPATCH_ENTRY_PATH,
   resolveHookBundleOut,
 } from '../../../scripts/fleet/paths.mts'
-// createLibStubPlugin stays under the opt-in `.config/repo/rolldown/` tier
+// createBundleStubPlugin stays under the opt-in `.config/repo/rolldown/` tier
 // (shared with hook-bundle-snapshot.config.mts and the trimming-bundle skill);
 // only this config's OWN location is mandatory-tier.
-import { createLibStubPlugin } from '../../repo/rolldown/lib-stub.mts'
+import { createBundleStubPlugin } from '../../repo/rolldown/bundle-stub.mts'
 
 // 1 path, 1 reference: the dispatch entry + bundle output are constructed once
 // in gen/hook-dispatch.mts (resolveHookBundleOut honors FLEET_HOOK_BUNDLE_OUT
@@ -61,7 +61,7 @@ const config: RolldownOptions = {
     // wrappers, and small string/path helpers; the glob (picomatch) and sort
     // (semver + npm-pack) subgraphs are statically reachable but never run.
     // Verify reachability before widening this pattern.
-    createLibStubPlugin({
+    createBundleStubPlugin({
       // Matches @socketsecurity/lib or lib-stable imports ending in /globs.js or /sorts.js.
       stubPattern: /@socketsecurity\/lib(?:-stable)?\/.*\/(?:globs|sorts)\.js$/,
     }),
@@ -77,7 +77,7 @@ const config: RolldownOptions = {
     // real `require('semver')` to first ACCESS keeps the module importable while the
     // never-accessed `new Comparator` never runs. Required since the codemod made
     // the dynamic-import hook eligible → `codeSplitting: false` → semver inlined.
-    createLibStubPlugin({
+    createBundleStubPlugin({
       stubPattern:
         /@socketsecurity\/lib(?:-stable)?\/.*\/external\/semver\.js$/,
       stubCode:

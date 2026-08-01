@@ -96,7 +96,7 @@ export function parseNpmPublishArgs(
 }
 
 /**
- * The `workflow_shared` inputs for npm-publish.yml. Pure. Always sends
+ * The `workflow_dispatch` inputs for npm-publish.yml. Pure. Always sends
  * `publish` (false = the CI dry-run default) + `dist-tag`; forwards
  * `release-as`, `bump=false`, `backfill-version`, and `checkout-ref` ONLY
  * when the caller set them off their defaults (a dispatch with an input the

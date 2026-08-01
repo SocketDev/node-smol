@@ -27,7 +27,7 @@ the file must declare:
    `disallowed_tools` + a non-default `permission_mode` — the same four-flag
    discipline `locking-down-claude` requires for headless `claude`.
 
-A workflow gated only on `push` / `workflow_shared` / `schedule` processes no
+A workflow gated only on `push` / `workflow_dispatch` / `schedule` processes no
 untrusted input, so it is not blocked (the Rule of Two needs only one leg gated,
 and "no untrusted input" is that leg).
 

@@ -35,17 +35,26 @@
 
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import process from 'node:process'
 
 import { bashGuard, block, defineHook, runHook } from '../_shared/guard.mts'
+import { resolveProjectDir } from '../_shared/project-dir.mts'
 import { parseCommands } from '../_shared/shell-command.mts'
 
 const NAME = 'use-repo-test-script-guard'
 
-export const triggers: readonly string[] = ['vitest', 'jest', 'mocha', '--test', 'ava']
+export const triggers: readonly string[] = [
+  'vitest',
+  'jest',
+  'mocha',
+  '--test',
+  'ava',
+]
 
 // Runner -> the token that identifies it inside a package script.
-export const RUNNERS: ReadonlyArray<{ readonly id: string; readonly label: string }> = [
+export const RUNNERS: ReadonlyArray<{
+  readonly id: string
+  readonly label: string
+}> = [
   { id: 'vitest', label: 'vitest' },
   { id: 'jest', label: 'jest' },
   { id: 'mocha', label: 'mocha' },
@@ -124,22 +133,24 @@ const check = bashGuard(command => {
     if (!runner) {
       continue
     }
-    const scripts = scriptsFor(readScripts(process.cwd()), runner)
+    const scripts = scriptsFor(readScripts(resolveProjectDir()), runner)
     if (!scripts.length) {
       // Nothing better to point at — do not strand the caller.
       continue
     }
     return block(
-      NAME,
       [
-        `Refusing a direct \`${runner}\` run — this repo defines its own script for it.`,
+        `🚨 ${NAME}: refusing a direct \`${runner}\` run — this repo defines its own script for it.`,
         '',
         ...scripts.map(name => `  npm run ${name}`),
         '',
         ...(scripts.length > 1
-          ? ['Pick the one whose glob covers the files you mean — they differ.', '']
+          ? [
+              'Pick the one whose glob covers the files you mean — they differ.',
+              '',
+            ]
           : []),
-        'A repo\'s runner is not inferable from the file extension, the directory',
+        "A repo's runner is not inferable from the file extension, the directory",
         'name, or from a sibling repo, and the script encodes the config path,',
         'setup files, flags and env that a hand-written invocation does not.',
         'Guessing produces output that reads as a defect in the CODE rather than',

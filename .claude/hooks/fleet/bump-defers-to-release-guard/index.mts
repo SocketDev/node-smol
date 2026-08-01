@@ -21,7 +21,7 @@
 // `npm version <arg>` / a manual non-prerelease version edit) still needs
 // `Allow release-bump bypass`; MAJOR additionally requires `Allow major-bump
 // bypass`. In CI, major happens only when a human selected it on the
-// workflow_shared form, this hook never runs there.
+// workflow_dispatch form, this hook never runs there.
 //
 // This guard exists because an agent once decided a major bump from
 // export-surface evidence, authored a synthetic `refactor!:` commit to steer
@@ -403,7 +403,7 @@ export function check(payload: ToolCallPayload): GuardResult {
       `         always allowed. A direct hand-bump still needs: ${BYPASS_PHRASE}`,
       majorLine,
       '  In CI, major happens only when a human selects it on the',
-      '  workflow_shared form.',
+      '  workflow_dispatch form.',
     ].join('\n'),
   )
 }

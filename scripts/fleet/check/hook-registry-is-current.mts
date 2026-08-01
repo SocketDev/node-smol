@@ -97,6 +97,12 @@ export function capabilityGatedBullets(registryText: string): Set<string> {
   return gated
 }
 
+// Registry entries that name a real directory under `.claude/hooks/fleet/`
+// which is NOT a policy hook. `_shared` is the bundled dispatcher runtime the
+// policy hooks execute inside, and the registry documents it on purpose, so its
+// bullet is legitimate even though `realFleetHooks` excludes the directory.
+const NON_HOOK_REGISTRY_ENTRIES: ReadonlySet<string> = new Set(['_shared'])
+
 // Bullets that name no real hook dir (stale / misnamed) — the hard-fail set.
 // A capability-gated bullet whose hook is absent is NOT stale: the cascade
 // intentionally skips installing it in repos lacking the capability, yet the
@@ -106,8 +112,14 @@ export function staleBullets(
   real: ReadonlySet<string>,
   capabilityGated: ReadonlySet<string> = new Set(),
 ): string[] {
+  const flagged = bullets.filter(
+    id =>
+      !real.has(id) &&
+      !capabilityGated.has(id) &&
+      !NON_HOOK_REGISTRY_ENTRIES.has(id),
+  )
   // oxlint-disable-next-line unicorn/no-array-sort -- .filter() already returns a fresh array, no shared mutation; .toSorted() would trip socket/no-runtime-features-below-engine-floor in cascaded Node-18 repos.
-  return bullets.filter(id => !real.has(id) && !capabilityGated.has(id)).sort()
+  return flagged.sort()
 }
 
 function main(): void {

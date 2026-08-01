@@ -28,7 +28,7 @@ Two layers, deliberately paired (code-is-law):
   to invent a ref (see `fix-bundle-pin.mts`).
 - **Belt** — `scripts/fleet/check/release-pins-are-canonical.mts` re-asserts the
   invariant over the **committed** tree: the effective
-  `.config/…/socket-wheelhouse.json` `bundle` block and any git-tracked
+  `.config/repo/socket-wheelhouse.json` `bundle` block and any git-tracked
   `release-bundle-manifest.json`. This catches a pin hand-edited past the write
   gate, or a member config that predates it. It does not relax or duplicate the
   write-time shape check — it re-asserts it, and additionally names `stable` and

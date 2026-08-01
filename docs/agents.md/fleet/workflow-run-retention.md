@@ -65,13 +65,17 @@ node scripts/fleet/prune-workflow-runs.mts --all
 node scripts/fleet/prune-workflow-runs.mts --repo owner/name --days 30 --purge 'old-nightly-*'
 ```
 
-Auth: the `gh` CLI (`GITHUB_TOKEN` in CI, the OS keychain locally). Deleting
+Auth: the `gh` CLI (`GITHUB_TOKEN` in CI, the OS keychain locally). Removing
 runs needs the `actions: write` permission.
+
+Prune through this script, never a hand-rolled API loop or a manual sweep over
+individual runs. A hand loop skips the classification rules above and has no
+rate-limit backoff. Preview with `--dry-run` first.
 
 ## Scheduled caller
 
 `.github/workflows/prune-workflow-runs.yml` runs it weekly (Sundays 04:00 UTC)
-and on `workflow_shared` (with `days` / `dry-run` inputs). The job grants
+and on `workflow_dispatch` (with `days` / `dry-run` inputs). The job grants
 `actions: write` + `contents: read` and runs the script via the fleet
 `setup-and-install` action. Both the script and the workflow are cascaded
 byte-identical across the fleet — edit the `template/base/` copies and

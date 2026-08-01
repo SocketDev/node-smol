@@ -61,8 +61,8 @@ so it is neither cascaded nor packaged in the release — the source is enough.
   `.codex` moved to the generated-untracked class (`CODEX_ADAPTER_PATHS` is the
   single authority the gitignore fleet block references).
 - **Cross-harness adapters** (`.cursor/`, `.windsurf/`, `.clinerules/`, `.kiro/`,
-  `AGENTS.md`, `.github/copilot-instructions.md`) — generated per-repo/per-platform
-  by `gen/harness-adapters.mts` — a tracked symlink checks out wrong on Windows.
+  `AGENTS.md`, a `copilot-instructions.md` under `.github/`) — generated per-repo/per-platform
+  by `scripts/fleet/gen/harness-adapters.mts` — a tracked symlink checks out wrong on Windows.
 - **`.janus/`** (per-repo Janus ticket queue) — a fresh queue is created per-repo
   by `janus init` at setup / adoption; there is no canonical seed content, the
   queue is repo-local and dynamic. See

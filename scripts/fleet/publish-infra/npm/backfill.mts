@@ -4,7 +4,7 @@
  *   two already-published versions — 1.4.3 between a live 1.4.2 and 1.4.4.
  *   The normal release path can't reach it: the bump/changelog gate anchors
  *   to registry latest and refuses anything at-or-below it, and a historical
- *   ref can't be dispatched because workflow_shared needs npm-publish.yml
+ *   ref can't be dispatched because workflow_dispatch needs npm-publish.yml
  *   to exist on the dispatched ref. So the workflow is dispatched from MAIN
  *   with `checkout-ref` naming the CONTENT and `backfill-version` naming the
  *   gap, the bump stage is bypassed, and the staged publish runs behind five

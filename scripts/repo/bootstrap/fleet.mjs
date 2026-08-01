@@ -243,12 +243,8 @@ function resolveSettingsPath(dest) {
     if (existsSync(p)) return p
   }
 }
-const APPLIED_MARKER =
-  'node_modules/.cache/fleet/socket-wheelhouse/bundle-applied'
-const APPLIED_FILES_MARKER =
-  'node_modules/.cache/fleet/socket-wheelhouse/applied-files'
-const FLAT_APPLIED_MARKER =
-  'node_modules/.cache/socket-wheelhouse/bundle-applied'
+const APPLIED_MARKER = '.cache/fleet/socket-wheelhouse/bundle-applied'
+const APPLIED_FILES_MARKER = '.cache/fleet/socket-wheelhouse/applied-files'
 const LEGACY_APPLIED_MARKER = '.config/fleet/.bundle-applied'
 /**
  * Default bundle ref for a member — `bundle.ref` in its wheelhouse settings
@@ -322,8 +318,6 @@ function writeAppliedRef(dest, ref) {
   writeFileSync(p, `${ref}\n`)
   const legacy = path.join(dest, LEGACY_APPLIED_MARKER)
   if (existsSync(legacy)) rm(legacy)
-  const flat = path.join(dest, FLAT_APPLIED_MARKER)
-  if (existsSync(flat)) rm(flat)
 }
 
 //#endregion
@@ -591,7 +585,7 @@ function mergeWorkspaceYaml(config) {
 //#region template/base/scripts/fleet/_shared/hook-wiring.mts
 const DISPATCH_EVENTS = ['PreToolUse', 'PostToolUse', 'SessionStart', 'Stop']
 const INDEX_REL = '.claude/hooks/fleet/index.cjs'
-const LAUNCHER_REL = '.claude/hooks/fleet/_dispatch/dispatch-launcher'
+const LAUNCHER_REL = '.claude/hooks/fleet/_shared/dispatch-launcher'
 /**
  * The compile-cache baseline command for an event, the cascaded canonical.
  */
@@ -1340,8 +1334,7 @@ function formatLockStepError(parts) {
     `  Fix:    re-cascade to the pin — \`node scripts/repo/sync-scaffolding/cli.mts --target . --fix\` — OR re-pin bundle.ref to the release whose templateSha is ${cascadeSha}.`,
   ].join('\n')
 }
-const NOTICE_STORE_REL =
-  'node_modules/.cache/fleet/socket-wheelhouse/update-notice.json'
+const NOTICE_STORE_REL = '.cache/fleet/socket-wheelhouse/update-notice.json'
 const TWENTY_FOUR_HOURS_MS = 1440 * 60 * 1e3
 const UPDATE_NOTIFIER_OPT_OUT_ENV = 'WHEELHOUSE_NO_UPDATE_NOTIFIER'
 function readNoticeStore(dest) {

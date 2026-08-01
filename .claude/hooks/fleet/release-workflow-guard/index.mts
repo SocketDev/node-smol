@@ -662,7 +662,7 @@ export function workflowDeclaresDryRunInput(
 //   2. `-f dry-run=false|0|no` is NOT present, user didn't override
 //   3. No force-prod input is present (release/publish/prod=true)
 //   4. The target workflow YAML declares a `dry-run:` input under
-//      its `workflow_shared.inputs` block — without that, the gh
+//      its `workflow_dispatch.inputs` block — without that, the gh
 //      CLI silently accepts the flag but the workflow ignores it.
 //
 // The workflow lookup probes the current project first, then any
@@ -997,7 +997,7 @@ export const check = bashGuard((command, payload) => {
       '    (a) Verifiable dry-run:',
       '        - Pass `-f dry-run=true` explicitly, AND',
       '        - The workflow YAML must declare a `dry-run:` input under',
-      '          its workflow_shared.inputs block.',
+      '          its workflow_dispatch.inputs block.',
       '        - No force-prod overrides may be set',
       '          (e.g. -f release=true / -f publish=true).',
       `    (b) Per-workflow phrase bypass: the user types`,
@@ -1007,7 +1007,7 @@ export const check = bashGuard((command, payload) => {
       '        needs its own phrase.',
       '',
       ...(ledgerDiagnostic ? [ledgerDiagnostic] : []),
-      '  Without a bypass, the user runs workflow_shared jobs',
+      '  Without a bypass, the user runs workflow_dispatch jobs',
       '  manually. Tell the user to run the command in their own',
       '  terminal (or via the GitHub Actions UI), then resume.',
     ].join('\n'),

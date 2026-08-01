@@ -162,7 +162,7 @@ export function renderDispatchTable(
     `// Re-run the maker after adding/removing an eligible hook, then rebuild\n` +
     `// the bundle with scripts/fleet/build-hook-bundle.mts.\n` +
     `\n` +
-    `import type { DispatchHookEntry } from './dispatch.mts'\n` +
+    `import type { DispatchHookEntry } from './dispatch-hook.mts'\n` +
     `\n` +
     (importLines.length ? importLines.join('\n') + '\n\n' : '\n') +
     `export const DISPATCH_TABLE: Record<string, readonly DispatchHookEntry[]> = {\n` +

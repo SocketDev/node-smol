@@ -16,7 +16,7 @@
  *   nearest one. Two flavors of path live in this file:
  *
  *   1. STATIC CONSTANTS — paths that don't depend on runtime input. Example:
- *      `REPO_ROOT`, `CONFIG_DIR`, `NODE_MODULES_CACHE_DIR`. Importable as-is.
+ *      `REPO_ROOT`, `CONFIG_DIR`, `TOOL_CACHE_DIR`. Importable as-is.
  *   2. RESOLVER FUNCTIONS — paths that need a search, multiple accepted locations
  *      or runtime input, a target directory, a package name. Example:
  *      `findSocketWheelhouseConfig(repoRoot)` resolves
@@ -122,26 +122,52 @@ export function lockstepManifestCandidates(repoRoot: string): string[] {
 export const NODE_MODULES_DIR = path.join(REPO_ROOT, 'node_modules')
 
 /**
- * Absolute path to the repo's tool-cache root. Fleet convention: every
- * per-repo tool cache lives under here (vitest, taze, our own audit caches,
- * etc.). Auto-gitignored via the fleet's `**∕.cache/` rule. Build tools also
- * write here (oxlint, etc.). Segmented into `fleet/` + `repo/` below.
+ * Absolute path to an installed CLI in the repo's `node_modules/.bin/`.
+ *
+ * Spawn this instead of `pnpm exec <tool>`: the exec wrapper adds the package
+ * manager's startup and, in this fleet, a Socket Firewall interception on every
+ * call — seconds per spawn for a binary already sitting on disk. The fleet's
+ * `no-pm-exec-guard` blocks the wrapper form at Bash time; this is the same
+ * rule for source. On Windows the shim carries a `.cmd` extension, which
+ * `spawnSync` cannot exec directly, so callers pass `shell: true` there.
+ *
+ * @param name Bare tool name, `oxlint`, `oxfmt`, `vitest`.
  */
-// oxlint-disable-next-line socket/prefer-node-modules-dot-cache -- NODE_MODULES_DIR is the canonical node_modules root; the rule's per-arg check can't see through identifiers.
-export const NODE_MODULES_CACHE_DIR = path.join(NODE_MODULES_DIR, '.cache')
+export function nodeModulesBinPath(name: string): string {
+  return path.join(
+    NODE_MODULES_DIR,
+    '.bin',
+    process.platform === 'win32' ? `${name}.cmd` : name,
+  )
+}
+
+/**
+ * Absolute path to the repo's tool-cache root — a repo-root `.cache/`. Fleet
+ * convention: every per-repo tool cache and every piece of per-repo runtime
+ * state lives under here (coverage, the hook bundle cache, the active-edits
+ * ledger, our own audit caches). Auto-gitignored via the fleet's `**∕.cache/`
+ * rule. Segmented into `fleet/` + `repo/` below.
+ *
+ * It sits at the repo root, NOT inside the dependency tree, because the store
+ * has to outlive it: `rm -rf node_modules` and a package `clean` both took the
+ * old location with them, destroying state that concurrent hook processes were
+ * still writing (one such `clean` died on `ENOTEMPTY` mid-sweep). A `clean`
+ * scopes to build output; the cache root is not build output.
+ */
+export const TOOL_CACHE_DIR = path.join(REPO_ROOT, '.cache')
 
 /**
  * Fleet-owned tool-cache segment: fleet-managed caches (coverage, hooks,
  * snapshots, etc.) live under here — mirroring the `.claude/hooks/{fleet,repo}`
  * / `.github/actions/{fleet,repo}` segmentation.
  */
-export const FLEET_CACHE_DIR = path.join(NODE_MODULES_CACHE_DIR, 'fleet')
+export const FLEET_CACHE_DIR = path.join(TOOL_CACHE_DIR, 'fleet')
 
 /**
  * Repo-owned tool-cache segment: caches specific to THIS repo (not fleet
  * tooling) live under here.
  */
-export const REPO_CACHE_DIR = path.join(NODE_MODULES_CACHE_DIR, 'repo')
+export const REPO_CACHE_DIR = path.join(TOOL_CACHE_DIR, 'repo')
 
 /**
  * Single coverage home. Every tier's report is persisted here as one distinctly
