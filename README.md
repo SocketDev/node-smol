@@ -5,8 +5,6 @@
 
 Socket's customized Node.js distribution — source patches, builtins, SEA packaging, platform artifacts, and release assembly.
 
-## Why this repo exists
-
 node-smol owns the Node source patches, builtins, SEA packaging, platform
 artifacts, and release assembly for Socket's customized Node.js distribution.
 Reusable native capabilities remain Rust-canonical in their owner repositories;
