@@ -84,6 +84,9 @@ overrides:
   'yaml@2': '2.9.0'
 
 packages:
+  # Node build inputs migrated from the retired socket-btm (2026-08-01):
+  # the node-smol-builder itself plus its dependency closure.
+  - 'packages/*'
   - .claude/hooks/fleet/*
   - .config/fleet/oxlint-plugin
   - .config/fleet/oxlint-plugin/fleet/*
