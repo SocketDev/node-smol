@@ -84,9 +84,6 @@ overrides:
   'yaml@2': '2.9.0'
 
 packages:
-  # Product components with their own package.json — bin-stub-builder
-  # arrived from the retired socket-btm repo (2026-08-01).
-  - 'packages/*'
   - .claude/hooks/fleet/*
   - .config/fleet/oxlint-plugin
   - .config/fleet/oxlint-plugin/fleet/*
