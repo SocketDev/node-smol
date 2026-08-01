@@ -87,6 +87,9 @@ packages:
   # Node build inputs migrated from the retired socket-btm (2026-08-01):
   # the node-smol-builder itself plus its dependency closure.
   - 'packages/*'
+  # packages/npm/ is a CONTAINER of published scoped packages, not a
+  # package itself — its members need their own glob.
+  - 'packages/npm/@node-smol/*'
   - .claude/hooks/fleet/*
   - .config/fleet/oxlint-plugin
   - .config/fleet/oxlint-plugin/fleet/*
