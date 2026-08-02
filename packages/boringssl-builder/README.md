@@ -6,6 +6,34 @@ public symbol (`SSL_CTX_new` → `smol_SSL_CTX_new`, etc.) so the
 resulting `libsmol_crypto.a` / `libsmol_ssl.a` link cleanly alongside
 Node's bundled OpenSSL with zero collisions.
 
+## Retention — do not garbage-collect
+
+**No package.json declares this package, and that is not evidence it is
+unused.** `node-smol-builder` consumes it through a _dynamic_ import in
+`scripts/binary-released/shared/prepare-external-sources.mts`
+(`copyBoringsslArtifacts` → `ensureBoringssl`), which stages the prebuilt
+static libs + headers into the patched source tree so `node.gyp` can resolve
+`deps/boringssl/boringssl.gyp:boringssl` at configure time. The import is
+deliberately lazy so that file stays loadable before this package is
+installed, during early sync-scaffolding bootstrap. The cost of that choice is
+an invisible dependency edge: a sweep that reasons about declared deps reads
+this package as an orphan.
+
+It is also lsquic's crypto path (`HAVE_BORINGSSL` in
+`additions/source-patched/deps/lsquic.gyp`), so `node:smol-quic` and
+`node:smol-http3` ride on it too.
+
+Decision (2026-08-02): **keep it, in node-smol, until something proves it is
+unneeded.** Retaining a build input that nothing declares is far cheaper than
+re-deriving a symbol-prefixed BoringSSL build. `libpq-builder` (for
+`node-smol:sql`) and `onnxruntime-builder` have the same missing-edge shape and
+the same retention decision.
+
+Related: code-sign's C++ signing port needs BoringSSL too, but **not this
+one** — the `BORINGSSL_PREFIX=smol` renaming exists to let it sit beside
+Node's OpenSSL inside the Node binary. That port needs its own unprefixed
+provisioning; see its lockstep tracker.
+
 ## Why a separate builder
 
 BoringSSL takes 7–10 minutes per platform to compile cold. `node-smol`

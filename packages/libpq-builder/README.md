@@ -2,6 +2,17 @@
 
 Builds libpq (the PostgreSQL client library) with OpenSSL support so node-smol's `node:smol-sql` module can talk to Postgres directly without shelling out or loading a system shared library. Prefers a prebuilt artifact from GitHub releases; falls back to a from-source build when none matches the current platform.
 
+## Retention — do not garbage-collect
+
+**No package.json declares this package, and that is not evidence it is
+unused.** It is a build input for `node:smol-sql` — the Postgres client's libpq, wired through the node-smol build
+rather than a declared dependency edge, so a sweep that reasons about declared
+deps reads it as an orphan.
+
+Decision (2026-08-02): **keep it, in node-smol, until something proves it is
+unneeded.** Same call, and same missing-edge shape, as
+[`boringssl-builder`](../boringssl-builder/README.md).
+
 ## Build
 
 ```bash
