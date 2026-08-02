@@ -6,11 +6,70 @@
  * authentic Node.js release.
  */
 
-import { fetchChecksumFile } from '@socketsecurity/lib-stable/http-request/checksum-file'
+import { httpText } from '@socketsecurity/lib-stable/http-request'
 
 import { errorMessage } from './error-utils.mts'
 import { getSubmoduleChecksum } from './submodule-version.mts'
 import { getNodeVersion } from './tool-version-reader.mts'
+
+export async function fetchNodeChecksum(
+  version: string,
+  options?: { timeout?: number | undefined } | undefined,
+): Promise<
+  { hash: string; version: string } | { error: string; version: string }
+> {
+  options = { __proto__: null, ...options } as typeof options
+  const versionTag = `v${version}`
+  const timeout = options?.timeout ?? 10_000
+  const url = `https://nodejs.org/dist/${versionTag}/SHASUMS256.txt`
+  const tarballName = `node-${versionTag}.tar.gz`
+
+  let checksums
+  try {
+    // Force an uncompressed response. nodejs.org serves SHASUMS256.txt with
+    // zstd content-encoding, which httpText/fetchChecksumFile does not decode —
+    // the parser then sees binary garbage and returns zero entries, so the
+    // real `node-vX.Y.Z.tar.gz` line is reported "not found". Requesting
+    // `identity` makes the body plain text the GNU-style parser can read.
+    checksums = parseShasums(
+      await httpText(url, {
+        headers: { 'accept-encoding': 'identity' },
+        timeout,
+      }),
+    )
+  } catch (e) {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
+    return {
+      __proto__: null,
+      version,
+      error: `Failed to fetch ${url}: ${errorMessage(e)}`,
+    } as unknown as { error: string; version: string }
+  }
+
+  const sri = checksums[tarballName]
+  if (!sri) {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
+    return {
+      __proto__: null,
+      version,
+      error: `${tarballName} not found in SHASUMS256.txt`,
+    } as unknown as { error: string; version: string }
+  }
+
+  // parseShasums yields the file's own lowercase hex, which is the format both
+  // callers want: verifyNodeChecksum compares hex, and the update-node skill
+  // writes `sha256:<hex>` into .gitmodules. An SRI form is still decoded so a
+  // future switch back to an SRI-producing source stays compatible.
+  const hash = sri.startsWith('sha256-')
+    ? Buffer.from(sri.slice('sha256-'.length), 'base64').toString('hex')
+    : sri
+
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
+  return { __proto__: null, hash, version } as unknown as {
+    hash: string
+    version: string
+  }
+}
 
 /**
  * Fetch the SHA-256 checksum for a Node.js source tarball from nodejs.org.
@@ -33,62 +92,31 @@ import { getNodeVersion } from './tool-version-reader.mts'
  *   { hash: string; version: string } | { error: string; version: string }
  * >}
  */
-export async function fetchNodeChecksum(
-  version: string,
-  options?: { timeout?: number | undefined } | undefined,
-): Promise<
-  { hash: string; version: string } | { error: string; version: string }
-> {
-  options = { __proto__: null, ...options } as typeof options
-  const versionTag = `v${version}`
-  const timeout = options?.timeout ?? 10_000
-  const url = `https://nodejs.org/dist/${versionTag}/SHASUMS256.txt`
-  const tarballName = `node-${versionTag}.tar.gz`
-
-  let checksums
-  try {
-    // Force an uncompressed response. nodejs.org serves SHASUMS256.txt with
-    // zstd content-encoding, which httpText/fetchChecksumFile does not decode —
-    // the parser then sees binary garbage and returns zero entries, so the
-    // real `node-vX.Y.Z.tar.gz` line is reported "not found". Requesting
-    // `identity` makes the body plain text the GNU-style parser can read.
-    checksums = await fetchChecksumFile(url, {
-      headers: { 'accept-encoding': 'identity' },
-      timeout,
-    })
-  } catch (e) {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
-    return {
-      __proto__: null,
-      version,
-      error: `Failed to fetch ${url}: ${errorMessage(e)}`,
-    } as unknown as { error: string; version: string }
+/**
+ * Parse a GNU-style `SHASUMS256.txt` into `{ filename: hexDigest }`.
+ *
+ * `@socketsecurity/lib`'s `fetchChecksumFile` would do this, but it is a
+ * build-stubbed export: the published package compiles the implementation out
+ * and calling it throws "compiled out of this @socketsecurity/lib build". The
+ * format is two fields — digest, then filename, separated by whitespace, with
+ * the binary-mode `*` prefix optional — so parsing it here is cheaper than
+ * waiting on the export.
+ */
+export function parseShasums(text: string): Record<string, string> {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the map prototype-free but changes its inferred type.
+  const out = { __proto__: null } as unknown as Record<string, string>
+  const lines = text.split('\n')
+  for (let i = 0, { length } = lines; i < length; i += 1) {
+    const line = lines[i]!.trim()
+    if (!line || line.startsWith('#')) {
+      continue
+    }
+    const match = /^(?<digest>[0-9a-f]{64})\s+\*?(?<name>\S+)$/.exec(line)
+    if (match?.groups) {
+      out[match.groups['name']!] = match.groups['digest']!
+    }
   }
-
-  const sri = checksums[tarballName]
-  if (!sri) {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
-    return {
-      __proto__: null,
-      version,
-      error: `${tarballName} not found in SHASUMS256.txt`,
-    } as unknown as { error: string; version: string }
-  }
-
-  // fetchChecksumFile returns SRI ("sha256-<base64>"), but .gitmodules and this
-  // helper's documented contract use lowercase hex (`# node-X.Y.Z sha256:<hex>`).
-  // Decode to hex so both callers — verifyNodeChecksum's hex compare and the
-  // update-node skill's `sha256:<hex>` write — receive the format they expect.
-  // Same 32 bytes either way, so the integrity check is unchanged.
-  const hash = sri.startsWith('sha256-')
-    ? Buffer.from(sri.slice('sha256-'.length), 'base64').toString('hex')
-    : sri
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
-  return { __proto__: null, hash, version } as unknown as {
-    hash: string
-    version: string
-  }
+  return out
 }
 
 /**

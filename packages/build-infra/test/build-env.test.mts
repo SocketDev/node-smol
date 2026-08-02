@@ -24,7 +24,11 @@ import {
 } from '../lib/build-env.mts'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
-describe('build-env', () => {
+// Every case here probes an external toolchain by spawning it — emcc, python,
+// a compiler. Spawn latency grows with machine load, so the 10s default
+// per-test budget makes this suite fail on a busy box rather than on a real
+// defect. One tolerant budget at the describe level covers them all.
+describe('build-env', { timeout: tolerantTimeout(60_000) }, () => {
   describe(getPlatform, () => {
     it('should return a valid platform identifier', () => {
       const platform = getPlatform()

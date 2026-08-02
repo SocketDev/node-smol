@@ -22,14 +22,14 @@ const TARGET_ARCH = process.env['TARGET_ARCH'] || process.arch
 /**
  * Convert model to ONNX if needed.
  *
- * @param {Object} options - The options object.
- * @param {string} options.modelKey - The model key (e.g., 'minilm-l6',
+ * @param {Object} config - The options object.
+ * @param {string} config.modelKey - The model key (e.g., 'minilm-l6',
  *   'codet5')
- * @param {Object} options.modelSources - The model sources configuration.
- * @param {string} options.buildDir - The build directory path.
- * @param {string} options.packageName - The package name.
- * @param {string} options.modelsDir - The models directory path.
- * @param {boolean} options.forceRebuild - Whether to force rebuild.
+ * @param {Object} config.modelSources - The model sources configuration.
+ * @param {string} config.buildDir - The build directory path.
+ * @param {string} config.packageName - The package name.
+ * @param {string} config.modelsDir - The models directory path.
+ * @param {boolean} config.forceRebuild - Whether to force rebuild.
  */
 export async function convertToOnnx(config) {
   const {
@@ -107,20 +107,20 @@ if len(sys.argv) < 2:
 model_path = sys.argv[1]
 output_path = Path(model_path) / "model.onnx"
 
-# Load tokenizer and modelSource
+# Load tokenizer and config
 tokenizer = AutoTokenizer.from_pretrained(model_path)
-modelSource = AutoConfig.from_pretrained(model_path)
+config = AutoConfig.from_pretrained(model_path)
 
 # Load appropriate model based on architecture
-model_type = modelSource.model_type
+model_type = config.model_type
 if model_type == "t5":
     # For T5 models (like CodeT5), use encoder only for feature extraction
     model = T5EncoderModel.from_pretrained(model_path)
-    print(f"Loaded T5 encoder model ({modelSource.architectures})")
+    print(f"Loaded T5 encoder model ({config.architectures})")
 else:
     # For BERT, RoBERTa, etc., use AutoModel
     model = AutoModel.from_pretrained(model_path)
-    print(f"Loaded {model_type} model ({modelSource.architectures})")
+    print(f"Loaded {model_type} model ({config.architectures})")
 
 model.eval()
 

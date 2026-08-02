@@ -3,7 +3,9 @@
  *   Validates .gitmodules version and checksum parsing.
  */
 
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+
+import nock from 'nock'
 
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -17,6 +19,43 @@ import {
 } from '../lib/version-helpers.mts'
 import { REPO_ROOT as monorepoRoot } from '../../../scripts/fleet/paths.mts'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
+
+// The fleet test setup runs `nock.disableNetConnect()`, so anything reaching
+// nodejs.org must be mocked. Serve the real SHASUMS256.txt shape, using the
+// digest recorded for this submodule in .gitmodules so the verify path compares
+// like for like.
+function mockShasums(version: string, digest: string): void {
+  nock('https://nodejs.org')
+    .get(`/dist/v${version}/SHASUMS256.txt`)
+    .reply(
+      200,
+      [
+        `${digest}  node-v${version}.tar.gz`,
+        `${'0'.repeat(64)}  node-v${version}-darwin-arm64.tar.gz`,
+        '',
+      ].join('\n'),
+      { 'content-type': 'text/plain' },
+    )
+}
+
+// The digest .gitmodules records for the pinned Node submodule.
+function storedNodeDigest(): string {
+  const gitmodules = readFileSync(
+    path.join(monorepoRoot, '.gitmodules'),
+    'utf8',
+  )
+  const match = /# node-v?[\d.]+ sha256:(?<digest>[0-9a-f]{64})/.exec(
+    gitmodules,
+  )
+  if (!match?.groups) {
+    throw new Error('no node sha256 comment in .gitmodules')
+  }
+  return match.groups['digest']!
+}
+
+afterEach(() => {
+  nock.cleanAll()
+})
 
 describe('version-helpers', () => {
   describe(getNodeVersion, () => {
@@ -106,10 +145,9 @@ describe('version-helpers', () => {
     })
 
     it('should return undefined for submodules without checksum', () => {
-      const checksum = getSubmoduleChecksum(
-        'packages/lief-builder/upstream/lief',
-        'lief',
-      )
+      // `upstream/stuie` tracks a branch and publishes no release tags, so it
+      // carries a version comment with no sha256 — the shape this covers.
+      const checksum = getSubmoduleChecksum('upstream/stuie', 'stuie')
 
       expect(checksum).toBeUndefined()
     })
@@ -126,6 +164,7 @@ describe('version-helpers', () => {
       'should fetch checksum for current Node.js version',
       async () => {
         const version = getNodeVersion()
+        mockShasums(version, storedNodeDigest())
         const result = await fetchNodeChecksum(version, { timeout: 15_000 })
 
         expect('hash' in result).toBe(true)
@@ -152,6 +191,7 @@ describe('version-helpers', () => {
     it(
       'should verify checksum against nodejs.org',
       async () => {
+        mockShasums(getNodeVersion(), storedNodeDigest())
         const result = await verifyNodeChecksum({ timeout: 15_000 })
 
         // Should succeed (stored checksum matches upstream)
