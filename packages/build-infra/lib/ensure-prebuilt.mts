@@ -32,7 +32,10 @@ import { errorMessage } from './error-utils.mts'
 // the actual error-handling path, where a failure to load it
 // degrades gracefully (the transient-error hint is omitted).
 import { getDownloadedDir } from './paths.mts'
-import { verifyReleaseChecksum } from './release-checksums/core.mts'
+// The canonical copy is fleet-owned under scripts/fleet/build-infra/. A
+// member-local copy gets pruned by the next cascade, which is exactly what
+// happened to the one recovered here earlier.
+import { verifyReleaseChecksum } from '../../../scripts/fleet/build-infra/lib/release-checksums/core.mts'
 import {
   detectLibc,
   downloadSocketBtmRelease,
