@@ -20,6 +20,7 @@ import { getBuildPaths as getNodeSmolBuildPaths } from 'node-smol-builder/script
 
 import { MAX_NODE_BINARY_SIZE } from './helpers/constants.mts'
 import { getBinjectPath } from './helpers/paths.mts'
+import { isErrnoException } from '@socketsecurity/lib-stable/errors/predicates'
 
 const logger = getDefaultLogger()
 
@@ -102,6 +103,7 @@ export async function downloadNodeSmolRelease() {
     }
 
     // Find matching asset
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- GitHub release payload: only `name` is read, and a shape miss yields undefined from find(), which the caller already handles.
     const asset = (release.assets as Array<{ name: string }>).find(a =>
       new RegExp(assetPattern).test(a.name),
     )
@@ -277,10 +279,7 @@ describe('binject CLI', () => {
       )
       binjectExists = true
     } catch (e) {
-      const code =
-        e instanceof Error && 'code' in e
-          ? (e as NodeJS.ErrnoException).code
-          : undefined
+      const code = isErrnoException(e) ? e.code : undefined
       logger.fail('BINJECT not accessible:', code, errorMessage(e))
       binjectExists = false
       // Skip tests gracefully if binary not built yet

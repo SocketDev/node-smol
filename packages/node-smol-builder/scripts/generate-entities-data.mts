@@ -26,6 +26,14 @@ import { fileURLToPath } from 'node:url'
 import { httpJson } from '@socketsecurity/lib-stable/http-request'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
+// The response envelope is indexed, so these read as `unknown`. Render only
+// scalars; anything else would fall back to Object's default stringification.
+function scalar(value: unknown): string {
+  return typeof value === 'string' || typeof value === 'number'
+    ? String(value)
+    : ''
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const OUTPUT = path.resolve(
   __dirname,
@@ -47,7 +55,7 @@ async function main() {
     await httpJson<Record<string, { characters: string }>>(SOURCE_URL)
   if (!response['ok']) {
     throw new Error(
-      `Failed to fetch entities.json: ${response['statusCode']} ${response['statusText']}`,
+      `Failed to fetch entities.json: ${scalar(response['statusCode'])} ${scalar(response['statusText'])}`,
     )
   }
   const j = response['data']

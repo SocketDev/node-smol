@@ -47,6 +47,7 @@ export function checkpointMatchesNodeVersion(
   expectedVersion: string = expectedNodeVersion,
 ): boolean {
   try {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
     const checkpoint = JSON.parse(readFileSync(checkpointPath, 'utf8')) as {
       nodeVersion?: unknown | undefined
     }

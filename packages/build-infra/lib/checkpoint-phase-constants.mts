@@ -160,7 +160,7 @@ export const CHECKPOINT_CHAINS = {
   /**
    * Yoga Layout WASM pipeline checkpoint chain.
    * Dev skips wasm-optimized for faster builds.
-   * Includes SOURCE_CONFIGURED (yoga needs configuration step).
+   * Includes SOURCE_CONFIGURED, because yoga needs a configuration step.
    */
   yoga: (mode: string) => {
     if (mode === 'prod') {
@@ -232,6 +232,7 @@ for (const [name, generator] of Object.entries(CHECKPOINT_CHAINS)) {
     validateCheckpointChain(gen('dev'), `CHECKPOINT_CHAINS.${name}(dev)`)
     validateCheckpointChain(gen('prod'), `CHECKPOINT_CHAINS.${name}(prod)`)
   } else {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowing a value whose shape is established by the call above; TypeScript cannot carry that proof through this boundary.
     const gen = generator as () => string[]
     validateCheckpointChain(gen(), `CHECKPOINT_CHAINS.${name}`)
   }

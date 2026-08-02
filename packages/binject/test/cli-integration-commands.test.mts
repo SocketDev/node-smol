@@ -18,6 +18,7 @@ import { errorMessage } from 'build-infra/lib/error-utils'
 import { MAX_NODE_BINARY_SIZE } from './helpers/constants.mts'
 import { getBinjectPath } from './helpers/paths.mts'
 import { execCommand, findNodeBinary } from './cli-integration.test.mts'
+import { isErrnoException } from '@socketsecurity/lib-stable/errors/predicates'
 
 const logger = getDefaultLogger()
 
@@ -59,10 +60,7 @@ describe('binject CLI commands', () => {
       )
       binjectExists = true
     } catch (e) {
-      const code =
-        e instanceof Error && 'code' in e
-          ? (e as NodeJS.ErrnoException).code
-          : undefined
+      const code = isErrnoException(e) ? e.code : undefined
       logger.fail('BINJECT not accessible:', code, errorMessage(e))
       binjectExists = false
       return

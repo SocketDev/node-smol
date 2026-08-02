@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { PACKAGE_ROOT } from './constants.mts'
+import { isErrnoException } from '@socketsecurity/lib-stable/errors/predicates'
 
 /**
  * Extract submodule checksum from .gitmodules version comment.
@@ -46,7 +47,7 @@ export function getSubmoduleChecksum(
   try {
     content = readFileSync(gitmodulesPath, 'utf8')
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrnoException(e) && e.code === 'ENOENT') {
       throw new Error(
         `.gitmodules not found at: ${gitmodulesPath}\n` +
           'This function must be called from within a monorepo package.',
@@ -119,7 +120,7 @@ export function getSubmoduleVersion(
   try {
     content = readFileSync(gitmodulesPath, 'utf8')
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrnoException(e) && e.code === 'ENOENT') {
       throw new Error(
         `.gitmodules not found at: ${gitmodulesPath}\n` +
           'This function must be called from within a monorepo package.',

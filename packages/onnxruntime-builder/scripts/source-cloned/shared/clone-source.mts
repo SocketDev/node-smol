@@ -34,7 +34,7 @@ const logger = getDefaultLogger()
  *   path.
  * @param {string} options.sharedCmakeListsFile - CMakeLists.txt file path.
  */
-export async function cloneOnnxSource(options) {
+export async function cloneOnnxSource(config) {
   const {
     eigenCommit,
     eigenSha1,
@@ -46,7 +46,7 @@ export async function cloneOnnxSource(options) {
     sharedCmakeWebassemblyFile,
     sharedPostBuildSourceFile,
     sharedSourceDir,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...options } as typeof config
 
   logger.step('Cloning ONNX Runtime Source')
 
@@ -81,7 +81,7 @@ export async function cloneOnnxSource(options) {
       }),
     )
     const allPatchesApplied = results.every(
-      r => r.status === 'fulfilled' && r.value === true,
+      r => r.status === 'fulfilled' && r.value,
     )
 
     if (!allPatchesApplied) {
@@ -155,7 +155,7 @@ export async function cloneOnnxSource(options) {
     throw new Error('Failed to verify cloned commit SHA')
   }
 
-  const clonedSha = verifyResult.stdout.toString().trim()
+  const clonedSha = verifyResult.stdout.trim()
   if (clonedSha !== onnxSha) {
     throw new Error(
       `SHA mismatch: expected ${onnxSha}, got ${clonedSha}. ` +
@@ -245,7 +245,7 @@ export async function cloneOnnxSource(options) {
   // CACHE HANDLING: CMake copies wasm_post_build.js from source to build directory
   // during configuration. GitHub Actions may restore cached builds with old unpatched
   // copies, so we must:
-  // 1. Patch source file (single source of truth)
+  // 1. Patch the source file. It is the single source of truth.
   // 2. Delete cached build copy if present (forces CMake recopy from patched source)
   // 3. Clear CMake cache (ensures full reconfiguration)
   logger.substep('Patching wasm_post_build.js to handle modern Emscripten…')

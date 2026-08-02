@@ -172,7 +172,7 @@ export function computeSourceHash(
       a.hashPath < b.hashPath ? -1 : a.hashPath > b.hashPath ? 1 : 0,
     )
 
-  // Hash each file individually (include filename to detect renames that affect ordering)
+  // Hash each file individually. The filename is included so renames that affect ordering are detected.
   const fileHashes: string[] = []
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
   for (const { absolutePath, hashPath } of entries) {
@@ -185,7 +185,7 @@ export function computeSourceHash(
       // source changes.
       const content = readFileSync(absolutePath)
       // Include the hash-path in the digest: absolute in source-cache mode
-      // (renames must change hash), relative in artifact-integrity mode
+      // Renames must change the hash; relative in artifact-integrity mode.
       // (absolute path varies between creation temp-dir and restore final-dir
       // so must NOT affect hash). Missing-file sentinels use the same
       // hash-path for symmetry.
@@ -200,7 +200,7 @@ export function computeSourceHash(
         // Missing file indicates cache should be invalidated, not a fatal error
         // File deletion is a valid operation (e.g., removing unused patches)
         // Use a sentinel value that will differ from any valid hash
-        // Use hash-path (absolute or relative per mode) to avoid collisions
+        // Use the hash-path, absolute or relative per mode, to avoid collisions.
         // when different files with the same basename are missing.
         const sentinelHash = crypto
           .createHash('sha256')
@@ -265,7 +265,7 @@ export function generateHashComment(sourcePaths: string | string[]): string {
  *
  * @returns {Promise<boolean>} True if extraction needed, false if cached
  */
-export interface ShouldExtractOptions {
+export interface ShouldExtractConfig {
   hashPattern?: RegExp | undefined
   outputPath: string
   sourcePaths: string | string[]
@@ -277,7 +277,7 @@ export async function shouldExtract({
   outputPath,
   sourcePaths,
   validateOutput,
-}: ShouldExtractOptions): Promise<boolean> {
+}: ShouldExtractConfig): Promise<boolean> {
   // Normalize to array.
   const sources = Array.isArray(sourcePaths) ? sourcePaths : [sourcePaths]
 

@@ -18,7 +18,9 @@
  * path provided, uses the dev Final binary.
  */
 
-import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+
+import { safeDeleteSync } from '@socketsecurity/lib-stable/fs/safe'
 import path from 'node:path'
 import process from 'node:process'
 
@@ -138,7 +140,7 @@ export async function ensureWptStreams(force: boolean = false): Promise<void> {
     readdirSync(WPT_SUBMODULE_DIR).length > 0
   ) {
     logger.info('Force re-fetching WPT streams (clearing working tree)')
-    rmSync(WPT_SUBMODULE_DIR, { recursive: true })
+    safeDeleteSync(WPT_SUBMODULE_DIR)
   }
 
   // If the submodule working tree is already populated, trust it —
@@ -384,14 +386,16 @@ export async function runTestFile(
       timeout: FILE_TIMEOUT,
     })
 
-    const stdout = String(result.stdout ?? '')
+    const stdout = result.stdout ?? ''
     // Try to parse the JSON result line from stdout. The epilogue prints
     // exactly one, but META/test output may precede it.
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier
     for (const line of stdout.trim().split('\n')) {
       try {
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
         const parsed = JSON.parse(line) as Partial<TestResult>
         if (parsed && typeof parsed.passed === 'number') {
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
           return parsed as TestResult
         }
       } catch {

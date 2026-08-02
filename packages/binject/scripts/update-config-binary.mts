@@ -111,7 +111,8 @@ export function serializeSmolConfig(config: Record<string, unknown>) {
   const rawUpdate = config['update']
   const updateConfig: Record<string, unknown> =
     rawUpdate !== null && typeof rawUpdate === 'object'
-      ? (rawUpdate as Record<string, unknown>)
+      ? // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowing a value whose shape is established by the call above; TypeScript cannot carry that proof through this boundary.
+        (rawUpdate as Record<string, unknown>)
       : {}
   const fakeArgvEnv = validateString(
     'fakeArgvEnv',

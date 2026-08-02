@@ -42,6 +42,13 @@ const __dirname = path.dirname(__filename)
 
 const logger = getDefaultLogger()
 
+// `parseArgs` widens every value to the union of every declared option type, so
+// a string option still reads as string-or-boolean and interpolating it
+// stringifies a non-string. Narrow once here instead of at each call site.
+function stringArg(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
 // Parse arguments.
 const { values } = parseArgs({
   options: {
@@ -136,7 +143,7 @@ export async function expandTestPatterns(testDir, patterns) {
     }
   }
 
-  return [...matchedFiles].toSorted()
+  return [...matchedFiles].toSorted((a, b) => a.localeCompare(b))
 }
 
 /**
@@ -213,13 +220,14 @@ async function main() {
 
   // Determine binary path.
   // Use provided platform-arch or auto-detect from current system.
-  const platformArch = values['platform-arch'] || getDefaultPlatformArch()
+  const platformArch =
+    stringArg(values['platform-arch']) || getDefaultPlatformArch()
   const { outputFinalBinary } = getBuildPaths(
     BUILD_MODE,
     process.platform,
     platformArch,
   )
-  const binaryPath = values['binary'] || outputFinalBinary
+  const binaryPath = stringArg(values['binary']) || outputFinalBinary
 
   if (!existsSync(binaryPath)) {
     logger.fail(`Binary not found: ${binaryPath}`)
@@ -294,7 +302,8 @@ async function main() {
   }
 
   // Determine number of parallel jobs.
-  const jobs = values['jobs'] || Math.max(1, os.cpus().length - 1)
+  const jobs =
+    stringArg(values['jobs']) || String(Math.max(1, os.cpus().length - 1))
 
   logger.log('Test configuration:')
   logger.log(`  Parallel jobs: ${jobs}`)
@@ -312,7 +321,7 @@ async function main() {
     return
   }
 
-  // Pass filtered test files (relative to test dir) to test.py.
+  // Pass filtered test files, relative to the test dir, to test.py.
   const relativeTests = filtered.map(t => path.relative(testDir, t))
 
   const args = [

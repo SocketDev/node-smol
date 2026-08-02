@@ -47,8 +47,8 @@ if (
 const cacheRoot = defaultModelCacheRoot()
 const backend = createNativeBackend(binding, DEFAULT_MODEL_MANIFEST)
 const LanguageModel = createLanguageModel({
-  acquire: options =>
-    acquireModel(DEFAULT_MODEL_MANIFEST, { cacheRoot, ...options }),
+  acquire: config =>
+    acquireModel(DEFAULT_MODEL_MANIFEST, { cacheRoot, ...config }),
   availability: () => modelAvailability(DEFAULT_MODEL_MANIFEST, { cacheRoot }),
   backend,
   manifest: DEFAULT_MODEL_MANIFEST,

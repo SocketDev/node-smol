@@ -54,6 +54,7 @@ export async function readCheckpoint(
   const checkpointFile = path.join(buildDir, 'build-checkpoint')
   try {
     const content = await fs.readFile(checkpointFile, 'utf8')
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
     return JSON.parse(content) as Record<string, unknown>
   } catch {
     return undefined

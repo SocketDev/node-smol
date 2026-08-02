@@ -9,6 +9,7 @@ import { promises as fs, readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { errorMessage } from './error-utils.mts'
+import { isErrnoException } from '@socketsecurity/lib-stable/errors/predicates'
 
 /**
  * Load and parse external-tools.json.
@@ -26,7 +27,7 @@ export async function loadExternalTools(packageRoot: string) {
     const content = await fs.readFile(externalToolsPath, 'utf8')
     return JSON.parse(content)
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrnoException(e) && e.code === 'ENOENT') {
       throw new Error(
         `external-tools.json not found at: ${externalToolsPath}\n` +
           'Please ensure external-tools.json exists in the package root.',
@@ -60,7 +61,7 @@ export function loadExternalToolsSync(packageRoot: string) {
     const content = readFileSync(externalToolsPath, 'utf8')
     return JSON.parse(content)
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrnoException(e) && e.code === 'ENOENT') {
       throw new Error(
         `external-tools.json not found at: ${externalToolsPath}\n` +
           'Please ensure external-tools.json exists in the package root.',

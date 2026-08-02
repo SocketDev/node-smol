@@ -138,7 +138,7 @@ export async function downloadAndCache(
   const releaseLock = await acquireLock(lockPath)
 
   try {
-    // Re-check cache after acquiring lock (another process may have completed)
+    // Re-check the cache after acquiring the lock. Another process may have completed.
     if (
       existsSync(binaryPath) &&
       verifyCacheIntegrity(cachePath, resolverResult.sha256)
@@ -178,7 +178,7 @@ export async function downloadAndCache(
         throw new Error(
           `Checksum mismatch for ${tool} ${version}:\n` +
             `  Expected: ${resolverResult.sha256}\n` +
-            `  Actual:   ${actualSha256}`,
+            `  Actual:   ${String(actualSha256)}`,
         )
       }
       logger.substep('Checksum verified')
@@ -334,7 +334,7 @@ export function getCacheDir() {
   if (process.env['EXTERNAL_TOOLS_CACHE']) {
     return process.env['EXTERNAL_TOOLS_CACHE']
   }
-  // oxlint-disable-next-line socket/prefer-node-modules-dot-cache -- this IS the canonical node_modules/.cache shape; the rule's per-arg check can't see the 'node_modules' literal preceding '.cache'.
+  // oxlint-disable-next-line socket/prefer-repo-root-dot-cache -- deliberately the node_modules/.cache shape: this store is a dependency artifact that must die with `rm -rf node_modules`, not survive in the repo root.
   return path.join(process.cwd(), 'node_modules', '.cache', 'external-tools')
 }
 

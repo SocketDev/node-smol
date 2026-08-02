@@ -52,6 +52,7 @@ export async function downloadNodeSmolRelease() {
     }
 
     // Find matching asset
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- GitHub release payload: only `name` is read, and a shape miss yields undefined from find(), which the caller already handles.
     const asset = (release.assets as Array<{ name: string }>).find(a =>
       new RegExp(assetPattern).test(a.name),
     )

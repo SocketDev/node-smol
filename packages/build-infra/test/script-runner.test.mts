@@ -40,6 +40,7 @@ vi.mock(
   // Partial logger surface — only the methods script-runner calls; same
   // as-never shape the fleet's other logger mocks use.
   () =>
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowing a value whose shape is established by the call above; TypeScript cannot carry that proof through this boundary.
     ({
       getDefaultLogger: () => ({
         error: vi.fn(),
@@ -59,8 +60,8 @@ describe('script-runner', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockWhich = binModule.which as Mock
-    mockSpawn = spawnModule.spawn as Mock
+    mockWhich = vi.mocked(binModule.which)
+    mockSpawn = vi.mocked(spawnModule.spawn)
 
     // Default mock: pnpm is available
     mockWhich.mockResolvedValue('/usr/local/bin/pnpm')

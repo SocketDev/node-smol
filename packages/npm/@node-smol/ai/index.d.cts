@@ -53,11 +53,11 @@ export interface LanguageModelSession {
   ): Promise<number>
   prompt(
     input: string | LanguageModelMessage | readonly LanguageModelMessage[],
-    options?: { readonly signal?: AbortSignal | undefined },
+    options?: { readonly signal?: AbortSignal | undefined } | undefined,
   ): Promise<string>
   promptStreaming(
     input: string | LanguageModelMessage | readonly LanguageModelMessage[],
-    options?: { readonly signal?: AbortSignal | undefined },
+    options?: { readonly signal?: AbortSignal | undefined } | undefined,
   ): ReadableStream<string>
 }
 
@@ -71,7 +71,9 @@ export interface LanguageModelFactory {
   availability(): Promise<
     'available' | 'downloadable' | 'downloading' | 'unavailable'
   >
-  create(options?: LanguageModelCreateOptions): Promise<LanguageModelSession>
+  create(
+    options?: LanguageModelCreateOptions | undefined,
+  ): Promise<LanguageModelSession>
   params(): Promise<LanguageModelParams>
 }
 

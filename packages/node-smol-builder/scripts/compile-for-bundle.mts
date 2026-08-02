@@ -42,6 +42,12 @@ import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 import { detectBundleFeatures } from './detect-bundle-features.mts'
 import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'
 
+// `parseArgs` widens every value to the union of all declared option types, so
+// a string option still reads as string-or-boolean. Narrow once, here.
+function stringArg(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -55,12 +61,12 @@ const SOURCE_PATCHED = 'source-patched'
  * configure+make+strip layer so identical flag sets on the same platform reuse
  * one compiled binary. Sorted so flag order doesn't matter.
  */
-export function computeCacheKey(options: {
+export function computeCacheKey(config: {
   configureFlags: string[]
   platformArch: string
   buildMode: string
 }): string {
-  const opts = { __proto__: null, ...options } as typeof options
+  const opts = { __proto__: null, ...config } as typeof config
   const sorted = [...opts.configureFlags].toSorted()
   const material = JSON.stringify({
     sourceStage: SOURCE_PATCHED,
@@ -83,12 +89,12 @@ export function computeCacheKey(options: {
  * build.mts's own checkpoint cache reuses the warm source-patched sub-phase, so
  * a plain build neither errors nor re-clones an unchanged tree.
  */
-export function buildBuildArgs(options: {
+export function buildBuildArgs(config: {
   buildScriptPath: string
   buildMode: 'dev' | 'prod'
   flags: string[]
 }): string[] {
-  const opts = { __proto__: null, ...options } as typeof options
+  const opts = { __proto__: null, ...config } as typeof config
   const args = [
     opts.buildScriptPath,
     opts.buildMode === 'prod' ? '--prod' : '--dev',
@@ -116,7 +122,7 @@ async function main(): Promise<void> {
     strict: false,
   })
 
-  const bundlePath = values['bundle'] as string | undefined
+  const bundlePath = stringArg(values['bundle'])
   if (!bundlePath || !existsSync(bundlePath)) {
     logger.fail(
       `--bundle is required and must exist (got: ${bundlePath ?? '<none>'})`,
@@ -124,12 +130,12 @@ async function main(): Promise<void> {
     process.exitCode = 1
     return
   }
-  const vfsPath = values['vfs'] as string | undefined
+  const vfsPath = stringArg(values['vfs'])
 
   let overrides:
     | { keep?: string[] | undefined; drop?: string[] | undefined }
     | undefined
-  const overridesPath = values['overrides'] as string | undefined
+  const overridesPath = stringArg(values['overrides'])
   if (overridesPath) {
     try {
       const { promises: fs } = await import('node:fs')

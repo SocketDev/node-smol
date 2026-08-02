@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-// oxlint-disable-next-line socket/prefer-stable-external-semver -- installed lib-stable does not export ./external/semver yet
+// oxlint-disable-next-line socket/prefer-stable-external-semver, socket/prefer-lib-versions-over-semver -- this suite exists to compare our implementation AGAINST semver, so semver is the subject; lib-stable does not export ./external/semver yet.
 import semver from 'semver'
 import './helpers/primordials-shim.mts'
 import {
@@ -400,7 +400,7 @@ describe('Comparison with semver gold standard', () => {
         ourThrows = true
       }
 
-      // Both should handle it the same way (throw or not throw)
+      // Both should handle it the same way: either both throw or neither does.
       expect(ourThrows).toBe(semverThrows)
     })
 

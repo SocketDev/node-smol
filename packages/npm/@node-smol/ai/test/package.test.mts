@@ -10,18 +10,19 @@ const {
   loadNativeBinding,
   nativePackageName,
   resolveNativeTarget,
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- CJS interop in a test: `require` returns `any`, and this shape assertion is what gives the destructure below its types.
 } = require('../lib/native-loader.js') as {
   NATIVE_TARGETS: readonly string[]
-  loadNativeBinding(options: {
+  loadNativeBinding: (options: {
     require: (specifier: string) => unknown
     target: string
-  }): unknown
-  nativePackageName(target: string): string
-  resolveNativeTarget(inputs: {
+  }) => unknown
+  nativePackageName: (target: string) => string
+  resolveNativeTarget: (inputs: {
     arch: string
     isMusl: boolean
     platform: NodeJS.Platform
-  }): string | undefined
+  }) => string | undefined
 }
 
 const npmRoot = path.resolve(import.meta.dirname, '../..')
@@ -39,6 +40,7 @@ const expectedTargets = [
 describe('@node-smol/ai package family', () => {
   it('declares the complete eight-target N-API family', () => {
     expect(NATIVE_TARGETS).toEqual(expectedTargets)
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
     const wrapper = JSON.parse(
       readFileSync(path.join(npmRoot, 'ai', 'package.json'), 'utf8'),
     ) as { optionalDependencies: Record<string, string> }
@@ -55,6 +57,7 @@ describe('@node-smol/ai package family', () => {
       expect(existsSync(path.join(directory, 'README.md')), packageName).toBe(
         true,
       )
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
         cpu: string[]
         libc?: string[] | undefined

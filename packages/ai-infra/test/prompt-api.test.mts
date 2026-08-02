@@ -4,15 +4,19 @@ import { describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { createLanguageModel, createNativeBackend, formatPrompt } =
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- CJS interop in a test: `require` returns `any`, and this shape assertion is what gives the destructure below its types.
   require('../../npm/@node-smol/ai/lib/prompt-api.js') as {
-    createLanguageModel(options: Record<string, unknown>): LanguageModelFactory
-    createNativeBackend(
+    createLanguageModel: (
+      options: Record<string, unknown>,
+    ) => LanguageModelFactory
+    createNativeBackend: (
       binding: Record<string, unknown>,
       manifest: Record<string, unknown>,
-    ): NativeLanguageModelBackend
-    formatPrompt(input: unknown, promptFormat: string): string
+    ) => NativeLanguageModelBackend
+    formatPrompt: (input: unknown, promptFormat: string) => string
   }
 const { TEST_MODEL_MANIFEST } =
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- CJS interop in a test: `require` returns `any`, and this shape assertion is what gives the destructure below its types.
   require('../../npm/@node-smol/ai/lib/model-manifest.js') as {
     TEST_MODEL_MANIFEST: Record<string, unknown> & {
       id: string
@@ -23,7 +27,9 @@ const { TEST_MODEL_MANIFEST } =
 interface LanguageModelFactory {
   availability(): Promise<string>
   capabilities: Record<string, boolean>
-  create(options?: Record<string, unknown>): Promise<LanguageModelSession>
+  create(
+    options?: Record<string, unknown> | undefined,
+  ): Promise<LanguageModelSession>
   params(): Promise<Record<string, number>>
 }
 
@@ -128,6 +134,7 @@ describe('Prompt API-compatible LanguageModel', () => {
     })
 
     expect(progress).toHaveBeenCalledWith({ loaded: 0.5 })
+    // oxlint-disable-next-line typescript/unbound-method -- asserting on the spy reference itself; it is never invoked, so there is no receiver to lose.
     expect(backend.createSession).toHaveBeenCalledWith('/cache/model.gguf', {
       maxTokens: 128,
       seed: 42,
@@ -148,6 +155,7 @@ describe('Prompt API-compatible LanguageModel', () => {
     await expect(session.measureInputUsage('abc')).resolves.toBe(3)
     await expect(session.clone()).resolves.toMatchObject({ inputQuota: 256 })
     session.destroy()
+    // oxlint-disable-next-line typescript/unbound-method -- asserting on the spy reference itself; it is never invoked, so there is no receiver to lose.
     expect(nativeSession.destroy).toHaveBeenCalledOnce()
   })
 

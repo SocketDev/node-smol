@@ -6,7 +6,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { exec } from 'build-infra/lib/build-helpers'
+import { execBuildStep } from 'build-infra/lib/build-helpers'
 import { errorMessage } from 'build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -102,7 +102,7 @@ async function main(): Promise<void> {
     )
   }
   logger.info(`Configuring smol_ai.node (${mode}, ${target})…`)
-  await exec(
+  await execBuildStep(
     'cmake',
     cmakeConfigureArgs({
       buildDir,
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
     { cwd: packageRoot },
   )
   logger.info('Compiling pinned llama.cpp and the N-API adapter…')
-  await exec(
+  await execBuildStep(
     'cmake',
     ['--build', buildDir, '--target', 'smol_ai', '--parallel'],
     { cwd: packageRoot },

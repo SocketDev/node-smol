@@ -52,9 +52,9 @@ describe('preflight-checks', () => {
     vi.clearAllMocks()
 
     const buildHelpers = await import('../lib/build-helpers.mts')
-    mockCheckDiskSpace = buildHelpers.checkDiskSpace as Mock
-    mockCheckCompiler = buildHelpers.checkCompiler as Mock
-    mockCheckPythonVersion = buildHelpers.checkPythonVersion as Mock
+    mockCheckDiskSpace = vi.mocked(buildHelpers.checkDiskSpace)
+    mockCheckCompiler = vi.mocked(buildHelpers.checkCompiler)
+    mockCheckPythonVersion = vi.mocked(buildHelpers.checkPythonVersion)
 
     // Default: all checks pass
     mockCheckDiskSpace.mockResolvedValue({

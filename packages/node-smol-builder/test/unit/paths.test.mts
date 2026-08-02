@@ -5,12 +5,13 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { checkpointMatchesNodeVersion } from '../paths.mts'
+import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 
 let tempDir: string | undefined
 
-afterEach(() => {
+afterEach(async () => {
   if (tempDir) {
-    rmSync(tempDir, { force: true, recursive: true })
+    await safeDelete(tempDir)
     tempDir = undefined
   }
 })

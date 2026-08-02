@@ -44,7 +44,7 @@ const logger = getDefaultLogger()
  * @param {string} options.modelsDir - The models directory path.
  * @param {boolean} options.forceRebuild - Whether to force rebuild.
  */
-export async function downloadModel(options) {
+export async function downloadModel(config) {
   const {
     buildDir,
     forceRebuild,
@@ -52,7 +52,7 @@ export async function downloadModel(options) {
     modelSources,
     modelsDir,
     packageName,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   if (
     !(await shouldRun(
@@ -67,9 +67,9 @@ export async function downloadModel(options) {
 
   logger.step(`Downloading ${modelKey} model`)
 
-  const config = modelSources[modelKey]
-  const sources = [config.primary, ...config.fallbacks]
-  const { revision } = config
+  const modelSource = modelSources[modelKey]
+  const sources = [modelSource.primary, ...modelSource.fallbacks]
+  const { revision } = modelSource
 
   for (let i = 0, { length } = sources; i < length; i += 1) {
     const source = sources[i]

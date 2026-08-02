@@ -1,11 +1,11 @@
 /**
  * @file Test262 result classifier.
- *   Buckets each Result into success/failure/falsePositive/falseNegative
+ *   Buckets each Test262Result into success/failure/falsePositive/falseNegative
  *   cross allowed/disallowed and reports an overall Summary. Pure
  *   functions — no I/O.
  */
 
-import type { Result, ResultBuckets, Summary } from './types.mts'
+import type { ResultBuckets, Summary, Test262Result } from './types.mts'
 
 export function emptyBuckets(): ResultBuckets {
   return {
@@ -17,7 +17,7 @@ export function emptyBuckets(): ResultBuckets {
 }
 
 /**
- * Bucket each Result and decide whether its placement is allowed
+ * Bucket each Test262Result and decide whether its placement is allowed
  * relative to the allowlist. Returns a Summary whose `passed` is true
  * iff every disallowed bucket is empty and no allowlist entry went
  * unmatched.
@@ -27,7 +27,7 @@ export function emptyBuckets(): ResultBuckets {
  * (stale entries — drift signal).
  */
 export function interpret(
-  results: readonly Result[],
+  results: readonly Test262Result[],
   allowlist: readonly string[],
   durationMs: number,
 ): Summary {

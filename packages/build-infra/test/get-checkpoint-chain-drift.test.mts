@@ -29,7 +29,8 @@ export async function loadChain(builder: string) {
       path.join(PACKAGES_DIR, builder, 'scripts/get-checkpoint-chain.mts'),
     ).href
   )
-  return mod.getCheckpointChain as (mode?: string) => string[]
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowing a value whose shape is established by the call above; TypeScript cannot carry that proof through this boundary.
+  return mod.getCheckpointChain as (mode?: string | undefined) => string[]
 }
 
 describe('get-checkpoint-chain drift guard', () => {

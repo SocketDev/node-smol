@@ -27,6 +27,7 @@ const logger = getDefaultLogger()
  * @type {Readonly<Record<string, string>>}
  */
 export const RELEASE_PLATFORM_MAP: Readonly<Partial<Record<string, string>>> =
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
   Object.freeze({
     __proto__: null,
     darwin: 'darwin',
@@ -40,6 +41,7 @@ export const RELEASE_PLATFORM_MAP: Readonly<Partial<Record<string, string>>> =
  * @type {Readonly<Record<string, string>>}
  */
 export const RELEASE_ARCH_MAP: Readonly<Partial<Record<string, string>>> =
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
   Object.freeze({
     __proto__: null,
     arm64: 'arm64',
@@ -201,6 +203,7 @@ export async function getCurrentPlatformArch(): Promise<string> {
 // mostly identity. `x86` remains a legacy alias for `ia32` since some
 // older release assets still ship under that name.
 const ASSET_PLATFORM_TO_NODE: Readonly<Partial<Record<string, string>>> =
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
   Object.freeze({
     __proto__: null,
     darwin: 'darwin',
@@ -209,6 +212,7 @@ const ASSET_PLATFORM_TO_NODE: Readonly<Partial<Record<string, string>>> =
   } as Partial<Record<string, string>>)
 
 const ASSET_ARCH_TO_NODE: Readonly<Partial<Record<string, string>>> =
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
   Object.freeze({
     __proto__: null,
     arm64: 'arm64',

@@ -212,8 +212,10 @@ function takeObject(idx) {
  * JSON-encoded result string. Meant to be called from JavaScript as:
  *
  *     const result = JSON.parse(aqs_match(source, selector))
+ *
  * @param {string} source
  * @param {string} selector
+ *
  * @returns {string}
  */
 exports.aqs_match = function (source, selector) {
@@ -247,8 +249,10 @@ exports.aqs_match = function (source, selector) {
 
 /**
  * Standalone parse function (matches Acorn API)
+ *
  * @param {string} code
  * @param {any} options
+ *
  * @returns {any}
  */
 exports.parse = function (code, options) {
@@ -275,7 +279,9 @@ exports.parse = function (code, options) {
 
 /**
  * Check if code has syntax errors (returns true if valid)
+ *
  * @param {string} code
+ *
  * @returns {boolean}
  */
 exports.is_valid = function (code) {
@@ -290,7 +296,8 @@ exports.is_valid = function (code) {
 }
 
 /**
- * Get version information
+ * Get version information.
+ *
  * @returns {string}
  */
 exports.version = function () {
@@ -311,11 +318,13 @@ exports.version = function () {
 }
 
 /**
- * Find innermost node containing position
+ * Find innermost node containing position.
+ *
  * @param {string} code
  * @param {number} pos
  * @param {string | null | undefined} node_type
  * @param {any} options_js
+ *
  * @returns {any}
  */
 exports.findNodeAround = function (code, pos, node_type, options_js) {
@@ -357,11 +366,13 @@ exports.findNodeAround = function (code, pos, node_type, options_js) {
 }
 
 /**
- * Find first node starting at or after position
+ * Find first node starting at or after position.
+ *
  * @param {string} code
  * @param {number} pos
  * @param {string | null | undefined} node_type
  * @param {any} options_js
+ *
  * @returns {any}
  */
 exports.findNodeAfter = function (code, pos, node_type, options_js) {
@@ -403,11 +414,13 @@ exports.findNodeAfter = function (code, pos, node_type, options_js) {
 }
 
 /**
- * Find outermost node ending before position
+ * Find outermost node ending before position.
+ *
  * @param {string} code
  * @param {number} pos
  * @param {string | null | undefined} node_type
  * @param {any} options_js
+ *
  * @returns {any}
  */
 exports.findNodeBefore = function (code, pos, node_type, options_js) {
@@ -449,7 +462,8 @@ exports.findNodeBefore = function (code, pos, node_type, options_js) {
 }
 
 /**
- * Simple walk - parse code and call visitor for each node type
+ * Simple walk - parse code and call visitor for each node type.
+ *
  * @param {string} code
  * @param {any} visitors_obj
  * @param {any} options_js
@@ -481,7 +495,8 @@ exports.simple = function (code, visitors_obj, options_js) {
 }
 
 /**
- * Walk with ancestors
+ * Walk with ancestors.
+ *
  * @param {string} code
  * @param {any} visitors_obj
  * @param {any} options_js
@@ -513,7 +528,8 @@ exports.walk = function (code, visitors_obj, options_js) {
 }
 
 /**
- * Full walk with enter/exit
+ * Full walk with enter/exit.
+ *
  * @param {string} code
  * @param {any} visitors_obj
  * @param {any} options_js
@@ -546,6 +562,7 @@ exports.full = function (code, visitors_obj, options_js) {
 
 /**
  * Recursive walk — visitor controls child traversal via c(child, state)
+ *
  * @param {string} code
  * @param {any} state
  * @param {any} funcs
@@ -579,10 +596,12 @@ exports.recursive = function (code, state, funcs, options_js) {
 }
 
 /**
- * Find all nodes matching a type string
+ * Find all nodes matching a type string.
+ *
  * @param {string} code
  * @param {string} node_type
  * @param {any} options_js
+ *
  * @returns {any}
  */
 exports.findAll = function (code, node_type, options_js) {
@@ -614,9 +633,11 @@ exports.findAll = function (code, node_type, options_js) {
 }
 
 /**
- * Count nodes by type
+ * Count nodes by type.
+ *
  * @param {string} code
  * @param {any} options_js
+ *
  * @returns {any}
  */
 exports.countNodes = function (code, options_js) {
@@ -642,7 +663,8 @@ exports.countNodes = function (code, options_js) {
 }
 
 /**
- * Walk all nodes, calling callback with (node, ancestors) for every node
+ * Walk all nodes, calling callback with (node, ancestors) for every node.
+ *
  * @param {string} code
  * @param {any} callback
  * @param {any} options_js
@@ -674,12 +696,14 @@ exports.fullAncestor = function (code, callback, options_js) {
 }
 
 /**
- * Find innermost node at exact start/end position
+ * Find innermost node at exact start/end position.
+ *
  * @param {string} code
  * @param {number | null | undefined} start
  * @param {number | null | undefined} end
  * @param {string | null | undefined} node_type
  * @param {any} options_js
+ *
  * @returns {any}
  */
 exports.findNodeAt = function (code, start, end, node_type, options_js) {
@@ -745,16 +769,19 @@ class WasmParser {
     return this
   }
   /**
-   * Parse JavaScript code and return AST as JsValue (WASM) or JSON string (native).
+   * Parse JavaScript code and return AST as JsValue (WASM) or JSON string
+   * (native).
    *
    * The WASM path goes:
-   *   options_js (JS object)
-   *     → options_from_jsvalue (Reflect-based reads, no serde_json)
-   *     → parser → JSON string
-   *     → JSON::parse (one cheap JS-side parse)
-   *     → JsValue handed back to JS as the AST root
+   * options_js (JS object)
+   * → options_from_jsvalue (Reflect-based reads, no serde_json)
+   * → parser → JSON string
+   * → JSON::parse (one cheap JS-side parse)
+   * → JsValue handed back to JS as the AST root.
+   *
    * @param {string} code
    * @param {any} options_js
+   *
    * @returns {any}
    */
   parse(code, options_js) {

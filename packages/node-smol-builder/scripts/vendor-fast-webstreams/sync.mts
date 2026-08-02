@@ -179,6 +179,7 @@ export async function processSourceFiles() {
   const vendorPkgPath = path.join(VENDOR_DIR, 'package.json')
   // readPackageJson({ editable: true }) returns an EditablePackageJson at
   // runtime; its declared return type does not model the editable variant.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- deliberately passing input the signature forbids — the assertion is how this test reaches the validator's reject path.
   const editablePkgJson = (await readPackageJson(pkgJsonPath, {
     editable: true,
   })) as unknown as EditablePackageJson | undefined
@@ -272,7 +273,7 @@ export function wireNativeChunkPool(content: string, filename: string) {
 
   // indexOf returns -1 if 'use strict' isn't found (e.g. converted-to-CJS
   // upstream uses double quotes); guard so we don't silently inject at the
-  // very start of the file (which would land above any banner comment).
+  // very start of the file. That position lands above any banner comment.
   const useStrictIdx = content.indexOf("'use strict'")
   if (useStrictIdx === -1) {
     throw new Error(

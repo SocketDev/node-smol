@@ -316,7 +316,7 @@ export async function createCheckpoint(
   // Artifact hash for corruption detection during checkpoint restoration
   let artifactHash: string | undefined
 
-  // If artifactPath is provided, create tarball (works for both files and directories)
+  // If artifactPath is provided, create a tarball. This works for both files and directories.
   // The tarball is ALWAYS checkpoint.tar.gz, and artifactPath in metadata tells where to extract
   if (data.artifactPath) {
     const resolvedArtifactPath = path.isAbsolute(data.artifactPath)
@@ -379,7 +379,7 @@ export async function createCheckpoint(
       //   → Creates tarball containing Final/ as top-level entry
       //   → During extraction, preserves directory structure (Final/ is recreated in extractDir)
 
-      // Log directory contents before archiving (helps diagnose tar failures)
+      // Log directory contents before archiving. The listing is what makes a tar failure diagnosable.
       if (isDir) {
         try {
           const contents = await fs.readdir(resolvedArtifactPath)
@@ -406,7 +406,7 @@ export async function createCheckpoint(
 
       // Handle tar exit codes:
       // - Exit code 0: Success
-      // - Exit code 1: "file changed as we read it" warning (common on busy filesystems)
+      // - Exit code 1: a "file changed as we read it" warning, common on busy filesystems.
       //   This is non-fatal - tar still creates a valid archive with the file contents
       //   at the time of reading. We check the tarball validity below.
       // - Exit code 2+: Fatal errors
@@ -488,12 +488,12 @@ export async function createCheckpoint(
         )
       }
       // Verify expected content is present in tarball
-      const tarContents = (listResult.stdout ?? '').toString()
+      const tarContents = listResult.stdout ?? ''
       if (!tarContents || !tarContents.includes(tarBase)) {
         throw new Error(`Tarball missing expected file: ${tarBase}`)
       }
 
-      // Atomically rename temp file to final location (prevents concurrent write corruption)
+      // Atomically rename the temp file to its final location so a concurrent write cannot corrupt it.
       // Note: If concurrent builds create the same checkpoint, both will produce identical
       // output (deterministic builds), so it's safe if one overwrites the other. We use
       // unique temp files (PID + random ID) to prevent corruption during creation.
@@ -578,7 +578,7 @@ export async function createCheckpoint(
     logger.substep(`Saved ${checkpointName}.tar.gz (${sizeMB}MB)`)
 
     // Compute artifact hash from tarball-extracted contents (not live directory)
-    // This ensures validation compares identical states (tarball extraction vs tarball extraction)
+    // This ensures validation compares identical states: tarball extraction against tarball extraction.
     if (!checkpointAlreadyExists) {
       // Extract tarball to temporary location to hash its actual contents
       // This prevents hash mismatches when live directory is modified after tarball creation
@@ -693,7 +693,7 @@ export async function createCheckpoint(
   logger.log('')
 
   // Only write checkpoint JSON if we actually created the tarball
-  // (skip if concurrent build already created it)
+  // Skip when a concurrent build already created it.
   if (!checkpointAlreadyExists) {
     const checkpointData = {
       created: new Date().toISOString(),
@@ -740,7 +740,7 @@ export async function createCheckpoint(
   // GITLAB_CI, CIRCLECI, TRAVIS, and ~25 other CI env vars — keep
   // the fleet's single source of truth so cleanup semantics stay
   // consistent with the rest of the build pipeline.
-  const isCI = Boolean(getCI())
+  const isCI = getCI()
 
   if (isCI && checkpointChain && data.artifactPath) {
     try {
@@ -870,7 +870,12 @@ export async function getCheckpointData(
   try {
     const content = await fs.readFile(checkpointFile, 'utf8')
     try {
-      return JSON.parse(content) as CheckpointData
+      const parsed: unknown = JSON.parse(content)
+      if (typeof parsed !== 'object' || parsed === null) {
+        throw new TypeError('checkpoint JSON is not an object')
+      }
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
+      return parsed as CheckpointData
     } catch (e) {
       throw new Error(
         `Checkpoint file contains invalid JSON: ${checkpointFile}. ` +
@@ -979,7 +984,7 @@ export async function removeCheckpoint(
   const tarballFile = checkpointFile.replace('.json', '.tar.gz')
   const lockFile = `${tarballFile}.lock`
 
-  await Promise.all([
+  await Promise.allSettled([
     safeDelete(checkpointFile),
     safeDelete(tarballFile),
     safeDelete(lockFile),
@@ -1130,7 +1135,7 @@ export async function restoreCheckpoint(
         return false
       }
 
-      // Validate checkpoint size limit (same as creation time validation)
+      // Validate the checkpoint size limit, the same validation creation time applies.
       const MAX_CHECKPOINT_SIZE = 2 * 1024 * 1024 * 1024
       if (stats.size > MAX_CHECKPOINT_SIZE) {
         logger.warn(
@@ -1252,11 +1257,9 @@ export async function restoreCheckpoint(
             // creation time (line ~520) where relativeTo was the temp extract
             // dir — the tarball was the same in both cases, only the absolute
             // extract prefix differs.
-            const extractedHash = await computeSourceHash(
-              [targetPath],
-              undefined,
-              { relativeTo: extractDir },
-            )
+            const extractedHash = computeSourceHash([targetPath], undefined, {
+              relativeTo: extractDir,
+            })
 
             // Require artifactHash for all checkpoints (corruption detection)
             if (!checkpointData.artifactHash) {
@@ -1348,7 +1351,7 @@ export async function restoreCheckpoint(
         throw e
       }
 
-      // Verify artifact is not empty (basic quick check for files)
+      // Verify the artifact is not empty — a basic quick check for files.
       if (extractedStats.isFile() && extractedStats.size === 0) {
         throw new Error(
           `Checkpoint extraction failed: artifact is empty after extraction: ${path.basename(targetPath)}`,
@@ -1395,7 +1398,7 @@ export async function shouldRun(
   packageName: string,
   checkpointName: string,
   force = false,
-  sourcePaths: string[] | undefined = undefined,
+  sourcePaths?: string[] | undefined,
   options: {
     readonly arch?: string | undefined
     readonly buildMode?: string | undefined
@@ -1410,7 +1413,7 @@ export async function shouldRun(
     return true
   }
 
-  const exists = await hasCheckpoint(buildDir, packageName, checkpointName)
+  const exists = hasCheckpoint(buildDir, packageName, checkpointName)
 
   if (!exists) {
     return true

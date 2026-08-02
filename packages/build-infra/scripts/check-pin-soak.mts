@@ -91,6 +91,7 @@ export function auditExternalToolsJson() {
   )) {
     let parsed: { tools?: Record<string, unknown> | undefined }
     try {
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
       parsed = JSON.parse(readFileSync(file, 'utf8')) as {
         tools?: Record<string, unknown> | undefined
       }
@@ -215,8 +216,9 @@ export function auditWorkflows() {
 export function printBucket(
   label: string,
   items: PinFinding[],
-  options: { alwaysList: boolean },
+  config: { alwaysList: boolean },
 ) {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
   const opts = { __proto__: null, ...options } as { alwaysList: boolean }
   if (items.length === 0) {
     return
@@ -243,8 +245,9 @@ export function pushFromSoak(
   lineNumber: number,
   identifier: string,
   published: string,
-  options: { hasSeparateAnnotation: boolean },
+  config: { hasSeparateAnnotation: boolean },
 ) {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
   const opts = { __proto__: null, ...options } as {
     hasSeparateAnnotation: boolean
   }

@@ -78,7 +78,7 @@ export function parseArgs(args) {
           logger.fail(`Unknown target: ${target}`)
           logger.fail(`Available targets: ${LINUX_TARGETS.join(', ')}`)
           process.exitCode = 1
-          return
+          return undefined
         }
       }
     }

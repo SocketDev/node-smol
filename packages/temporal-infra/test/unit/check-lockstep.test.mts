@@ -16,6 +16,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 
 let fixtureRoot: string
 
@@ -23,8 +24,8 @@ beforeEach(() => {
   fixtureRoot = mkdtempSync(path.join(os.tmpdir(), 'temporal-lockstep-test-'))
 })
 
-afterEach(() => {
-  rmSync(fixtureRoot, { recursive: true, force: true })
+afterEach(async () => {
+  await safeDelete(fixtureRoot)
 })
 
 /**

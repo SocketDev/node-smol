@@ -2,7 +2,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import { exec } from 'build-infra/lib/build-helpers'
+import { execBuildStep } from 'build-infra/lib/build-helpers'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -25,7 +25,7 @@ export async function copySmolAiArtifacts(
     platformArch,
   )
   await fs.mkdir(buildDir, { recursive: true })
-  await exec(
+  await execBuildStep(
     'cmake',
     [
       '-S',
@@ -39,7 +39,7 @@ export async function copySmolAiArtifacts(
     ],
     { cwd: LANGUAGE_MODEL_INFRA_DIR },
   )
-  await exec(
+  await execBuildStep(
     'cmake',
     ['--build', buildDir, '--target', 'smol_ai_core', '--parallel'],
     { cwd: LANGUAGE_MODEL_INFRA_DIR },

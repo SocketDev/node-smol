@@ -227,14 +227,17 @@ describe('update Config Validation', () => {
   describe('type Validation', () => {
     it('should reject non-object config', () => {
       expect(() =>
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- deliberately passing input the signature forbids — the assertion is how this test reaches the validator's reject path.
         serializeUpdateConfig(undefined as unknown as Record<string, unknown>),
       ).toThrow(/config.*must be an object/)
 
       expect(() =>
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- deliberately passing input the signature forbids — the assertion is how this test reaches the validator's reject path.
         serializeUpdateConfig('string' as unknown as Record<string, unknown>),
       ).toThrow(/config.*must be an object/)
 
       expect(() =>
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- deliberately passing input the signature forbids — the assertion is how this test reaches the validator's reject path.
         serializeUpdateConfig(123 as unknown as Record<string, unknown>),
       ).toThrow(/config.*must be an object/)
     })

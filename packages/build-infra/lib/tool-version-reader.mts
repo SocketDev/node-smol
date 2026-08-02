@@ -13,6 +13,7 @@ import {
   loadExternalTools,
   loadExternalToolsSync,
 } from './external-tools-loader.mts'
+import { isErrnoException } from '@socketsecurity/lib-stable/errors/predicates'
 
 /**
  * Load CMake version from external-tools.json.
@@ -121,6 +122,7 @@ export function getMinPythonVersion(): string {
 
     minPythonVersion = version
   }
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowing a value whose shape is established by the call above; TypeScript cannot carry that proof through this boundary.
   return minPythonVersion as string
 }
 
@@ -149,7 +151,7 @@ export function getNodeVersion(): string {
 
       nodeVersion = version
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (isErrnoException(e) && e.code === 'ENOENT') {
         throw new Error(
           `.node-version file not found at: ${NODE_VERSION_FILE}\n` +
             'Please ensure .node-version exists in the monorepo root.',

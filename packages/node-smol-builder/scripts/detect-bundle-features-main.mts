@@ -18,6 +18,12 @@ import { errorMessage } from 'build-infra/lib/error-utils'
 import { SMOL_FEATURES } from './lib/smol-features.mts'
 import { detectBundleFeatures } from './detect-bundle-features.mts'
 
+// `parseArgs` widens every value to the union of all declared option types, so
+// a string option still reads as string-or-boolean. Narrow once, here.
+function stringArg(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
 const logger = getDefaultLogger()
 
 export function replacerStripProto(_key: string, value: unknown): unknown {
@@ -49,7 +55,7 @@ async function main(): Promise<void> {
     strict: false,
   })
 
-  const bundlePath = values['bundle'] as string | undefined
+  const bundlePath = stringArg(values['bundle'])
   if (!bundlePath || !existsSync(bundlePath)) {
     logger.fail(
       `--bundle is required and must exist (got: ${bundlePath ?? '<none>'})`,
@@ -57,7 +63,7 @@ async function main(): Promise<void> {
     process.exitCode = 1
     return
   }
-  const vfsPath = values['vfs'] as string | undefined
+  const vfsPath = stringArg(values['vfs'])
   if (vfsPath && !existsSync(vfsPath)) {
     logger.fail(`--vfs path does not exist: ${vfsPath}`)
     process.exitCode = 1
@@ -67,7 +73,7 @@ async function main(): Promise<void> {
   let overrides:
     | { keep?: string[] | undefined; drop?: string[] | undefined }
     | undefined
-  const overridesPath = values['overrides'] as string | undefined
+  const overridesPath = stringArg(values['overrides'])
   if (overridesPath) {
     try {
       const pkg = JSON.parse(await fs.readFile(overridesPath, 'utf8'))

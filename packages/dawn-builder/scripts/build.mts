@@ -55,13 +55,13 @@ import { getBuildPaths, UPSTREAM_DAWN_DIR } from './paths.mts'
 
 const logger = getDefaultLogger()
 
-interface BuildOptions {
+interface BuildConfig {
   mode: 'dev' | 'prod'
   force: boolean
   jobs: number
 }
 
-export function parseArgs(): BuildOptions {
+export function parseArgs(): BuildConfig {
   const args = process.argv.slice(2)
   let mode: 'dev' | 'prod' = 'dev'
   let force = false

@@ -32,6 +32,12 @@ import {
   getLatestStrippedBinary,
 } from '../test/paths.mts'
 
+// `parseArgs` widens every value to the union of all declared option types, so
+// a string option still reads as string-or-boolean. Narrow once, here.
+function stringArg(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
 const __filename = fileURLToPath(import.meta.url)
 const logger = getDefaultLogger()
 
@@ -45,7 +51,7 @@ export function probeBuiltin(binary: string, specifier: string): boolean {
       ],
       { encoding: 'utf8', timeout: 5000 },
     )
-    return String(r.stdout ?? '').trim() === 'true'
+    return (r.stdout ?? '').trim() === 'true'
   } catch {
     return false
   }
@@ -65,7 +71,7 @@ async function main(): Promise<void> {
   })
 
   const binary =
-    (values['binary'] as string | undefined) ??
+    stringArg(values['binary']) ??
     getLatestFinalBinary() ??
     getLatestStrippedBinary()
 

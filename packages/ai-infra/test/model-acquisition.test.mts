@@ -15,20 +15,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { acquireModel, modelAvailability, modelPartialPath } =
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- CJS interop in a test: `require` returns `any`, and this shape assertion is what gives the destructure below its types.
   require('../../npm/@node-smol/ai/lib/model-acquisition.js') as {
-    acquireModel(
+    acquireModel: (
       manifest: ModelManifest,
       options: AcquireModelOptions,
-    ): Promise<string>
-    modelAvailability(
+    ) => Promise<string>
+    modelAvailability: (
       manifest: ModelManifest,
       options: { cacheRoot: string },
-    ): Promise<string>
-    modelPartialPath(cacheRoot: string, manifest: ModelManifest): string
+    ) => Promise<string>
+    modelPartialPath: (cacheRoot: string, manifest: ModelManifest) => string
   }
 const { modelCachePath } =
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- CJS interop in a test: `require` returns `any`, and this shape assertion is what gives the destructure below its types.
   require('../../npm/@node-smol/ai/lib/model-manifest.js') as {
-    modelCachePath(cacheRoot: string, manifest: ModelManifest): string
+    modelCachePath: (cacheRoot: string, manifest: ModelManifest) => string
   }
 
 interface AcquireModelOptions {

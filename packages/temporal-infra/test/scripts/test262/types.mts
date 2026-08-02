@@ -54,7 +54,7 @@ export interface SkippedResult {
   reason: string
 }
 
-export type Result = Test | SkippedResult
+export type Test262Result = Test | SkippedResult
 
 export interface ResultBuckets {
   success: Test[]

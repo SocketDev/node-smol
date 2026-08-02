@@ -16,7 +16,7 @@
  *      binary. Catches a wiring bug where a flag was emitted but the gate
  *      didn't fire.
  *   2. Presence probes: every feature the manifest KEPT is still importable.
- *      Catches over-trimming (a flag that dropped more than intended).
+ *      Catches over-trimming, where a flag dropped more than intended.
  *   3. Soft-use fallback: for `soft` features that were dropped, the app must run
  *      its fallback path with the binding absent (handled by the app suite +,
  *      if provided, a fallback assertion). Plus the app's own suite must pass
@@ -42,6 +42,12 @@ import {
 
 import { detectBundleFeatures } from './detect-bundle-features.mts'
 import { featureBuiltinSpecifier, SMOL_FEATURES } from './lib/smol-features.mts'
+
+// `parseArgs` widens every value to the union of all declared option types, so
+// a string option still reads as string-or-boolean. Narrow once, here.
+function stringArg(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -122,7 +128,7 @@ export function spawnProbe(binary: string, specifier: string): boolean {
       ],
       { encoding: 'utf8', timeout: 5000 },
     )
-    return String(r.stdout ?? '').trim() === '1'
+    return (r.stdout ?? '').trim() === '1'
   } catch {
     return true
   }
@@ -144,8 +150,8 @@ async function main(): Promise<void> {
     strict: false,
   })
 
-  const binary = values['binary'] as string | undefined
-  const bundlePath = values['bundle'] as string | undefined
+  const binary = stringArg(values['binary'])
+  const bundlePath = stringArg(values['bundle'])
   if (!binary || !existsSync(binary)) {
     logger.fail(
       `--binary is required and must exist (got: ${binary ?? '<none>'})`,
@@ -164,7 +170,7 @@ async function main(): Promise<void> {
   let overrides:
     | { keep?: string[] | undefined; drop?: string[] | undefined }
     | undefined
-  const overridesPath = values['overrides'] as string | undefined
+  const overridesPath = stringArg(values['overrides'])
   if (overridesPath) {
     try {
       const { promises: fs } = await import('node:fs')
@@ -180,14 +186,15 @@ async function main(): Promise<void> {
   // Re-derive the manifest the trimmed binary was built from (same inputs).
   const manifest = await detectBundleFeatures({
     bundlePath,
-    vfsPath: values['vfs'] as string | undefined,
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
+    vfsPath: stringArg(values['vfs']),
     overrides,
   })
 
   const expectations: FeatureExpectation[] = SMOL_FEATURES.map(f => ({
     __proto__: null,
     feature: f.name,
-    expectDropped: manifest.features[f.name]?.drop === true,
+    expectDropped: manifest.features[f.name]?.drop,
   }))
 
   let failed = false
@@ -217,7 +224,7 @@ async function main(): Promise<void> {
   }
 
   // App suite against the trimmed binary — the real backstop for dynamic requires.
-  const suite = values['suite'] as string | undefined
+  const suite = stringArg(values['suite'])
   if (suite) {
     logger.log('Running app suite against trimmed binary:')
     logger.substep(suite)

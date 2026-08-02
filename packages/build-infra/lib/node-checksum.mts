@@ -35,7 +35,7 @@ import { getNodeVersion } from './tool-version-reader.mts'
  */
 export async function fetchNodeChecksum(
   version: string,
-  options?: { timeout?: number | undefined },
+  options?: { timeout?: number | undefined } | undefined,
 ): Promise<
   { hash: string; version: string } | { error: string; version: string }
 > {
@@ -57,6 +57,7 @@ export async function fetchNodeChecksum(
       timeout,
     })
   } catch (e) {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
     return {
       __proto__: null,
       version,
@@ -66,6 +67,7 @@ export async function fetchNodeChecksum(
 
   const sri = checksums[tarballName]
   if (!sri) {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
     return {
       __proto__: null,
       version,
@@ -82,6 +84,7 @@ export async function fetchNodeChecksum(
     ? Buffer.from(sri.slice('sha256-'.length), 'base64').toString('hex')
     : sri
 
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
   return { __proto__: null, hash, version } as unknown as {
     hash: string
     version: string
@@ -115,10 +118,14 @@ export async function fetchNodeChecksum(
  *   error?: string
  * }>}
  */
-export async function verifyNodeChecksum(options?: {
-  version?: string | undefined
-  timeout?: number | undefined
-}): Promise<{
+export async function verifyNodeChecksum(
+  options?:
+    | {
+        version?: string | undefined
+        timeout?: number | undefined
+      }
+    | undefined,
+): Promise<{
   valid: boolean
   expected?: string | undefined
   actual?: string | undefined
@@ -141,6 +148,7 @@ export async function verifyNodeChecksum(options?: {
   )
 
   if (!stored) {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
     return {
       __proto__: null,
       valid: false,
@@ -151,6 +159,7 @@ export async function verifyNodeChecksum(options?: {
 
   const result = await fetchNodeChecksum(version, options)
   if ('error' in result) {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
     return {
       __proto__: null,
       valid: false,
@@ -159,6 +168,7 @@ export async function verifyNodeChecksum(options?: {
     } as unknown as VerifyResult
   }
 
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the literal prototype-free but changes its inferred type, so the cast is what makes the declared shape hold.
   return {
     __proto__: null,
     valid: stored.hash === result.hash,

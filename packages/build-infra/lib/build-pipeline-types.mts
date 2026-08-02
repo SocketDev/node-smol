@@ -80,7 +80,7 @@ export interface PipelineStage {
    */
   run: (
     ctx: PipelineContext,
-    params?: Record<string, unknown>,
+    params?: Record<string, unknown> | undefined,
   ) => Promise<StageResult | undefined | void>
   /**
    * Use the shared build directory for this checkpoint.
@@ -117,7 +117,7 @@ export interface PipelineContext {
 /**
  * Manifest for one pipeline run.
  */
-export interface RunPipelineOptions {
+export interface RunPipelineConfig {
   /**
    * Extra files whose contents contribute to the package-wide cache key.
    */

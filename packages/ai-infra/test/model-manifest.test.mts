@@ -8,11 +8,12 @@ const {
   modelCachePath,
   TEST_MODEL_MANIFEST,
   validateModelManifest,
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- CJS interop in a test: `require` returns `any`, and this shape assertion is what gives the destructure below its types.
 } = require('../../npm/@node-smol/ai/lib/model-manifest.js') as {
   DEFAULT_MODEL_MANIFEST: ModelManifest
-  modelCachePath(cacheRoot: string, manifest: ModelManifest): string
+  modelCachePath: (cacheRoot: string, manifest: ModelManifest) => string
   TEST_MODEL_MANIFEST: ModelManifest
-  validateModelManifest(manifest: ModelManifest): void
+  validateModelManifest: (manifest: ModelManifest) => void
 }
 
 interface ModelManifest {
