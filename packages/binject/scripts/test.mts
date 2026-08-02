@@ -18,7 +18,7 @@ import {
 const runCommand = runCommandRaw as (
   command: string,
   args: string[],
-  cwd?: string,
+  cwd?: string | undefined,
 ) => Promise<void>
 import { getBuildMode } from 'build-infra/lib/constants'
 import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'

@@ -29,6 +29,7 @@ import {
   execCommand,
   getBinaryPath,
 } from './cross-package-integration-helpers.mts'
+import { tolerantTimeout } from '../../../../test/fleet/_shared/lib/timing.mts'
 
 export {
   execCommand,
@@ -82,368 +83,414 @@ afterAll(async () => {
 
 describe.skipIf(!allBinariesExist)('cross-package integration', () => {
   describe('complete pipeline: compress → inject → execute', () => {
-    it('should compress node binary, inject SEA, and execute', async () => {
-      // Step 1: Compress Node.js binary using binpress
-      const compressedNode = path.join(testDir, 'node_compressed')
+    it(
+      'should compress node binary, inject SEA, and execute',
+      async () => {
+        // Step 1: Compress Node.js binary using binpress
+        const compressedNode = path.join(testDir, 'node_compressed')
 
-      logger.log('  Step 1: Compressing Node.js binary…')
-      const compressResult = await execCommand(
-        BINPRESS,
-        [NODE_BINARY, '-o', compressedNode],
-        { timeout: 120_000 },
-      )
+        logger.log('  Step 1: Compressing Node.js binary…')
+        const compressResult = await execCommand(
+          BINPRESS,
+          [NODE_BINARY, '-o', compressedNode],
+          { timeout: 120_000 },
+        )
 
-      expect(compressResult.code).toBe(0)
-      expect(existsSync(compressedNode)).toBeTruthy()
+        expect(compressResult.code).toBe(0)
+        expect(existsSync(compressedNode)).toBeTruthy()
 
-      await makeExecutable(compressedNode)
+        await makeExecutable(compressedNode)
 
-      // Verify compressed binary works
-      const compressedExec = await execCommand(compressedNode, ['--version'])
-      expect(compressedExec.code).toBe(0)
-      expect(compressedExec.stdout).toMatch(/^v\d+\.\d+\.\d+/)
+        // Verify compressed binary works
+        const compressedExec = await execCommand(compressedNode, ['--version'])
+        expect(compressedExec.code).toBe(0)
+        expect(compressedExec.stdout).toMatch(/^v\d+\.\d+\.\d+/)
 
-      // Step 2: Inject SEA blob using binject
-      const seaBlob = path.join(testDir, 'test.blob')
-      await fs.writeFile(seaBlob, Buffer.from('CROSS_PACKAGE_TEST_SEA_CONTENT'))
+        // Step 2: Inject SEA blob using binject
+        const seaBlob = path.join(testDir, 'test.blob')
+        await fs.writeFile(
+          seaBlob,
+          Buffer.from('CROSS_PACKAGE_TEST_SEA_CONTENT'),
+        )
 
-      const finalBinary = path.join(testDir, 'node_final')
+        const finalBinary = path.join(testDir, 'node_final')
 
-      logger.log('  Step 2: Injecting SEA blob…')
-      const injectResult = await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        compressedNode,
-        '-o',
-        finalBinary,
-        '--sea',
-        seaBlob,
-      ])
+        logger.log('  Step 2: Injecting SEA blob…')
+        const injectResult = await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          compressedNode,
+          '-o',
+          finalBinary,
+          '--sea',
+          seaBlob,
+        ])
 
-      expect(injectResult.code).toBe(0)
-      expect(existsSync(finalBinary)).toBeTruthy()
+        expect(injectResult.code).toBe(0)
+        expect(existsSync(finalBinary)).toBeTruthy()
 
-      // Step 3: Execute final binary
-      logger.log('  Step 3: Executing final binary…')
-      const finalExec = await execCommand(finalBinary, ['--version'])
+        // Step 3: Execute final binary
+        logger.log('  Step 3: Executing final binary…')
+        const finalExec = await execCommand(finalBinary, ['--version'])
 
-      expect(finalExec.code).toBe(0)
-      expect(finalExec.stdout).toMatch(/^v\d+\.\d+\.\d+/)
+        expect(finalExec.code).toBe(0)
+        expect(finalExec.stdout).toMatch(/^v\d+\.\d+\.\d+/)
 
-      // Verify binary is functional
-      const evalResult = await execCommand(finalBinary, [
-        '--eval',
-        'console.log("integration test works")',
-      ])
+        // Verify binary is functional
+        const evalResult = await execCommand(finalBinary, [
+          '--eval',
+          'console.log("integration test works")',
+        ])
 
-      expect(evalResult.code).toBe(0)
-      expect(evalResult.stdout).toContain('integration test works')
-      // 4 minute timeout
-    }, 240_000)
+        expect(evalResult.code).toBe(0)
+        expect(evalResult.stdout).toContain('integration test works')
+        // 4 minute timeout
+      },
+      tolerantTimeout(240_000),
+    )
 
-    it('should compress, inject VFS, and execute', async () => {
-      const compressedNode = path.join(testDir, 'node_vfs_compressed')
+    it(
+      'should compress, inject VFS, and execute',
+      async () => {
+        const compressedNode = path.join(testDir, 'node_vfs_compressed')
 
-      // Compress
-      await execCommand(BINPRESS, [NODE_BINARY, '-o', compressedNode], {
-        timeout: 120_000,
-      })
-      await makeExecutable(compressedNode)
+        // Compress
+        await execCommand(BINPRESS, [NODE_BINARY, '-o', compressedNode], {
+          timeout: 120_000,
+        })
+        await makeExecutable(compressedNode)
 
-      // Inject SEA and VFS (binject requires --sea with --vfs)
-      const seaBlob = path.join(testDir, 'test_vfs.blob')
-      await fs.writeFile(seaBlob, Buffer.from('CROSS_PACKAGE_VFS_SEA_CONTENT'))
+        // Inject SEA and VFS (binject requires --sea with --vfs)
+        const seaBlob = path.join(testDir, 'test_vfs.blob')
+        await fs.writeFile(
+          seaBlob,
+          Buffer.from('CROSS_PACKAGE_VFS_SEA_CONTENT'),
+        )
 
-      const vfsArchive = path.join(testDir, 'test.vfs')
-      await fs.writeFile(
-        vfsArchive,
-        Buffer.from('CROSS_PACKAGE_TEST_VFS_CONTENT'),
-      )
+        const vfsArchive = path.join(testDir, 'test.vfs')
+        await fs.writeFile(
+          vfsArchive,
+          Buffer.from('CROSS_PACKAGE_TEST_VFS_CONTENT'),
+        )
 
-      const finalBinary = path.join(testDir, 'node_vfs_final')
+        const finalBinary = path.join(testDir, 'node_vfs_final')
 
-      await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        compressedNode,
-        '-o',
-        finalBinary,
-        '--sea',
-        seaBlob,
-        '--vfs',
-        vfsArchive,
-      ])
+        await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          compressedNode,
+          '-o',
+          finalBinary,
+          '--sea',
+          seaBlob,
+          '--vfs',
+          vfsArchive,
+        ])
 
-      // Execute
-      const execResult = await execCommand(finalBinary, ['--version'])
+        // Execute
+        const execResult = await execCommand(finalBinary, ['--version'])
 
-      expect(execResult.code).toBe(0)
-      expect(execResult.stdout).toMatch(/^v\d+\.\d+\.\d+/)
-    }, 240_000)
+        expect(execResult.code).toBe(0)
+        expect(execResult.stdout).toMatch(/^v\d+\.\d+\.\d+/)
+      },
+      tolerantTimeout(240_000),
+    )
 
-    it('should compress, inject both SEA and VFS, and execute', async () => {
-      const compressedNode = path.join(testDir, 'node_both_compressed')
+    it(
+      'should compress, inject both SEA and VFS, and execute',
+      async () => {
+        const compressedNode = path.join(testDir, 'node_both_compressed')
 
-      // Compress
-      await execCommand(BINPRESS, [NODE_BINARY, '-o', compressedNode], {
-        timeout: 120_000,
-      })
-      await makeExecutable(compressedNode)
+        // Compress
+        await execCommand(BINPRESS, [NODE_BINARY, '-o', compressedNode], {
+          timeout: 120_000,
+        })
+        await makeExecutable(compressedNode)
 
-      // Inject both resources
-      const seaBlob = path.join(testDir, 'both.blob')
-      await fs.writeFile(seaBlob, Buffer.from('SEA_CONTENT'))
+        // Inject both resources
+        const seaBlob = path.join(testDir, 'both.blob')
+        await fs.writeFile(seaBlob, Buffer.from('SEA_CONTENT'))
 
-      const vfsArchive = path.join(testDir, 'both.vfs')
-      await fs.writeFile(vfsArchive, Buffer.from('VFS_CONTENT'))
+        const vfsArchive = path.join(testDir, 'both.vfs')
+        await fs.writeFile(vfsArchive, Buffer.from('VFS_CONTENT'))
 
-      const finalBinary = path.join(testDir, 'node_both_final')
+        const finalBinary = path.join(testDir, 'node_both_final')
 
-      await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        compressedNode,
-        '-o',
-        finalBinary,
-        '--sea',
-        seaBlob,
-        '--vfs',
-        vfsArchive,
-      ])
+        await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          compressedNode,
+          '-o',
+          finalBinary,
+          '--sea',
+          seaBlob,
+          '--vfs',
+          vfsArchive,
+        ])
 
-      // Execute
-      const execResult = await execCommand(finalBinary, ['--version'])
+        // Execute
+        const execResult = await execCommand(finalBinary, ['--version'])
 
-      expect(execResult.code).toBe(0)
-      expect(execResult.stdout).toMatch(/^v\d+\.\d+\.\d+/)
-    }, 240_000)
+        expect(execResult.code).toBe(0)
+        expect(execResult.stdout).toMatch(/^v\d+\.\d+\.\d+/)
+      },
+      tolerantTimeout(240_000),
+    )
   })
 
   describe('pipeline validation', () => {
-    it('should maintain binary functionality through full pipeline', async () => {
-      // Get original behavior
-      const originalResult = await execCommand(NODE_BINARY, [
-        '--eval',
-        'console.log(process.version)',
-      ])
-      const originalVersion = originalResult.stdout.trim()
+    it(
+      'should maintain binary functionality through full pipeline',
+      async () => {
+        // Get original behavior
+        const originalResult = await execCommand(NODE_BINARY, [
+          '--eval',
+          'console.log(process.version)',
+        ])
+        const originalVersion = originalResult.stdout.trim()
 
-      // Through pipeline
-      const compressed = path.join(testDir, 'validate_compressed')
-      await execCommand(BINPRESS, [NODE_BINARY, '-o', compressed], {
-        timeout: 120_000,
-      })
-      await makeExecutable(compressed)
+        // Through pipeline
+        const compressed = path.join(testDir, 'validate_compressed')
+        await execCommand(BINPRESS, [NODE_BINARY, '-o', compressed], {
+          timeout: 120_000,
+        })
+        await makeExecutable(compressed)
 
-      const seaBlob = path.join(testDir, 'validate.blob')
-      await fs.writeFile(seaBlob, Buffer.from('test'))
+        const seaBlob = path.join(testDir, 'validate.blob')
+        await fs.writeFile(seaBlob, Buffer.from('test'))
 
-      const final = path.join(testDir, 'validate_final')
-      await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        compressed,
-        '-o',
-        final,
-        '--sea',
-        seaBlob,
-      ])
+        const final = path.join(testDir, 'validate_final')
+        await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          compressed,
+          '-o',
+          final,
+          '--sea',
+          seaBlob,
+        ])
 
-      // Check final behavior matches original
-      const finalResult = await execCommand(final, [
-        '--eval',
-        'console.log(process.version)',
-      ])
+        // Check final behavior matches original
+        const finalResult = await execCommand(final, [
+          '--eval',
+          'console.log(process.version)',
+        ])
 
-      expect(finalResult.stdout.trim()).toBe(originalVersion)
-    }, 240_000)
+        expect(finalResult.stdout.trim()).toBe(originalVersion)
+      },
+      tolerantTimeout(240_000),
+    )
 
-    it('should preserve compression through injection', async () => {
-      const compressed = path.join(testDir, 'preserve_compressed')
+    it(
+      'should preserve compression through injection',
+      async () => {
+        const compressed = path.join(testDir, 'preserve_compressed')
 
-      // Compress
-      await execCommand(BINPRESS, [NODE_BINARY, '-o', compressed], {
-        timeout: 120_000,
-      })
-      await makeExecutable(compressed)
+        // Compress
+        await execCommand(BINPRESS, [NODE_BINARY, '-o', compressed], {
+          timeout: 120_000,
+        })
+        await makeExecutable(compressed)
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to compare compressed/final artifact sizes through the repack flow.
-      const compressedSize = (await fs.stat(compressed)).size
+        // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to compare compressed/final artifact sizes through the repack flow.
+        const compressedSize = (await fs.stat(compressed)).size
 
-      // Inject
-      const seaBlob = path.join(testDir, 'preserve.blob')
-      // 1KB blob
-      await fs.writeFile(seaBlob, Buffer.alloc(1000))
+        // Inject
+        const seaBlob = path.join(testDir, 'preserve.blob')
+        // 1KB blob
+        await fs.writeFile(seaBlob, Buffer.alloc(1000))
 
-      const final = path.join(testDir, 'preserve_final')
-      await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        compressed,
-        '-o',
-        final,
-        '--sea',
-        seaBlob,
-      ])
+        const final = path.join(testDir, 'preserve_final')
+        await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          compressed,
+          '-o',
+          final,
+          '--sea',
+          seaBlob,
+        ])
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to compare compressed/final artifact sizes through the repack flow.
-      const finalSize = (await fs.stat(final)).size
+        // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to compare compressed/final artifact sizes through the repack flow.
+        const finalSize = (await fs.stat(final)).size
 
-      // Final should be roughly compressed size + blob size (with some overhead)
-      const expectedSize = compressedSize + 1000
-      expect(finalSize).toBeGreaterThan(compressedSize)
-      // Allow 10KB overhead
-      expect(finalSize).toBeLessThan(expectedSize + 10_000)
-    }, 240_000)
+        // Final should be roughly compressed size + blob size (with some overhead)
+        const expectedSize = compressedSize + 1000
+        expect(finalSize).toBeGreaterThan(compressedSize)
+        // Allow 10KB overhead
+        expect(finalSize).toBeLessThan(expectedSize + 10_000)
+      },
+      tolerantTimeout(240_000),
+    )
   })
 
   describe('cache behavior through pipeline', () => {
-    it('should create cache on first execution of final binary', async () => {
-      const compressed = path.join(testDir, 'cache_compressed')
-      await execCommand(BINPRESS, [NODE_BINARY, '-o', compressed], {
-        timeout: 120_000,
-      })
-      await makeExecutable(compressed)
+    it(
+      'should create cache on first execution of final binary',
+      async () => {
+        const compressed = path.join(testDir, 'cache_compressed')
+        await execCommand(BINPRESS, [NODE_BINARY, '-o', compressed], {
+          timeout: 120_000,
+        })
+        await makeExecutable(compressed)
 
-      const seaBlob = path.join(testDir, 'cache.blob')
-      await fs.writeFile(seaBlob, Buffer.from('cache test'))
+        const seaBlob = path.join(testDir, 'cache.blob')
+        await fs.writeFile(seaBlob, Buffer.from('cache test'))
 
-      const final = path.join(testDir, 'cache_final')
-      await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        compressed,
-        '-o',
-        final,
-        '--sea',
-        seaBlob,
-      ])
+        const final = path.join(testDir, 'cache_final')
+        await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          compressed,
+          '-o',
+          final,
+          '--sea',
+          seaBlob,
+        ])
 
-      // Determine cache directory
-      const DLX_DIR = getSocketDlxDir()
+        // Determine cache directory
+        const DLX_DIR = getSocketDlxDir()
 
-      // First execution (creates cache)
-      const exec1 = await execCommand(final, ['--version'])
-      expect(exec1.code).toBe(0)
+        // First execution (creates cache)
+        const exec1 = await execCommand(final, ['--version'])
+        expect(exec1.code).toBe(0)
 
-      // Find cache directory
-      const cacheDirs = existsSync(DLX_DIR) ? await fs.readdir(DLX_DIR) : []
-      expect(cacheDirs.length).toBeGreaterThan(0)
-      const newestCacheDir = cacheDirs[cacheDirs.length - 1]
-      if (newestCacheDir === undefined) {
-        throw new Error('No cache directories found')
-      }
+        // Find cache directory
+        const cacheDirs = existsSync(DLX_DIR) ? await fs.readdir(DLX_DIR) : []
+        expect(cacheDirs.length).toBeGreaterThan(0)
+        const newestCacheDir = cacheDirs[cacheDirs.length - 1]
+        if (newestCacheDir === undefined) {
+          throw new Error('No cache directories found')
+        }
 
-      const cacheDir = path.join(DLX_DIR, newestCacheDir)
-      const metadataPath = path.join(cacheDir, '.dlx-metadata.json')
-      expect(existsSync(metadataPath)).toBeTruthy()
+        const cacheDir = path.join(DLX_DIR, newestCacheDir)
+        const metadataPath = path.join(cacheDir, '.dlx-metadata.json')
+        expect(existsSync(metadataPath)).toBeTruthy()
 
-      const metadataBefore = JSON.parse(await fs.readFile(metadataPath, 'utf8'))
-      const timestampBefore = metadataBefore.timestamp
+        const metadataBefore = JSON.parse(
+          await fs.readFile(metadataPath, 'utf8'),
+        )
+        const timestampBefore = metadataBefore.timestamp
 
-      // Second execution (uses cache)
-      const exec2 = await execCommand(final, ['--version'])
-      expect(exec2.code).toBe(0)
+        // Second execution (uses cache)
+        const exec2 = await execCommand(final, ['--version'])
+        expect(exec2.code).toBe(0)
 
-      // Verify cache was reused (timestamp unchanged)
-      const metadataAfter = JSON.parse(await fs.readFile(metadataPath, 'utf8'))
-      expect(metadataAfter.timestamp).toBe(timestampBefore)
-    }, 240_000)
+        // Verify cache was reused (timestamp unchanged)
+        const metadataAfter = JSON.parse(
+          await fs.readFile(metadataPath, 'utf8'),
+        )
+        expect(metadataAfter.timestamp).toBe(timestampBefore)
+      },
+      tolerantTimeout(240_000),
+    )
   })
 
   describe('error propagation', () => {
-    it('should fail if compression fails', async () => {
-      const nonExistent = path.join(testDir, 'does_not_exist')
-      const output = path.join(testDir, 'error_output')
+    it(
+      'should fail if compression fails',
+      async () => {
+        const nonExistent = path.join(testDir, 'does_not_exist')
+        const output = path.join(testDir, 'error_output')
 
-      const result = await execCommand(BINPRESS, [nonExistent, '-o', output])
+        const result = await execCommand(BINPRESS, [nonExistent, '-o', output])
 
-      expect(result.code).not.toBe(0)
-      expect(result.stderr).toBeTruthy()
-      expect(result.stderr.toLowerCase()).toMatch(
-        /not found|exist|no such|cannot/,
-      )
-    }, 30_000)
+        expect(result.code).not.toBe(0)
+        expect(result.stderr).toBeTruthy()
+        expect(result.stderr.toLowerCase()).toMatch(
+          /not found|exist|no such|cannot/,
+        )
+      },
+      tolerantTimeout(30_000),
+    )
 
-    it('should fail if injection on non-compressed binary fails gracefully', async () => {
-      // Try to inject into a regular file (not a valid binary)
-      const textFile = path.join(testDir, 'text.txt')
-      await fs.writeFile(textFile, 'not a binary')
+    it(
+      'should fail if injection on non-compressed binary fails gracefully',
+      async () => {
+        // Try to inject into a regular file (not a valid binary)
+        const textFile = path.join(testDir, 'text.txt')
+        await fs.writeFile(textFile, 'not a binary')
 
-      const seaBlob = path.join(testDir, 'error.blob')
-      await fs.writeFile(seaBlob, Buffer.from('test'))
+        const seaBlob = path.join(testDir, 'error.blob')
+        await fs.writeFile(seaBlob, Buffer.from('test'))
 
-      const output = path.join(testDir, 'error_inject_output')
+        const output = path.join(testDir, 'error_inject_output')
 
-      const result = await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        textFile,
-        '-o',
-        output,
-        '--sea',
-        seaBlob,
-      ])
+        const result = await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          textFile,
+          '-o',
+          output,
+          '--sea',
+          seaBlob,
+        ])
 
-      // Should fail (not crash)
-      expect(result.code).not.toBe(0)
-      expect(result.stderr).toBeTruthy()
-      expect(result.stderr.toLowerCase()).toMatch(
-        /invalid|binary|format|cannot/,
-      )
-    }, 30_000)
+        // Should fail (not crash)
+        expect(result.code).not.toBe(0)
+        expect(result.stderr).toBeTruthy()
+        expect(result.stderr.toLowerCase()).toMatch(
+          /invalid|binary|format|cannot/,
+        )
+      },
+      tolerantTimeout(30_000),
+    )
   })
 
   describe('real-world scenarios', () => {
-    it('should handle multiple sequential operations', async () => {
-      // Scenario: compress → inject SEA → inject VFS → execute
-      const compressed = path.join(testDir, 'multi_compressed')
-      await execCommand(BINPRESS, [NODE_BINARY, '-o', compressed], {
-        timeout: 120_000,
-      })
-      await makeExecutable(compressed)
+    it(
+      'should handle multiple sequential operations',
+      async () => {
+        // Scenario: compress → inject SEA → inject VFS → execute
+        const compressed = path.join(testDir, 'multi_compressed')
+        await execCommand(BINPRESS, [NODE_BINARY, '-o', compressed], {
+          timeout: 120_000,
+        })
+        await makeExecutable(compressed)
 
-      // Inject SEA
-      const seaBlob = path.join(testDir, 'multi.blob')
-      await fs.writeFile(seaBlob, Buffer.from('sea'))
+        // Inject SEA
+        const seaBlob = path.join(testDir, 'multi.blob')
+        await fs.writeFile(seaBlob, Buffer.from('sea'))
 
-      const withSea = path.join(testDir, 'multi_with_sea')
-      await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        compressed,
-        '-o',
-        withSea,
-        '--sea',
-        seaBlob,
-      ])
+        const withSea = path.join(testDir, 'multi_with_sea')
+        await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          compressed,
+          '-o',
+          withSea,
+          '--sea',
+          seaBlob,
+        ])
 
-      // Inject VFS (requires SEA per main.c:398-407)
-      const vfsArchive = path.join(testDir, 'multi.vfs')
-      await fs.writeFile(vfsArchive, Buffer.from('vfs'))
+        // Inject VFS (requires SEA per main.c:398-407)
+        const vfsArchive = path.join(testDir, 'multi.vfs')
+        await fs.writeFile(vfsArchive, Buffer.from('vfs'))
 
-      const seaBlob2 = path.join(testDir, 'multi2.blob')
-      await fs.writeFile(seaBlob2, Buffer.from('sea2'))
+        const seaBlob2 = path.join(testDir, 'multi2.blob')
+        await fs.writeFile(seaBlob2, Buffer.from('sea2'))
 
-      const final = path.join(testDir, 'multi_final')
-      await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        withSea,
-        '-o',
-        final,
-        '--sea',
-        seaBlob2,
-        '--vfs',
-        vfsArchive,
-      ])
+        const final = path.join(testDir, 'multi_final')
+        await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          withSea,
+          '-o',
+          final,
+          '--sea',
+          seaBlob2,
+          '--vfs',
+          vfsArchive,
+        ])
 
-      // Execute final
-      const execResult = await execCommand(final, ['--version'])
+        // Execute final
+        const execResult = await execCommand(final, ['--version'])
 
-      expect(execResult.code).toBe(0)
-      expect(execResult.stdout).toMatch(/^v\d+\.\d+\.\d+/)
-      // 5 minute timeout
-    }, 300_000)
+        expect(execResult.code).toBe(0)
+        expect(execResult.stdout).toMatch(/^v\d+\.\d+\.\d+/)
+        // 5 minute timeout
+      },
+      tolerantTimeout(300_000),
+    )
   })
 })

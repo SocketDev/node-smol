@@ -17,7 +17,7 @@ import {
 const runCommand = runCommandRaw as (
   command: string,
   args: string[],
-  cwd?: string,
+  cwd?: string | undefined,
 ) => Promise<void>
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

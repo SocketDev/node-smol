@@ -22,10 +22,13 @@ const logger = getDefaultLogger()
 const BINJECT = getBinjectPath()
 
 let testDir: string
-let binjectExists = false
+// Resolved at module scope on purpose: `describe.skipIf` is evaluated when
+// the suite is REGISTERED, before any beforeAll runs. Assigning this in a
+// hook left it false at that moment, so skipIf(!binjectExists) was always
+// skipIf(true) and the whole suite silently never ran.
+const binjectExists = existsSync(BINJECT)
 
 beforeAll(async () => {
-  binjectExists = existsSync(BINJECT)
   if (!binjectExists) {
     logger.warn(`binject not found at ${BINJECT}`)
     logger.warn('   Run: pnpm build in packages/binject')

@@ -22,6 +22,7 @@ import {
   getEmscriptenVersion,
   getPlatform,
 } from '../lib/build-env.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 describe('build-env', () => {
   describe(getPlatform, () => {
@@ -96,39 +97,51 @@ describe('build-env', () => {
 
   describe(checkRust, () => {
     // 120s timeout for slow rustup commands on Windows CI
-    it('should detect Rust installation', async () => {
-      const result = await checkRust()
+    it(
+      'should detect Rust installation',
+      async () => {
+        const result = await checkRust()
 
-      expect(result).toHaveProperty('available')
+        expect(result).toHaveProperty('available')
 
-      if (result.available) {
-        expect(result).toHaveProperty('version')
-        expect(result.version).toMatch(/^\d+\.\d+\.\d+$/)
-      } else {
-        expect(result).toHaveProperty('reason')
-      }
-    }, 120_000)
-
-    // 60s timeout for slow rustup commands on Windows
-    it('should check for WASM target when Rust is available', async () => {
-      const result = await checkRust()
-
-      if (result.available && (await commandExists('rustup'))) {
-        // If Rust is available, it should have checked for WASM target
-        // Either it's available or there's a fix suggestion
-        expect(result.available === true || result.fix).toBeTruthy()
-      }
-    }, 60_000)
+        if (result.available) {
+          expect(result).toHaveProperty('version')
+          expect(result.version).toMatch(/^\d+\.\d+\.\d+$/)
+        } else {
+          expect(result).toHaveProperty('reason')
+        }
+      },
+      tolerantTimeout(120_000),
+    )
 
     // 60s timeout for slow rustup commands on Windows
-    it('should provide fix suggestions when missing components', async () => {
-      const result = await checkRust()
+    it(
+      'should check for WASM target when Rust is available',
+      async () => {
+        const result = await checkRust()
 
-      if (!result.available && result.fix) {
-        expectTypeOf(result.fix).toBeString()
-        expect(result.fix.length).toBeGreaterThan(0)
-      }
-    }, 60_000)
+        if (result.available && (await commandExists('rustup'))) {
+          // If Rust is available, it should have checked for WASM target
+          // Either it's available or there's a fix suggestion
+          expect(result.available || result.fix).toBeTruthy()
+        }
+      },
+      tolerantTimeout(60_000),
+    )
+
+    // 60s timeout for slow rustup commands on Windows
+    it(
+      'should provide fix suggestions when missing components',
+      async () => {
+        const result = await checkRust()
+
+        if (!result.available && result.fix) {
+          expectTypeOf(result.fix).toBeString()
+          expect(result.fix.length).toBeGreaterThan(0)
+        }
+      },
+      tolerantTimeout(60_000),
+    )
   })
 
   describe(findEmscriptenSDK, () => {

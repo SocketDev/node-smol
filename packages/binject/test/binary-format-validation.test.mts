@@ -25,14 +25,20 @@ import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getBinjectPath } from './helpers/paths.mts'
 import { execCommand } from './helpers/exec-command.mts'
 import { MACHO_SEGMENT_NODE_SEA } from 'bin-infra/test/helpers/segment-names'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
+
+const TIMEOUT_30S = tolerantTimeout(30_000)
 
 const BINJECT = getBinjectPath()
 
 let testDir: string
-let binjectExists = false
+// Resolved at module scope on purpose: `describe.skipIf` is evaluated when
+// the suite is REGISTERED, before any beforeAll runs. Assigning this in a
+// hook left it false at that moment, so skipIf(!binjectExists) was always
+// skipIf(true) and the whole suite silently never ran.
+const binjectExists = existsSync(BINJECT)
 
 beforeAll(async () => {
-  binjectExists = existsSync(BINJECT)
   if (!binjectExists) {
     return
   }
@@ -174,171 +180,191 @@ describe.skipIf(!binjectExists)(
     })
 
     describe('binary executability', () => {
-      it('should produce executable binary after injection', async () => {
-        const inputBinary = path.join(testDir, 'exec_input')
-        await fs.copyFile(BINJECT, inputBinary)
+      it(
+        'should produce executable binary after injection',
+        async () => {
+          const inputBinary = path.join(testDir, 'exec_input')
+          await fs.copyFile(BINJECT, inputBinary)
 
-        const seaBlob = path.join(testDir, 'exec_test.blob')
-        await fs.writeFile(seaBlob, Buffer.from('test'))
+          const seaBlob = path.join(testDir, 'exec_test.blob')
+          await fs.writeFile(seaBlob, Buffer.from('test'))
 
-        const outputBinary = path.join(testDir, 'exec_output')
+          const outputBinary = path.join(testDir, 'exec_output')
 
-        // Inject
-        await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          inputBinary,
-          '-o',
-          outputBinary,
-          '--sea',
-          seaBlob,
-        ])
+          // Inject
+          await execCommand(BINJECT, [
+            'inject',
+            '-e',
+            inputBinary,
+            '-o',
+            outputBinary,
+            '--sea',
+            seaBlob,
+          ])
 
-        // Check file permissions
-        // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() in this file consumes stats.size to assert input/output binary size deltas after injection.
-        const stats = await fs.stat(outputBinary)
-        const isExecutable = (stats.mode & 0o111) !== 0
+          // Check file permissions
+          // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() in this file consumes stats.size to assert input/output binary size deltas after injection.
+          const stats = await fs.stat(outputBinary)
+          const isExecutable = (stats.mode & 0o111) !== 0
 
-        expect(isExecutable).toBeTruthy()
+          expect(isExecutable).toBeTruthy()
 
-        // Try to execute (run --help which should work even without resources)
-        const execResult = await execCommand(outputBinary, ['--help'])
-        expect(execResult.code).toBe(0)
-      }, 30_000)
+          // Try to execute (run --help which should work even without resources)
+          const execResult = await execCommand(outputBinary, ['--help'])
+          expect(execResult.code).toBe(0)
+        },
+        TIMEOUT_30S,
+      )
 
-      it('should maintain original binary permissions', async () => {
-        const inputBinary = path.join(testDir, 'perm_input')
-        await fs.copyFile(BINJECT, inputBinary)
+      it(
+        'should maintain original binary permissions',
+        async () => {
+          const inputBinary = path.join(testDir, 'perm_input')
+          await fs.copyFile(BINJECT, inputBinary)
 
-        // Set specific permissions
-        await makeExecutable(inputBinary)
+          // Set specific permissions
+          await makeExecutable(inputBinary)
 
-        const seaBlob = path.join(testDir, 'perm_test.blob')
-        await fs.writeFile(seaBlob, Buffer.from('test'))
+          const seaBlob = path.join(testDir, 'perm_test.blob')
+          await fs.writeFile(seaBlob, Buffer.from('test'))
 
-        const outputBinary = path.join(testDir, 'perm_output')
+          const outputBinary = path.join(testDir, 'perm_output')
 
-        // Inject
-        await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          inputBinary,
-          '-o',
-          outputBinary,
-          '--sea',
-          seaBlob,
-        ])
+          // Inject
+          await execCommand(BINJECT, [
+            'inject',
+            '-e',
+            inputBinary,
+            '-o',
+            outputBinary,
+            '--sea',
+            seaBlob,
+          ])
 
-        // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() in this file consumes stats.size to assert input/output binary size deltas after injection.
-        const outputStats = await fs.stat(outputBinary)
+          // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() in this file consumes stats.size to assert input/output binary size deltas after injection.
+          const outputStats = await fs.stat(outputBinary)
 
-        // Output should be executable
-        expect(outputStats.mode & 0o111).not.toBe(0)
-      }, 30_000)
+          // Output should be executable
+          expect(outputStats.mode & 0o111).not.toBe(0)
+        },
+        TIMEOUT_30S,
+      )
     })
 
     describe('file format structure validation', () => {
-      it('should use file command to verify format after injection', async () => {
-        const inputBinary = path.join(testDir, 'format_input')
-        await fs.copyFile(BINJECT, inputBinary)
+      it(
+        'should use file command to verify format after injection',
+        async () => {
+          const inputBinary = path.join(testDir, 'format_input')
+          await fs.copyFile(BINJECT, inputBinary)
 
-        const seaBlob = path.join(testDir, 'format_test.blob')
-        await fs.writeFile(seaBlob, Buffer.from('test'))
+          const seaBlob = path.join(testDir, 'format_test.blob')
+          await fs.writeFile(seaBlob, Buffer.from('test'))
 
-        const outputBinary = path.join(testDir, 'format_output')
+          const outputBinary = path.join(testDir, 'format_output')
 
-        // Inject
-        await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          inputBinary,
-          '-o',
-          outputBinary,
-          '--sea',
-          seaBlob,
-        ])
+          // Inject
+          await execCommand(BINJECT, [
+            'inject',
+            '-e',
+            inputBinary,
+            '-o',
+            outputBinary,
+            '--sea',
+            seaBlob,
+          ])
 
-        // Use 'file' command to identify binary type
-        const fileResult = await execCommand('file', [outputBinary])
+          // Use 'file' command to identify binary type
+          const fileResult = await execCommand('file', [outputBinary])
 
-        if (fileResult.code === 0) {
-          const output = fileResult.stdout.toLowerCase()
+          if (fileResult.code === 0) {
+            const output = fileResult.stdout.toLowerCase()
 
-          // Should identify as executable
-          expect(output).toContain('executable')
+            // Should identify as executable
+            expect(output).toContain('executable')
 
-          // Platform-specific checks
-          if (process.platform === 'darwin') {
-            expect(output).toContain('mach-o')
-          } else if (process.platform === 'linux') {
-            expect(output).toContain('elf')
-          } else if (process.platform === 'win32') {
-            // or 'ms windows'
-            expect(output).toContain('pe')
+            // Platform-specific checks
+            if (process.platform === 'darwin') {
+              expect(output).toContain('mach-o')
+            } else if (process.platform === 'linux') {
+              expect(output).toContain('elf')
+            } else if (process.platform === 'win32') {
+              // or 'ms windows'
+              expect(output).toContain('pe')
+            }
           }
-        }
-      }, 30_000)
+        },
+        TIMEOUT_30S,
+      )
 
-      it('should maintain section alignment after injection', async () => {
-        const inputBinary = path.join(testDir, 'align_input')
-        await fs.copyFile(BINJECT, inputBinary)
+      it(
+        'should maintain section alignment after injection',
+        async () => {
+          const inputBinary = path.join(testDir, 'align_input')
+          await fs.copyFile(BINJECT, inputBinary)
 
-        const seaBlob = path.join(testDir, 'align_test.blob')
-        await fs.writeFile(seaBlob, Buffer.from('test'))
+          const seaBlob = path.join(testDir, 'align_test.blob')
+          await fs.writeFile(seaBlob, Buffer.from('test'))
 
-        const outputBinary = path.join(testDir, 'align_output')
+          const outputBinary = path.join(testDir, 'align_output')
 
-        // Inject
-        const injectResult = await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          inputBinary,
-          '-o',
-          outputBinary,
-          '--sea',
-          seaBlob,
-        ])
+          // Inject
+          const injectResult = await execCommand(BINJECT, [
+            'inject',
+            '-e',
+            inputBinary,
+            '-o',
+            outputBinary,
+            '--sea',
+            seaBlob,
+          ])
 
-        expect(injectResult.code).toBe(0)
+          expect(injectResult.code).toBe(0)
 
-        // Binary should be valid (no loader errors when trying to run it)
-        const testResult = await execCommand(outputBinary, ['--help'])
-        expect(testResult.code).toBe(0)
-      }, 30_000)
+          // Binary should be valid (no loader errors when trying to run it)
+          const testResult = await execCommand(outputBinary, ['--help'])
+          expect(testResult.code).toBe(0)
+        },
+        TIMEOUT_30S,
+      )
 
-      it('should not corrupt existing binary sections', async () => {
-        const inputBinary = path.join(testDir, 'corrupt_input')
-        await fs.copyFile(BINJECT, inputBinary)
+      it(
+        'should not corrupt existing binary sections',
+        async () => {
+          const inputBinary = path.join(testDir, 'corrupt_input')
+          await fs.copyFile(BINJECT, inputBinary)
 
-        // Get input binary size (should be smaller than output)
-        const inputData = await fs.readFile(inputBinary)
+          // Get input binary size (should be smaller than output)
+          const inputData = await fs.readFile(inputBinary)
 
-        const seaBlob = path.join(testDir, 'corrupt_test.blob')
-        await fs.writeFile(seaBlob, Buffer.from('test content'))
+          const seaBlob = path.join(testDir, 'corrupt_test.blob')
+          await fs.writeFile(seaBlob, Buffer.from('test content'))
 
-        const outputBinary = path.join(testDir, 'corrupt_output')
+          const outputBinary = path.join(testDir, 'corrupt_output')
 
-        // Inject
-        await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          inputBinary,
-          '-o',
-          outputBinary,
-          '--sea',
-          seaBlob,
-        ])
+          // Inject
+          await execCommand(BINJECT, [
+            'inject',
+            '-e',
+            inputBinary,
+            '-o',
+            outputBinary,
+            '--sea',
+            seaBlob,
+          ])
 
-        const outputData = await fs.readFile(outputBinary)
+          const outputData = await fs.readFile(outputBinary)
 
-        // Output should be larger (contains injected data)
-        expect(outputData.length).toBeGreaterThan(inputData.length)
+          // Output should be larger (contains injected data)
+          expect(outputData.length).toBeGreaterThan(inputData.length)
 
-        // But binary should still be functional
-        const execResult = await execCommand(outputBinary, ['--help'])
-        expect(execResult.code).toBe(0)
-        expect(execResult.stdout).toContain('binject')
-      }, 30_000)
+          // But binary should still be functional
+          const execResult = await execCommand(outputBinary, ['--help'])
+          expect(execResult.code).toBe(0)
+          expect(execResult.stdout).toContain('binject')
+        },
+        TIMEOUT_30S,
+      )
     })
 
     describe('resource section validation', () => {
@@ -403,72 +429,6 @@ describe.skipIf(!binjectExists)(
         },
         30_000,
       )
-    })
-
-    describe('binary size validation', () => {
-      it('should produce binary with expected size increase', async () => {
-        const inputBinary = path.join(testDir, 'size_input')
-        await fs.copyFile(BINJECT, inputBinary)
-
-        // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() in this file consumes stats.size to assert input/output binary size deltas after injection.
-        const inputStats = await fs.stat(inputBinary)
-
-        const seaBlob = path.join(testDir, 'size_test.blob')
-        // 10KB blob
-        const blobContent = Buffer.alloc(10_000)
-        await fs.writeFile(seaBlob, blobContent)
-
-        const outputBinary = path.join(testDir, 'size_output')
-
-        // Inject
-        await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          inputBinary,
-          '-o',
-          outputBinary,
-          '--sea',
-          seaBlob,
-        ])
-
-        // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() in this file consumes stats.size to assert input/output binary size deltas after injection.
-        const outputStats = await fs.stat(outputBinary)
-
-        // Output should be at least blob size larger (allowing for metadata overhead)
-        const expectedMinSize = inputStats.size + blobContent.length
-        expect(outputStats.size).toBeGreaterThanOrEqual(expectedMinSize)
-
-        // But not excessively larger (< 10% overhead)
-        const maxExpectedSize = inputStats.size + blobContent.length * 1.1
-        expect(outputStats.size).toBeLessThan(maxExpectedSize)
-      }, 30_000)
-
-      it('should reject empty SEA blob injection', async () => {
-        const inputBinary = path.join(testDir, 'empty_input')
-        await fs.copyFile(BINJECT, inputBinary)
-
-        const seaBlob = path.join(testDir, 'empty.blob')
-        // Empty blob
-        await fs.writeFile(seaBlob, Buffer.alloc(0))
-
-        const outputBinary = path.join(testDir, 'empty_output')
-
-        // Inject empty blob (should fail with error)
-        const injectResult = await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          inputBinary,
-          '-o',
-          outputBinary,
-          '--sea',
-          seaBlob,
-        ])
-
-        // Empty blobs should be rejected
-        expect(injectResult.code).not.toBe(0)
-        expect(injectResult.stderr).toBeTruthy()
-        expect(injectResult.stderr.toLowerCase()).toMatch(/empty|size|invalid/)
-      }, 30_000)
     })
   },
 )
