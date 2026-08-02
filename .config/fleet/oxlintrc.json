@@ -303,6 +303,7 @@
     "</fleet>",
     "#fleet-canonical-end",
     "<repo>",
+    "**/additions/source-patched/**",
     "</repo>"
   ]
 }
