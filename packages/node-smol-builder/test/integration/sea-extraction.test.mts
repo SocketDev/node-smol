@@ -69,9 +69,9 @@ function secretPatterns() {
     // Socket API token.
     new RegExp(`${joinFragments(['skt', 'sec_'])}[A-Za-z0-9_-]{24,}`),
     // AWS access key id.
-    new RegExp(`${'AKIA'}[A-Z0-9]{16}`),
+    new RegExp(`AKIA[A-Z0-9]{16}`),
     // GitHub personal access token.
-    new RegExp(`${'ghp_'}[A-Za-z0-9]{36}`),
+    new RegExp(`ghp_[A-Za-z0-9]{36}`),
     // JWT (three base64url segments).
     new RegExp(`eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}`),
   ]
@@ -212,6 +212,6 @@ describe.skipIf(skipTests)('SEA extraction / leak guard', () => {
 
   // Added when build-sea snapshot mode lands: a V8 startup snapshot serializes
   // compiled heap, not source text, so extractBundle() must return undefined
-  // (the fenced source is not present as plaintext).
+  // The fenced source is not present as plaintext.
   it.todo('a snapshot SEA does not leak its source as plaintext')
 })

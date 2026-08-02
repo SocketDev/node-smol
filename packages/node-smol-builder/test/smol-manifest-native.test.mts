@@ -110,7 +110,7 @@ describe('smol_manifest_native binding — sdxgen-bug-regressions equivalence', 
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     })
-    const output = String(result.stdout ?? '')
+    const output = result.stdout ?? ''
     // Confirm every expected fixture name appears with PASS.
     for (let i = 0, { length } = EXPECTED_FIXTURE_NAMES; i < length; i += 1) {
       const name = EXPECTED_FIXTURE_NAMES[i]
@@ -129,7 +129,7 @@ describe('smol_manifest_native binding — sdxgen-bug-regressions equivalence', 
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
       })
-      const output = String(result.stdout ?? '')
+      const output = result.stdout ?? ''
       expect(output).toContain('PASS')
       expect(output).not.toContain('FAIL')
     },

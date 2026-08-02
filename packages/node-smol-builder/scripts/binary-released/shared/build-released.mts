@@ -359,7 +359,7 @@ export async function buildRelease(config, buildOptions = {}) {
   logger.log(`   Building Node.js ${nodeVersion} with custom patches`)
   logger.log('')
 
-  // Initialize build log (clear previous runs to prevent log accumulation).
+  // Initialize the build log. Clearing previous runs keeps logs from accumulating.
   await clearBuildLog(buildDir)
   await saveBuildLog(buildDir, '━'.repeat(60))
   await saveBuildLog(buildDir, '  Socket CLI - Custom Node.js Builder')
@@ -501,7 +501,7 @@ export async function buildRelease(config, buildOptions = {}) {
   //    (a patch file changed, or the pristine Node source under modeSourceDir
   //    differs from what the patches expect). In that case the patched tree
   //    is invalid — we must re-extract pristine source and re-apply patches.
-  // 2. Source has uncommitted changes (local dev modified files).
+  // 2. Source has uncommitted changes. Local development edited files.
   //
   // Addition source files (under packages/*/src/socketsecurity/...) get
   // copied into the source tree by copyBuildAdditions. They do NOT modify

@@ -23,6 +23,7 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { getBinjectPath } from './helpers/paths.mts'
 import { execCommand, hashFile } from './helpers/exec-command.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const logger = getDefaultLogger()
 
@@ -53,328 +54,116 @@ afterAll(async () => {
 
 describe.skipIf(!binjectExists)('round-trip injection and extraction', () => {
   describe('sEA blob round-trip', () => {
-    it('should inject and extract SEA blob with identical content', async () => {
-      // Create test SEA blob
-      const seaBlob = path.join(testDir, 'test.blob')
-      const seaContent = Buffer.from(`TEST_SEA_BLOB_CONTENT_${Date.now()}`)
-      await fs.writeFile(seaBlob, seaContent)
+    it(
+      'should inject and extract SEA blob with identical content',
+      async () => {
+        // Create test SEA blob
+        const seaBlob = path.join(testDir, 'test.blob')
+        const seaContent = Buffer.from(`TEST_SEA_BLOB_CONTENT_${Date.now()}`)
+        await fs.writeFile(seaBlob, seaContent)
 
-      // Create placeholder binary (use binject itself as test binary)
-      const inputBinary = path.join(testDir, 'input_binary')
-      await fs.copyFile(BINJECT, inputBinary)
+        // Create a placeholder binary, using binject itself as the test binary.
+        const inputBinary = path.join(testDir, 'input_binary')
+        await fs.copyFile(BINJECT, inputBinary)
 
-      const outputBinary = path.join(testDir, 'output_with_sea')
+        const outputBinary = path.join(testDir, 'output_with_sea')
 
-      // Inject SEA blob
-      const injectResult = await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        inputBinary,
-        '-o',
-        outputBinary,
-        '--sea',
-        seaBlob,
-      ])
-
-      expect(injectResult.code).toBe(0)
-      expect(existsSync(outputBinary)).toBeTruthy()
-
-      // Extract SEA blob
-      const extractedSea = path.join(testDir, 'extracted.blob')
-      const extractResult = await execCommand(BINJECT, [
-        'extract',
-        '-e',
-        outputBinary,
-        '-o',
-        extractedSea,
-        '--sea',
-      ])
-
-      expect(extractResult.code).toBe(0)
-      expect(existsSync(extractedSea)).toBeTruthy()
-
-      // Compare original and extracted
-      const originalHash = await hashFile(seaBlob)
-      const extractedHash = await hashFile(extractedSea)
-
-      expect(extractedHash).toBe(originalHash)
-
-      // Verify byte-for-byte equality
-      const originalContent = await fs.readFile(seaBlob)
-      const extractedContent = await fs.readFile(extractedSea)
-      expect(Buffer.compare(originalContent, extractedContent)).toBe(0)
-    }, 30_000)
-
-    it('should preserve binary functionality after SEA injection', async () => {
-      const inputBinary = path.join(testDir, 'func_test_input')
-      await fs.copyFile(BINJECT, inputBinary)
-
-      const seaBlob = path.join(testDir, 'func_test.blob')
-      await fs.writeFile(seaBlob, Buffer.from('test content'))
-
-      const outputBinary = path.join(testDir, 'func_test_output')
-
-      // Inject
-      const injectResult = await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        inputBinary,
-        '-o',
-        outputBinary,
-        '--sea',
-        seaBlob,
-      ])
-
-      expect(injectResult.code).toBe(0)
-
-      // Verify output binary is still executable (test with --help)
-      const execResult = await execCommand(outputBinary, ['--help'])
-      expect(execResult.code).toBe(0)
-      expect(execResult.stdout).toContain('binject')
-    }, 30_000)
-
-    it('should handle large SEA blobs (>1MB)', async () => {
-      // Create 2MB SEA blob
-      const seaBlob = path.join(testDir, 'large.blob')
-      const largeContent = Buffer.alloc(2 * 1024 * 1024)
-      // Fill with pattern for compression resistance
-      for (let i = 0; i < largeContent.length; i++) {
-        largeContent[i] = i % 256
-      }
-      await fs.writeFile(seaBlob, largeContent)
-
-      const inputBinary = path.join(testDir, 'large_input')
-      await fs.copyFile(BINJECT, inputBinary)
-
-      const outputBinary = path.join(testDir, 'large_output')
-
-      // Inject
-      const injectResult = await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        inputBinary,
-        '-o',
-        outputBinary,
-        '--sea',
-        seaBlob,
-      ])
-
-      expect(injectResult.code).toBe(0)
-
-      // Extract
-      const extractedSea = path.join(testDir, 'large_extracted.blob')
-      const extractResult = await execCommand(BINJECT, [
-        'extract',
-        '-e',
-        outputBinary,
-        '-o',
-        extractedSea,
-        '--sea',
-      ])
-
-      expect(extractResult.code).toBe(0)
-
-      // Verify size and hash
-      // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size to verify extracted payload matches.
-      const extractedStats = await fs.stat(extractedSea)
-      expect(extractedStats.size).toBe(largeContent.length)
-
-      const originalHash = await hashFile(seaBlob)
-      const extractedHash = await hashFile(extractedSea)
-      expect(extractedHash).toBe(originalHash)
-    }, 60_000)
-  })
-
-  describe('vFS archive round-trip', () => {
-    it('should inject and extract VFS archive with identical content', async () => {
-      // Create test VFS archive
-      const vfsArchive = path.join(testDir, 'test.vfs')
-      const vfsContent = Buffer.from(`TEST_VFS_ARCHIVE_CONTENT_${Date.now()}`)
-      await fs.writeFile(vfsArchive, vfsContent)
-
-      // Create test SEA blob (required for VFS injection)
-      const seaBlob = path.join(testDir, 'vfs_test.blob')
-      await fs.writeFile(seaBlob, Buffer.from('test'))
-
-      const inputBinary = path.join(testDir, 'vfs_input')
-      await fs.copyFile(BINJECT, inputBinary)
-
-      const outputBinary = path.join(testDir, 'vfs_output')
-
-      // Inject VFS (with required SEA blob)
-      const injectResult = await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        inputBinary,
-        '-o',
-        outputBinary,
-        '--sea',
-        seaBlob,
-        '--vfs',
-        vfsArchive,
-      ])
-
-      expect(injectResult.code).toBe(0)
-
-      // Extract VFS
-      const extractedVfs = path.join(testDir, 'extracted.vfs')
-      const extractResult = await execCommand(BINJECT, [
-        'extract',
-        '-e',
-        outputBinary,
-        '-o',
-        extractedVfs,
-        '--vfs',
-      ])
-
-      expect(extractResult.code).toBe(0)
-
-      // Compare
-      const originalHash = await hashFile(vfsArchive)
-      const extractedHash = await hashFile(extractedVfs)
-      expect(extractedHash).toBe(originalHash)
-    }, 30_000)
-
-    it('should handle VFS with special characters in filename', async () => {
-      const vfsArchive = path.join(testDir, 'test-vfs_v1.2.3.vfs')
-      const vfsContent = Buffer.from('VFS_CONTENT_WITH_SPECIAL_NAME')
-      await fs.writeFile(vfsArchive, vfsContent)
-
-      // Create test SEA blob (required for VFS injection)
-      const seaBlob = path.join(testDir, 'special_test.blob')
-      await fs.writeFile(seaBlob, Buffer.from('test'))
-
-      const inputBinary = path.join(testDir, 'special_input')
-      await fs.copyFile(BINJECT, inputBinary)
-
-      const outputBinary = path.join(testDir, 'special_output')
-
-      // Inject (with required SEA blob)
-      const injectResult = await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        inputBinary,
-        '-o',
-        outputBinary,
-        '--sea',
-        seaBlob,
-        '--vfs',
-        vfsArchive,
-      ])
-
-      expect(injectResult.code).toBe(0)
-
-      // Extract
-      const extractedVfs = path.join(testDir, 'special_extracted.vfs')
-      const extractResult = await execCommand(BINJECT, [
-        'extract',
-        '-e',
-        outputBinary,
-        '-o',
-        extractedVfs,
-        '--vfs',
-      ])
-
-      expect(extractResult.code).toBe(0)
-
-      // Verify
-      const originalContent = await fs.readFile(vfsArchive)
-      const extractedContent = await fs.readFile(extractedVfs)
-      expect(Buffer.compare(originalContent, extractedContent)).toBe(0)
-    }, 30_000)
-  })
-
-  describe('batch injection round-trip', () => {
-    it('should inject and extract both SEA and VFS with identical content', async () => {
-      // Create resources
-      const seaBlob = path.join(testDir, 'batch.blob')
-      const seaContent = Buffer.from('BATCH_SEA_CONTENT')
-      await fs.writeFile(seaBlob, seaContent)
-
-      const vfsArchive = path.join(testDir, 'batch.vfs')
-      const vfsContent = Buffer.from('BATCH_VFS_CONTENT')
-      await fs.writeFile(vfsArchive, vfsContent)
-
-      const inputBinary = path.join(testDir, 'batch_input')
-      await fs.copyFile(BINJECT, inputBinary)
-
-      const outputBinary = path.join(testDir, 'batch_output')
-
-      // Inject both
-      const injectResult = await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        inputBinary,
-        '-o',
-        outputBinary,
-        '--sea',
-        seaBlob,
-        '--vfs',
-        vfsArchive,
-      ])
-
-      expect(injectResult.code).toBe(0)
-
-      // Extract SEA
-      const extractedSea = path.join(testDir, 'batch_extracted.blob')
-      const seaExtractResult = await execCommand(BINJECT, [
-        'extract',
-        '-e',
-        outputBinary,
-        '-o',
-        extractedSea,
-        '--sea',
-      ])
-
-      expect(seaExtractResult.code).toBe(0)
-
-      // Extract VFS
-      const extractedVfs = path.join(testDir, 'batch_extracted.vfs')
-      const vfsExtractResult = await execCommand(BINJECT, [
-        'extract',
-        '-e',
-        outputBinary,
-        '-o',
-        extractedVfs,
-        '--vfs',
-      ])
-
-      expect(vfsExtractResult.code).toBe(0)
-
-      // Verify both
-      const seaOriginalHash = await hashFile(seaBlob)
-      const seaExtractedHash = await hashFile(extractedSea)
-      expect(seaExtractedHash).toBe(seaOriginalHash)
-
-      const vfsOriginalHash = await hashFile(vfsArchive)
-      const vfsExtractedHash = await hashFile(extractedVfs)
-      expect(vfsExtractedHash).toBe(vfsOriginalHash)
-    }, 30_000)
-  })
-
-  describe('multiple injection/extraction cycles', () => {
-    it('should maintain integrity after 3 inject/extract cycles', async () => {
-      let currentBinary = path.join(testDir, 'cycle_input')
-      await fs.copyFile(BINJECT, currentBinary)
-
-      const originalSeaBlob = path.join(testDir, 'original.blob')
-      const originalContent = Buffer.from('CYCLE_TEST_CONTENT')
-      await fs.writeFile(originalSeaBlob, originalContent)
-
-      // 3 cycles of inject + extract
-      for (let i = 0; i < 3; i++) {
-        const seaBlob = path.join(testDir, `cycle_${i}.blob`)
-        // eslint-disable-next-line no-await-in-loop
-        await fs.copyFile(originalSeaBlob, seaBlob)
-
-        const outputBinary = path.join(testDir, `cycle_output_${i}`)
-
-        // Inject
-        // eslint-disable-next-line no-await-in-loop
+        // Inject SEA blob
         const injectResult = await execCommand(BINJECT, [
           'inject',
           '-e',
-          currentBinary,
+          inputBinary,
+          '-o',
+          outputBinary,
+          '--sea',
+          seaBlob,
+        ])
+
+        expect(injectResult.code).toBe(0)
+        expect(existsSync(outputBinary)).toBeTruthy()
+
+        // Extract SEA blob
+        const extractedSea = path.join(testDir, 'extracted.blob')
+        const extractResult = await execCommand(BINJECT, [
+          'extract',
+          '-e',
+          outputBinary,
+          '-o',
+          extractedSea,
+          '--sea',
+        ])
+
+        expect(extractResult.code).toBe(0)
+        expect(existsSync(extractedSea)).toBeTruthy()
+
+        // Compare original and extracted
+        const originalHash = await hashFile(seaBlob)
+        const extractedHash = await hashFile(extractedSea)
+
+        expect(extractedHash).toBe(originalHash)
+
+        // Verify byte-for-byte equality
+        const originalContent = await fs.readFile(seaBlob)
+        const extractedContent = await fs.readFile(extractedSea)
+        expect(Buffer.compare(originalContent, extractedContent)).toBe(0)
+      },
+      tolerantTimeout(30_000),
+    )
+
+    it(
+      'should preserve binary functionality after SEA injection',
+      async () => {
+        const inputBinary = path.join(testDir, 'func_test_input')
+        await fs.copyFile(BINJECT, inputBinary)
+
+        const seaBlob = path.join(testDir, 'func_test.blob')
+        await fs.writeFile(seaBlob, Buffer.from('test content'))
+
+        const outputBinary = path.join(testDir, 'func_test_output')
+
+        // Inject
+        const injectResult = await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          inputBinary,
+          '-o',
+          outputBinary,
+          '--sea',
+          seaBlob,
+        ])
+
+        expect(injectResult.code).toBe(0)
+
+        // Verify output binary is still executable (test with --help)
+        const execResult = await execCommand(outputBinary, ['--help'])
+        expect(execResult.code).toBe(0)
+        expect(execResult.stdout).toContain('binject')
+      },
+      tolerantTimeout(30_000),
+    )
+
+    it(
+      'should handle large SEA blobs (>1MB)',
+      async () => {
+        // Create 2MB SEA blob
+        const seaBlob = path.join(testDir, 'large.blob')
+        const largeContent = Buffer.alloc(2 * 1024 * 1024)
+        // Fill with pattern for compression resistance
+        for (let i = 0; i < largeContent.length; i++) {
+          largeContent[i] = i % 256
+        }
+        await fs.writeFile(seaBlob, largeContent)
+
+        const inputBinary = path.join(testDir, 'large_input')
+        await fs.copyFile(BINJECT, inputBinary)
+
+        const outputBinary = path.join(testDir, 'large_output')
+
+        // Inject
+        const injectResult = await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          inputBinary,
           '-o',
           outputBinary,
           '--sea',
@@ -384,83 +173,327 @@ describe.skipIf(!binjectExists)('round-trip injection and extraction', () => {
         expect(injectResult.code).toBe(0)
 
         // Extract
-        const extractedBlob = path.join(testDir, `cycle_extracted_${i}.blob`)
-        // eslint-disable-next-line no-await-in-loop
+        const extractedSea = path.join(testDir, 'large_extracted.blob')
         const extractResult = await execCommand(BINJECT, [
           'extract',
           '-e',
           outputBinary,
           '-o',
-          extractedBlob,
+          extractedSea,
           '--sea',
         ])
 
         expect(extractResult.code).toBe(0)
 
-        // Verify hash matches original
-        // eslint-disable-next-line no-await-in-loop
-        const extractedHash = await hashFile(extractedBlob)
-        // eslint-disable-next-line no-await-in-loop
-        const originalHash = await hashFile(originalSeaBlob)
+        // Verify size and hash
+        // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size to verify extracted payload matches.
+        const extractedStats = await fs.stat(extractedSea)
+        expect(extractedStats.size).toBe(largeContent.length)
+
+        const originalHash = await hashFile(seaBlob)
+        const extractedHash = await hashFile(extractedSea)
         expect(extractedHash).toBe(originalHash)
+      },
+      tolerantTimeout(60_000),
+    )
+  })
 
-        // Update current binary for next cycle
-        currentBinary = outputBinary
-      }
-    }, 90_000)
+  describe('vFS archive round-trip', () => {
+    it(
+      'should inject and extract VFS archive with identical content',
+      async () => {
+        // Create test VFS archive
+        const vfsArchive = path.join(testDir, 'test.vfs')
+        const vfsContent = Buffer.from(`TEST_VFS_ARCHIVE_CONTENT_${Date.now()}`)
+        await fs.writeFile(vfsArchive, vfsContent)
 
-    it('should handle re-injection with extraction validation', async () => {
-      const inputBinary = path.join(testDir, 'reinject_input')
-      await fs.copyFile(BINJECT, inputBinary)
+        // Create test SEA blob (required for VFS injection)
+        const seaBlob = path.join(testDir, 'vfs_test.blob')
+        await fs.writeFile(seaBlob, Buffer.from('test'))
 
-      const blob1 = path.join(testDir, 'blob1.blob')
-      await fs.writeFile(blob1, Buffer.from('FIRST_INJECTION'))
+        const inputBinary = path.join(testDir, 'vfs_input')
+        await fs.copyFile(BINJECT, inputBinary)
 
-      const blob2 = path.join(testDir, 'blob2.blob')
-      await fs.writeFile(blob2, Buffer.from('SECOND_INJECTION'))
+        const outputBinary = path.join(testDir, 'vfs_output')
 
-      const output1 = path.join(testDir, 'reinject_output1')
-      const output2 = path.join(testDir, 'reinject_output2')
+        // Inject VFS (with required SEA blob)
+        const injectResult = await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          inputBinary,
+          '-o',
+          outputBinary,
+          '--sea',
+          seaBlob,
+          '--vfs',
+          vfsArchive,
+        ])
 
-      // First injection
-      await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        inputBinary,
-        '-o',
-        output1,
-        '--sea',
-        blob1,
-      ])
+        expect(injectResult.code).toBe(0)
 
-      // Second injection (re-inject)
-      await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        output1,
-        '-o',
-        output2,
-        '--sea',
-        blob2,
-      ])
+        // Extract VFS
+        const extractedVfs = path.join(testDir, 'extracted.vfs')
+        const extractResult = await execCommand(BINJECT, [
+          'extract',
+          '-e',
+          outputBinary,
+          '-o',
+          extractedVfs,
+          '--vfs',
+        ])
 
-      // Extract from second output
-      const extracted = path.join(testDir, 'reinject_extracted.blob')
-      const extractResult = await execCommand(BINJECT, [
-        'extract',
-        '-e',
-        output2,
-        '-o',
-        extracted,
-        '--sea',
-      ])
+        expect(extractResult.code).toBe(0)
 
-      expect(extractResult.code).toBe(0)
+        // Compare
+        const originalHash = await hashFile(vfsArchive)
+        const extractedHash = await hashFile(extractedVfs)
+        expect(extractedHash).toBe(originalHash)
+      },
+      tolerantTimeout(30_000),
+    )
 
-      // Should match blob2, not blob1
-      const extractedContent = await fs.readFile(extracted, 'utf8')
-      expect(extractedContent).toBe('SECOND_INJECTION')
-      expect(extractedContent).not.toBe('FIRST_INJECTION')
-    }, 60_000)
+    it(
+      'should handle VFS with special characters in filename',
+      async () => {
+        const vfsArchive = path.join(testDir, 'test-vfs_v1.2.3.vfs')
+        const vfsContent = Buffer.from('VFS_CONTENT_WITH_SPECIAL_NAME')
+        await fs.writeFile(vfsArchive, vfsContent)
+
+        // Create test SEA blob (required for VFS injection)
+        const seaBlob = path.join(testDir, 'special_test.blob')
+        await fs.writeFile(seaBlob, Buffer.from('test'))
+
+        const inputBinary = path.join(testDir, 'special_input')
+        await fs.copyFile(BINJECT, inputBinary)
+
+        const outputBinary = path.join(testDir, 'special_output')
+
+        // Inject (with required SEA blob)
+        const injectResult = await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          inputBinary,
+          '-o',
+          outputBinary,
+          '--sea',
+          seaBlob,
+          '--vfs',
+          vfsArchive,
+        ])
+
+        expect(injectResult.code).toBe(0)
+
+        // Extract
+        const extractedVfs = path.join(testDir, 'special_extracted.vfs')
+        const extractResult = await execCommand(BINJECT, [
+          'extract',
+          '-e',
+          outputBinary,
+          '-o',
+          extractedVfs,
+          '--vfs',
+        ])
+
+        expect(extractResult.code).toBe(0)
+
+        // Verify
+        const originalContent = await fs.readFile(vfsArchive)
+        const extractedContent = await fs.readFile(extractedVfs)
+        expect(Buffer.compare(originalContent, extractedContent)).toBe(0)
+      },
+      tolerantTimeout(30_000),
+    )
+  })
+
+  describe('batch injection round-trip', () => {
+    it(
+      'should inject and extract both SEA and VFS with identical content',
+      async () => {
+        // Create resources
+        const seaBlob = path.join(testDir, 'batch.blob')
+        const seaContent = Buffer.from('BATCH_SEA_CONTENT')
+        await fs.writeFile(seaBlob, seaContent)
+
+        const vfsArchive = path.join(testDir, 'batch.vfs')
+        const vfsContent = Buffer.from('BATCH_VFS_CONTENT')
+        await fs.writeFile(vfsArchive, vfsContent)
+
+        const inputBinary = path.join(testDir, 'batch_input')
+        await fs.copyFile(BINJECT, inputBinary)
+
+        const outputBinary = path.join(testDir, 'batch_output')
+
+        // Inject both
+        const injectResult = await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          inputBinary,
+          '-o',
+          outputBinary,
+          '--sea',
+          seaBlob,
+          '--vfs',
+          vfsArchive,
+        ])
+
+        expect(injectResult.code).toBe(0)
+
+        // Extract SEA
+        const extractedSea = path.join(testDir, 'batch_extracted.blob')
+        const seaExtractResult = await execCommand(BINJECT, [
+          'extract',
+          '-e',
+          outputBinary,
+          '-o',
+          extractedSea,
+          '--sea',
+        ])
+
+        expect(seaExtractResult.code).toBe(0)
+
+        // Extract VFS
+        const extractedVfs = path.join(testDir, 'batch_extracted.vfs')
+        const vfsExtractResult = await execCommand(BINJECT, [
+          'extract',
+          '-e',
+          outputBinary,
+          '-o',
+          extractedVfs,
+          '--vfs',
+        ])
+
+        expect(vfsExtractResult.code).toBe(0)
+
+        // Verify both
+        const seaOriginalHash = await hashFile(seaBlob)
+        const seaExtractedHash = await hashFile(extractedSea)
+        expect(seaExtractedHash).toBe(seaOriginalHash)
+
+        const vfsOriginalHash = await hashFile(vfsArchive)
+        const vfsExtractedHash = await hashFile(extractedVfs)
+        expect(vfsExtractedHash).toBe(vfsOriginalHash)
+      },
+      tolerantTimeout(30_000),
+    )
+  })
+
+  describe('multiple injection/extraction cycles', () => {
+    it(
+      'should maintain integrity after 3 inject/extract cycles',
+      async () => {
+        let currentBinary = path.join(testDir, 'cycle_input')
+        await fs.copyFile(BINJECT, currentBinary)
+
+        const originalSeaBlob = path.join(testDir, 'original.blob')
+        const originalContent = Buffer.from('CYCLE_TEST_CONTENT')
+        await fs.writeFile(originalSeaBlob, originalContent)
+
+        // 3 cycles of inject + extract
+        for (let i = 0; i < 3; i++) {
+          const seaBlob = path.join(testDir, `cycle_${i}.blob`)
+          // eslint-disable-next-line no-await-in-loop
+          await fs.copyFile(originalSeaBlob, seaBlob)
+
+          const outputBinary = path.join(testDir, `cycle_output_${i}`)
+
+          // Inject
+          // eslint-disable-next-line no-await-in-loop
+          const injectResult = await execCommand(BINJECT, [
+            'inject',
+            '-e',
+            currentBinary,
+            '-o',
+            outputBinary,
+            '--sea',
+            seaBlob,
+          ])
+
+          expect(injectResult.code).toBe(0)
+
+          // Extract
+          const extractedBlob = path.join(testDir, `cycle_extracted_${i}.blob`)
+          // eslint-disable-next-line no-await-in-loop
+          const extractResult = await execCommand(BINJECT, [
+            'extract',
+            '-e',
+            outputBinary,
+            '-o',
+            extractedBlob,
+            '--sea',
+          ])
+
+          expect(extractResult.code).toBe(0)
+
+          // Verify hash matches original
+          // eslint-disable-next-line no-await-in-loop
+          const extractedHash = await hashFile(extractedBlob)
+          // eslint-disable-next-line no-await-in-loop
+          const originalHash = await hashFile(originalSeaBlob)
+          expect(extractedHash).toBe(originalHash)
+
+          // Update current binary for next cycle
+          currentBinary = outputBinary
+        }
+      },
+      tolerantTimeout(90_000),
+    )
+
+    it(
+      'should handle re-injection with extraction validation',
+      async () => {
+        const inputBinary = path.join(testDir, 'reinject_input')
+        await fs.copyFile(BINJECT, inputBinary)
+
+        const blob1 = path.join(testDir, 'blob1.blob')
+        await fs.writeFile(blob1, Buffer.from('FIRST_INJECTION'))
+
+        const blob2 = path.join(testDir, 'blob2.blob')
+        await fs.writeFile(blob2, Buffer.from('SECOND_INJECTION'))
+
+        const output1 = path.join(testDir, 'reinject_output1')
+        const output2 = path.join(testDir, 'reinject_output2')
+
+        // First injection
+        await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          inputBinary,
+          '-o',
+          output1,
+          '--sea',
+          blob1,
+        ])
+
+        // Second injection (re-inject)
+        await execCommand(BINJECT, [
+          'inject',
+          '-e',
+          output1,
+          '-o',
+          output2,
+          '--sea',
+          blob2,
+        ])
+
+        // Extract from second output
+        const extracted = path.join(testDir, 'reinject_extracted.blob')
+        const extractResult = await execCommand(BINJECT, [
+          'extract',
+          '-e',
+          output2,
+          '-o',
+          extracted,
+          '--sea',
+        ])
+
+        expect(extractResult.code).toBe(0)
+
+        // Should match blob2, not blob1
+        const extractedContent = await fs.readFile(extracted, 'utf8')
+        expect(extractedContent).toBe('SECOND_INJECTION')
+        expect(extractedContent).not.toBe('FIRST_INJECTION')
+      },
+      tolerantTimeout(60_000),
+    )
   })
 })

@@ -92,7 +92,7 @@ export async function staticVerifyBinary(
         return true
       }
 
-      fileInfo = fileResult.stdout?.toString() || ''
+      fileInfo = fileResult.stdout || ''
       logger.log(`  Binary info: ${fileInfo.trim()}`)
     } catch {
       // file command not available (e.g., Windows without Git Bash tools)

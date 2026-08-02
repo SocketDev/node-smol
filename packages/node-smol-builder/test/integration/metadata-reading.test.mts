@@ -236,7 +236,7 @@ describe.skipIf(skipTests)('metadata Reading Correctness', () => {
     const metadataPath = path.join(cacheKeyDir, '.dlx-metadata.json')
     const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf8'))
 
-    // Verify binary bytes match current platform (binary embeds these at build time)
+    // Verify the binary bytes match the current platform. The binary embeds these at build time.
     const platformMapping: Record<number, string> = {
       0: 'linux',
       1: 'darwin',

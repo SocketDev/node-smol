@@ -181,7 +181,7 @@ console.log(results.join('\\n'))
       })
 
       // Async glob captures fs/promises references at module load time, before
-      // VFS shim installation. globSync works (uses shimmed fs methods directly).
+      // VFS shim installation. globSync works because it uses the shimmed fs methods directly.
       // Resolving this requires installing the VFS shim before the glob module
       // loads. Tracked separately; the test is pending the shim ordering fix.
       it.todo('should support async fs.glob() on VFS paths')

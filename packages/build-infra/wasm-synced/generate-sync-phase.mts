@@ -40,7 +40,7 @@ const logger = getDefaultLogger()
  * @param {string} options.packageConfig.fileBaseName - Base file name (defaults
  *   to exportName)
  */
-export async function generateSync(options) {
+export async function generateSync(config) {
   const {
     buildDir,
     buildMode,
@@ -48,7 +48,7 @@ export async function generateSync(options) {
     outputReleaseDir,
     outputSyncDir,
     packageConfig,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   logger.log(
     'Creating CommonJS synchronous wrapper from ESM async WASM module…',

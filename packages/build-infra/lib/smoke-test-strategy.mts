@@ -47,10 +47,10 @@ export type CrossCompileSmokeTestStrategy =
  * Checks if we're testing a cross-compiled binary.
  */
 export function isCrossCompiled(
-  options: { arch?: string | undefined } | undefined,
+  config: { arch?: string | undefined } | undefined,
   hostArch: string,
 ): boolean {
-  const { arch = getArch() } = { __proto__: null, ...options } as {
+  const { arch = getArch() } = { __proto__: null, ...config } as {
     arch?: string | undefined
   }
   return arch !== hostArch

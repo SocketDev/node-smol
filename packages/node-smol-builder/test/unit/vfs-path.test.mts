@@ -87,7 +87,7 @@ export function isValidVFSPrefix(prefix: string): {
  * Simulate path normalization (backslash → forward slash)
  */
 export function normalizePath(filepath: string): string {
-  // oxlint-disable-next-line socket/prefer-normalize-path -- this function IS the thing under test (a simulation of the production separator rewrite); it cannot call the lib helper it stands in for
+  // oxlint-disable-next-line socket/prefer-normalize-path -- this function IS the thing under test, a simulation of the production separator rewrite; it cannot call the lib helper it stands in for
   return filepath.replace(/\\/g, '/')
 }
 

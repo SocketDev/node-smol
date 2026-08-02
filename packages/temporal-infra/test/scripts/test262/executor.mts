@@ -30,7 +30,7 @@ export function loadAllowlist(filePath: string): string[] {
     .filter(line => line.length > 0 && !line.startsWith('#'))
 }
 
-export function resolveBinary(override?: string): string {
+export function resolveBinary(override?: string | undefined): string {
   if (override) {
     if (!existsSync(override)) {
       throw new Error(`Binary not found at --binary ${override}`)

@@ -20,6 +20,7 @@ import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { getBinjectPath } from './helpers/paths.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const BINJECT = getBinjectPath()
 
@@ -107,333 +108,365 @@ describe('bINJECT_NODE_PATH environment variable', () => {
     }
   })
 
-  it('should use BINJECT_NODE_PATH when set to valid node binary', async () => {
-    // Create a simple JS file
-    const jsFile = path.join(testDir, 'app.js')
-    await fs.writeFile(jsFile, "console.log('Hello');\n")
+  it(
+    'should use BINJECT_NODE_PATH when set to valid node binary',
+    async () => {
+      // Create a simple JS file
+      const jsFile = path.join(testDir, 'app.js')
+      await fs.writeFile(jsFile, "console.log('Hello');\n")
 
-    // Create SEA config
-    const configFile = path.join(testDir, 'sea-config.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app.js',
-        output: 'app.blob',
-      }),
-    )
+      // Create SEA config
+      const configFile = path.join(testDir, 'sea-config.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app.js',
+          output: 'app.blob',
+        }),
+      )
 
-    const outputBinary = path.join(testDir, 'output-valid-path')
-    const testBinject = await createTestBinject('test-binject-valid-path')
+      const outputBinary = path.join(testDir, 'output-valid-path')
+      const testBinject = await createTestBinject('test-binject-valid-path')
 
-    // Use process.execPath as the explicit node path
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
-      {
-        cwd: testDir,
-        env: {
-          ...process.env,
-          BINJECT_NODE_PATH: process.execPath,
+      // Use process.execPath as the explicit node path
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
+        {
+          cwd: testDir,
+          env: {
+            ...process.env,
+            BINJECT_NODE_PATH: process.execPath,
+          },
         },
-      },
-    )
+      )
 
-    // Should succeed
-    expect(result.code).toBe(0)
+      // Should succeed
+      expect(result.code).toBe(0)
 
-    // Should show it's generating blob (uses the specified node)
-    expect(result.output).toMatch(/Generating SEA blob/)
-    expect(result.output).toMatch(/Generated SEA blob/)
+      // Should show it is generating a blob using the specified node.
+      expect(result.output).toMatch(/Generating SEA blob/)
+      expect(result.output).toMatch(/Generated SEA blob/)
 
-    // Should have created output binary
-    expect(existsSync(outputBinary)).toBeTruthy()
-  }, 60_000)
+      // Should have created output binary
+      expect(existsSync(outputBinary)).toBeTruthy()
+    },
+    tolerantTimeout(60_000),
+  )
 
-  it('should fail with explicit error when BINJECT_NODE_PATH points to invalid binary', async () => {
-    // Create a simple JS file
-    const jsFile = path.join(testDir, 'app-invalid.js')
-    await fs.writeFile(jsFile, "console.log('Hello');\n")
+  it(
+    'should fail with explicit error when BINJECT_NODE_PATH points to invalid binary',
+    async () => {
+      // Create a simple JS file
+      const jsFile = path.join(testDir, 'app-invalid.js')
+      await fs.writeFile(jsFile, "console.log('Hello');\n")
 
-    // Create SEA config
-    const configFile = path.join(testDir, 'sea-config-invalid.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app-invalid.js',
-        output: 'app-invalid.blob',
-      }),
-    )
+      // Create SEA config
+      const configFile = path.join(testDir, 'sea-config-invalid.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app-invalid.js',
+          output: 'app-invalid.blob',
+        }),
+      )
 
-    const outputBinary = path.join(testDir, 'output-invalid-path')
-    const testBinject = await createTestBinject('test-binject-invalid-path')
+      const outputBinary = path.join(testDir, 'output-invalid-path')
+      const testBinject = await createTestBinject('test-binject-invalid-path')
 
-    // Point to a non-existent binary
-    const invalidPath = path.join(testDir, 'nonexistent-node')
+      // Point to a non-existent binary
+      const invalidPath = path.join(testDir, 'nonexistent-node')
 
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
-      {
-        cwd: testDir,
-        env: {
-          ...process.env,
-          BINJECT_NODE_PATH: invalidPath,
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
+        {
+          cwd: testDir,
+          env: {
+            ...process.env,
+            BINJECT_NODE_PATH: invalidPath,
+          },
         },
-      },
-    )
+      )
 
-    // Should fail
-    expect(result.code).not.toBe(0)
+      // Should fail
+      expect(result.code).not.toBe(0)
 
-    // Should show explicit error about invalid BINJECT_NODE_PATH
-    expect(result.output).toMatch(
-      /BINJECT_NODE_PATH is set but binary is invalid/,
-    )
-    expect(result.output).toContain(invalidPath)
-  }, 30_000)
+      // Should show explicit error about invalid BINJECT_NODE_PATH
+      expect(result.output).toMatch(
+        /BINJECT_NODE_PATH is set but binary is invalid/,
+      )
+      expect(result.output).toContain(invalidPath)
+    },
+    tolerantTimeout(30_000),
+  )
 
-  it('should fail when BINJECT_NODE_PATH points to non-executable file', async () => {
-    // Create a simple JS file
-    const jsFile = path.join(testDir, 'app-noexec.js')
-    await fs.writeFile(jsFile, "console.log('Hello');\n")
+  it(
+    'should fail when BINJECT_NODE_PATH points to non-executable file',
+    async () => {
+      // Create a simple JS file
+      const jsFile = path.join(testDir, 'app-noexec.js')
+      await fs.writeFile(jsFile, "console.log('Hello');\n")
 
-    // Create SEA config
-    const configFile = path.join(testDir, 'sea-config-noexec.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app-noexec.js',
-        output: 'app-noexec.blob',
-      }),
-    )
+      // Create SEA config
+      const configFile = path.join(testDir, 'sea-config-noexec.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app-noexec.js',
+          output: 'app-noexec.blob',
+        }),
+      )
 
-    const outputBinary = path.join(testDir, 'output-noexec-path')
-    const testBinject = await createTestBinject('test-binject-noexec-path')
+      const outputBinary = path.join(testDir, 'output-noexec-path')
+      const testBinject = await createTestBinject('test-binject-noexec-path')
 
-    // Create a regular text file (not executable)
-    const notExecutable = path.join(testDir, 'not-a-binary.txt')
-    await fs.writeFile(notExecutable, 'This is not a binary\n')
+      // Create a regular text file (not executable)
+      const notExecutable = path.join(testDir, 'not-a-binary.txt')
+      await fs.writeFile(notExecutable, 'This is not a binary\n')
 
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
-      {
-        cwd: testDir,
-        env: {
-          ...process.env,
-          BINJECT_NODE_PATH: notExecutable,
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
+        {
+          cwd: testDir,
+          env: {
+            ...process.env,
+            BINJECT_NODE_PATH: notExecutable,
+          },
         },
-      },
-    )
+      )
 
-    // Should fail
-    expect(result.code).not.toBe(0)
+      // Should fail
+      expect(result.code).not.toBe(0)
 
-    // Should show explicit error about invalid BINJECT_NODE_PATH
-    expect(result.output).toMatch(
-      /BINJECT_NODE_PATH is set but binary is invalid/,
-    )
-  }, 30_000)
+      // Should show explicit error about invalid BINJECT_NODE_PATH
+      expect(result.output).toMatch(
+        /BINJECT_NODE_PATH is set but binary is invalid/,
+      )
+    },
+    tolerantTimeout(30_000),
+  )
 
-  it('should not search PATH when BINJECT_NODE_PATH is set', async () => {
-    // Create a simple JS file
-    const jsFile = path.join(testDir, 'app-nosearch.js')
-    await fs.writeFile(jsFile, "console.log('Hello');\n")
+  it(
+    'should not search PATH when BINJECT_NODE_PATH is set',
+    async () => {
+      // Create a simple JS file
+      const jsFile = path.join(testDir, 'app-nosearch.js')
+      await fs.writeFile(jsFile, "console.log('Hello');\n")
 
-    // Create SEA config
-    const configFile = path.join(testDir, 'sea-config-nosearch.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app-nosearch.js',
-        output: 'app-nosearch.blob',
-      }),
-    )
+      // Create SEA config
+      const configFile = path.join(testDir, 'sea-config-nosearch.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app-nosearch.js',
+          output: 'app-nosearch.blob',
+        }),
+      )
 
-    const outputBinary = path.join(testDir, 'output-nosearch')
-    const testBinject = await createTestBinject('test-binject-nosearch')
+      const outputBinary = path.join(testDir, 'output-nosearch')
+      const testBinject = await createTestBinject('test-binject-nosearch')
 
-    // Set BINJECT_NODE_PATH to a valid node and clear PATH
-    // If binject were still searching PATH, this would fail
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
-      {
-        cwd: testDir,
-        env: {
-          ...process.env,
-          BINJECT_NODE_PATH: process.execPath,
-          // Clear PATH to prove we're not searching it
-          PATH: '',
+      // Set BINJECT_NODE_PATH to a valid node and clear PATH
+      // If binject were still searching PATH, this would fail
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
+        {
+          cwd: testDir,
+          env: {
+            ...process.env,
+            BINJECT_NODE_PATH: process.execPath,
+            // Clear PATH to prove we're not searching it
+            PATH: '',
+          },
         },
-      },
-    )
+      )
 
-    // Should succeed because BINJECT_NODE_PATH is used directly
-    expect(result.code).toBe(0)
+      // Should succeed because BINJECT_NODE_PATH is used directly
+      expect(result.code).toBe(0)
 
-    // Should have created output binary
-    expect(existsSync(outputBinary)).toBeTruthy()
-  }, 60_000)
+      // Should have created output binary
+      expect(existsSync(outputBinary)).toBeTruthy()
+    },
+    tolerantTimeout(60_000),
+  )
 
-  it('should proceed with version mismatch warning when BINJECT_NODE_PATH version differs', async () => {
-    // Create a simple JS file
-    const jsFile = path.join(testDir, 'app-mismatch.js')
-    await fs.writeFile(jsFile, "console.log('Hello');\n")
+  it(
+    'should proceed with version mismatch warning when BINJECT_NODE_PATH version differs',
+    async () => {
+      // Create a simple JS file
+      const jsFile = path.join(testDir, 'app-mismatch.js')
+      await fs.writeFile(jsFile, "console.log('Hello');\n")
 
-    // Create SEA config
-    const configFile = path.join(testDir, 'sea-config-mismatch.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app-mismatch.js',
-        output: 'app-mismatch.blob',
-      }),
-    )
+      // Create SEA config
+      const configFile = path.join(testDir, 'sea-config-mismatch.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app-mismatch.js',
+          output: 'app-mismatch.blob',
+        }),
+      )
 
-    const outputBinary = path.join(testDir, 'output-mismatch')
-    const testBinject = await createTestBinject('test-binject-mismatch')
+      const outputBinary = path.join(testDir, 'output-mismatch')
+      const testBinject = await createTestBinject('test-binject-mismatch')
 
-    // Use current node - when targeting binject (not node-smol), there's no embedded version
-    // so this should succeed without version mismatch warnings
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
-      {
-        cwd: testDir,
-        env: {
-          ...process.env,
-          BINJECT_NODE_PATH: process.execPath,
+      // Use current node - when targeting binject (not node-smol), there's no embedded version
+      // so this should succeed without version mismatch warnings
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
+        {
+          cwd: testDir,
+          env: {
+            ...process.env,
+            BINJECT_NODE_PATH: process.execPath,
+          },
         },
-      },
-    )
+      )
 
-    // Should succeed (version mismatch doesn't block, just disables optimizations)
-    expect(result.code).toBe(0)
+      // Should succeed (version mismatch doesn't block, just disables optimizations)
+      expect(result.code).toBe(0)
 
-    // Should have created output binary
-    expect(existsSync(outputBinary)).toBeTruthy()
-  }, 60_000)
+      // Should have created output binary
+      expect(existsSync(outputBinary)).toBeTruthy()
+    },
+    tolerantTimeout(60_000),
+  )
 
-  it('should ignore empty BINJECT_NODE_PATH and fall back to normal search', async () => {
-    // Create a simple JS file
-    const jsFile = path.join(testDir, 'app-empty.js')
-    await fs.writeFile(jsFile, "console.log('Hello');\n")
+  it(
+    'should ignore empty BINJECT_NODE_PATH and fall back to normal search',
+    async () => {
+      // Create a simple JS file
+      const jsFile = path.join(testDir, 'app-empty.js')
+      await fs.writeFile(jsFile, "console.log('Hello');\n")
 
-    // Create SEA config
-    const configFile = path.join(testDir, 'sea-config-empty.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app-empty.js',
-        output: 'app-empty.blob',
-      }),
-    )
+      // Create SEA config
+      const configFile = path.join(testDir, 'sea-config-empty.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app-empty.js',
+          output: 'app-empty.blob',
+        }),
+      )
 
-    const outputBinary = path.join(testDir, 'output-empty')
-    const testBinject = await createTestBinject('test-binject-empty')
+      const outputBinary = path.join(testDir, 'output-empty')
+      const testBinject = await createTestBinject('test-binject-empty')
 
-    // Set BINJECT_NODE_PATH to empty string
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
-      {
-        cwd: testDir,
-        env: {
-          ...process.env,
-          BINJECT_NODE_PATH: '',
+      // Set BINJECT_NODE_PATH to empty string
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
+        {
+          cwd: testDir,
+          env: {
+            ...process.env,
+            BINJECT_NODE_PATH: '',
+          },
         },
-      },
-    )
+      )
 
-    // Should succeed (falls back to normal PATH search)
-    expect(result.code).toBe(0)
+      // Should succeed (falls back to normal PATH search)
+      expect(result.code).toBe(0)
 
-    // Should have created output binary
-    expect(existsSync(outputBinary)).toBeTruthy()
-  }, 60_000)
+      // Should have created output binary
+      expect(existsSync(outputBinary)).toBeTruthy()
+    },
+    tolerantTimeout(60_000),
+  )
 
-  it('should handle relative paths correctly', async () => {
-    // Create app files
-    const jsFile = path.join(testDir, 'app-relative.js')
-    await fs.writeFile(jsFile, "console.log('Hello');\n")
+  it(
+    'should handle relative paths correctly',
+    async () => {
+      // Create app files
+      const jsFile = path.join(testDir, 'app-relative.js')
+      await fs.writeFile(jsFile, "console.log('Hello');\n")
 
-    const configFile = path.join(testDir, 'sea-config-relative.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app-relative.js',
-        output: 'app-relative.blob',
-      }),
-    )
+      const configFile = path.join(testDir, 'sea-config-relative.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app-relative.js',
+          output: 'app-relative.blob',
+        }),
+      )
 
-    const outputBinary = path.join(testDir, 'output-relative-path')
-    const testBinject = await createTestBinject('test-binject-relative-path')
+      const outputBinary = path.join(testDir, 'output-relative-path')
+      const testBinject = await createTestBinject('test-binject-relative-path')
 
-    // Copy node to test directory with a simple name
-    const localNode = path.join(testDir, 'my-node')
-    await fs.copyFile(process.execPath, localNode)
-    await makeExecutable(localNode)
+      // Copy node to test directory with a simple name
+      const localNode = path.join(testDir, 'my-node')
+      await fs.copyFile(process.execPath, localNode)
+      await makeExecutable(localNode)
 
-    // Use relative path (from testDir)
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
-      {
-        cwd: testDir,
-        env: {
-          ...process.env,
-          BINJECT_NODE_PATH: './my-node',
+      // Use relative path (from testDir)
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
+        {
+          cwd: testDir,
+          env: {
+            ...process.env,
+            BINJECT_NODE_PATH: './my-node',
+          },
         },
-      },
-    )
+      )
 
-    // Should succeed - realpath resolves relative paths
-    expect(result.code).toBe(0)
-    expect(existsSync(outputBinary)).toBeTruthy()
-  }, 60_000)
+      // Should succeed - realpath resolves relative paths
+      expect(result.code).toBe(0)
+      expect(existsSync(outputBinary)).toBeTruthy()
+    },
+    tolerantTimeout(60_000),
+  )
 
-  it('should handle paths with spaces', async () => {
-    // Create directory with spaces
-    const dirWithSpaces = path.join(testDir, 'Program Files', 'nodejs')
-    await fs.mkdir(dirWithSpaces, { recursive: true })
+  it(
+    'should handle paths with spaces',
+    async () => {
+      // Create directory with spaces
+      const dirWithSpaces = path.join(testDir, 'Program Files', 'nodejs')
+      await fs.mkdir(dirWithSpaces, { recursive: true })
 
-    // Copy node to path with spaces
-    const ext = process.platform === 'win32' ? '.exe' : ''
-    const nodeWithSpaces = path.join(dirWithSpaces, `node${ext}`)
-    await fs.copyFile(process.execPath, nodeWithSpaces)
-    await makeExecutable(nodeWithSpaces)
+      // Copy node to path with spaces
+      const ext = process.platform === 'win32' ? '.exe' : ''
+      const nodeWithSpaces = path.join(dirWithSpaces, `node${ext}`)
+      await fs.copyFile(process.execPath, nodeWithSpaces)
+      await makeExecutable(nodeWithSpaces)
 
-    // Create app files
-    const jsFile = path.join(testDir, 'app-spaces.js')
-    await fs.writeFile(jsFile, "console.log('Hello');\n")
+      // Create app files
+      const jsFile = path.join(testDir, 'app-spaces.js')
+      await fs.writeFile(jsFile, "console.log('Hello');\n")
 
-    const configFile = path.join(testDir, 'sea-config-spaces.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app-spaces.js',
-        output: 'app-spaces.blob',
-      }),
-    )
+      const configFile = path.join(testDir, 'sea-config-spaces.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app-spaces.js',
+          output: 'app-spaces.blob',
+        }),
+      )
 
-    const outputBinary = path.join(testDir, 'output-spaces')
-    const testBinject = await createTestBinject('test-binject-spaces')
+      const outputBinary = path.join(testDir, 'output-spaces')
+      const testBinject = await createTestBinject('test-binject-spaces')
 
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
-      {
-        cwd: testDir,
-        env: {
-          ...process.env,
-          BINJECT_NODE_PATH: nodeWithSpaces,
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
+        {
+          cwd: testDir,
+          env: {
+            ...process.env,
+            BINJECT_NODE_PATH: nodeWithSpaces,
+          },
         },
-      },
-    )
+      )
 
-    // Should succeed with paths containing spaces
-    expect(result.code).toBe(0)
-    expect(existsSync(outputBinary)).toBeTruthy()
-  }, 60_000)
+      // Should succeed with paths containing spaces
+      expect(result.code).toBe(0)
+      expect(existsSync(outputBinary)).toBeTruthy()
+    },
+    tolerantTimeout(60_000),
+  )
 })

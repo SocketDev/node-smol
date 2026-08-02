@@ -13,7 +13,7 @@ import { getCheckpointChain } from './build.mts'
 
 const logger = getDefaultLogger()
 
-// Get checkpoint chain (same for dev and prod).
+// Get the checkpoint chain. It is the same for dev and prod.
 const chain = getCheckpointChain()
 
 // Output as comma-separated string (for CI).

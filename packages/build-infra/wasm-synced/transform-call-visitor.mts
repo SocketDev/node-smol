@@ -26,7 +26,7 @@ const builtinModulesSet = new Set(builtinModules)
  *
  * @returns {object} Visitor handlers object for acorn-walk ancestor().
  */
-export function buildCallVisitor(options) {
+export function buildCallVisitor(config) {
   const {
     detectedModuleVar,
     mjsContent,
@@ -35,7 +35,7 @@ export function buildCallVisitor(options) {
     safeOverwrite,
     safeRemove,
     topLevelStatementsToRemove,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   return {
     CallExpression(node, ancestors) {

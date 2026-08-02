@@ -126,7 +126,7 @@ export async function validateTarballPaths(
     stdio: 'pipe',
   })
 
-  const files = (listResult.stdout?.toString() || '')
+  const files = (listResult.stdout || '')
     .split('\n')
     .filter(Boolean)
     .map(f => f.trim())
@@ -177,7 +177,7 @@ export async function validateTarballPaths(
     }
 
     // Defense-in-depth: Check normalized path doesn't become absolute
-    // (catches edge cases where normalization might produce absolute paths)
+    // This catches edge cases where normalization might produce absolute paths.
     if (path.isAbsolute(normalized)) {
       throw new Error(
         `Tarball contains unsafe path: ${file} (normalizes to absolute path)`,

@@ -21,6 +21,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../../../scripts/fleet/paths.mts'
 import { execCommand } from './helpers/compression-roundtrip.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const PACKAGE_DIR = path.join(REPO_ROOT, 'packages', 'binpress')
 
@@ -76,167 +77,191 @@ describe.skipIf(!existsSync(BINPRESS))(
   'binpress compression round-trip (edge cases)',
   () => {
     describe('large binary compression', () => {
-      it('should handle binary larger than 10MB', async () => {
-        // Create a test binary by concatenating node binary multiple times
-        const inputBinary = path.join(testDir, 'large_input')
+      it(
+        'should handle binary larger than 10MB',
+        async () => {
+          // Create a test binary by concatenating node binary multiple times
+          const inputBinary = path.join(testDir, 'large_input')
 
-        // Read test binary
-        const nodeData = await fs.readFile(testBinary)
+          // Read test binary
+          const nodeData = await fs.readFile(testBinary)
 
-        // Create large binary (repeat content to reach ~10MB)
-        const targetSize = 10 * 1024 * 1024
-        const repetitions = Math.ceil(targetSize / nodeData.length)
+          // Create large binary (repeat content to reach ~10MB)
+          const targetSize = 10 * 1024 * 1024
+          const repetitions = Math.ceil(targetSize / nodeData.length)
 
-        const handle = await fs.open(inputBinary, 'w')
-        try {
-          for (let i = 0; i < repetitions; i++) {
-            // eslint-disable-next-line no-await-in-loop
-            await handle.write(nodeData)
+          const handle = await fs.open(inputBinary, 'w')
+          try {
+            for (let i = 0; i < repetitions; i++) {
+              // eslint-disable-next-line no-await-in-loop
+              await handle.write(nodeData)
+            }
+          } finally {
+            await handle.close()
           }
-        } finally {
-          await handle.close()
-        }
 
-        // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
-        const inputStats = await fs.stat(inputBinary)
-        expect(inputStats.size).toBeGreaterThan(targetSize)
+          // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
+          const inputStats = await fs.stat(inputBinary)
+          expect(inputStats.size).toBeGreaterThan(targetSize)
 
-        const compressedBinary = path.join(testDir, 'large_compressed')
+          const compressedBinary = path.join(testDir, 'large_compressed')
 
-        // Compress (may take a while)
-        const compressResult = await execCommand(
-          BINPRESS,
-          [inputBinary, '--output', compressedBinary],
-          { timeout: 120_000 },
-        )
+          // Compress (may take a while)
+          const compressResult = await execCommand(
+            BINPRESS,
+            [inputBinary, '--output', compressedBinary],
+            { timeout: 120_000 },
+          )
 
-        expect(compressResult.code).toBe(0)
+          expect(compressResult.code).toBe(0)
 
-        // On Windows, binpress adds .exe extension automatically
-        const finalPath =
-          process.platform === 'win32'
-            ? `${compressedBinary}.exe`
-            : compressedBinary
+          // On Windows, binpress adds .exe extension automatically
+          const finalPath =
+            process.platform === 'win32'
+              ? `${compressedBinary}.exe`
+              : compressedBinary
 
-        // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
-        const compressedStats = await fs.stat(finalPath)
+          // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
+          const compressedStats = await fs.stat(finalPath)
 
-        // With repetitive data, should compress significantly
-        expect(compressedStats.size).toBeLessThan(inputStats.size * 0.8)
-      }, 180_000)
+          // With repetitive data, should compress significantly
+          expect(compressedStats.size).toBeLessThan(inputStats.size * 0.8)
+        },
+        tolerantTimeout(180_000),
+      )
     })
 
     describe('error handling', () => {
-      it('should fail gracefully with non-existent input', async () => {
-        const nonExistent = path.join(testDir, 'does_not_exist')
-        const output = path.join(testDir, 'error_output')
+      it(
+        'should fail gracefully with non-existent input',
+        async () => {
+          const nonExistent = path.join(testDir, 'does_not_exist')
+          const output = path.join(testDir, 'error_output')
 
-        const result = await execCommand(BINPRESS, [
-          nonExistent,
-          '--output',
-          output,
-        ])
+          const result = await execCommand(BINPRESS, [
+            nonExistent,
+            '--output',
+            output,
+          ])
 
-        expect(result.code).not.toBe(0)
-        expect(result.stderr).toBeTruthy()
-        expect(result.stderr.toLowerCase()).toMatch(
-          /not found|exist|no such|cannot find/,
-        )
-      }, 30_000)
+          expect(result.code).not.toBe(0)
+          expect(result.stderr).toBeTruthy()
+          expect(result.stderr.toLowerCase()).toMatch(
+            /not found|exist|no such|cannot find/,
+          )
+        },
+        tolerantTimeout(30_000),
+      )
 
-      it('should reject invalid input file', async () => {
-        const invalidInput = path.join(testDir, 'invalid.txt')
-        await fs.writeFile(invalidInput, 'not a binary')
+      it(
+        'should reject invalid input file',
+        async () => {
+          const invalidInput = path.join(testDir, 'invalid.txt')
+          await fs.writeFile(invalidInput, 'not a binary')
 
-        const output = path.join(testDir, 'invalid_output')
+          const output = path.join(testDir, 'invalid_output')
 
-        const result = await execCommand(BINPRESS, [
-          invalidInput,
-          '--output',
-          output,
-        ])
+          const result = await execCommand(BINPRESS, [
+            invalidInput,
+            '--output',
+            output,
+          ])
 
-        // Text files are not valid binaries and should be rejected
-        expect(result.code).not.toBe(0)
-        expect(result.stderr).toBeTruthy()
-        expect(result.stderr.toLowerCase()).toMatch(
-          /invalid|binary|format|not a|cannot/,
-        )
-      }, 30_000)
+          // Text files are not valid binaries and should be rejected
+          expect(result.code).not.toBe(0)
+          expect(result.stderr).toBeTruthy()
+          expect(result.stderr.toLowerCase()).toMatch(
+            /invalid|binary|format|not a|cannot/,
+          )
+        },
+        tolerantTimeout(30_000),
+      )
 
-      it('should reject empty file input', async () => {
-        const emptyFile = path.join(testDir, 'empty')
-        await fs.writeFile(emptyFile, Buffer.alloc(0))
+      it(
+        'should reject empty file input',
+        async () => {
+          const emptyFile = path.join(testDir, 'empty')
+          await fs.writeFile(emptyFile, Buffer.alloc(0))
 
-        const output = path.join(testDir, 'empty_output')
+          const output = path.join(testDir, 'empty_output')
 
-        const result = await execCommand(BINPRESS, [
-          emptyFile,
-          '--output',
-          output,
-        ])
+          const result = await execCommand(BINPRESS, [
+            emptyFile,
+            '--output',
+            output,
+          ])
 
-        // Empty files are not valid binaries and should be rejected
-        expect(result.code).not.toBe(0)
-        expect(result.stderr).toBeTruthy()
-        expect(result.stderr.toLowerCase()).toMatch(
-          /mach-o|binary|empty|size|invalid|cannot/,
-        )
-      }, 30_000)
+          // Empty files are not valid binaries and should be rejected
+          expect(result.code).not.toBe(0)
+          expect(result.stderr).toBeTruthy()
+          expect(result.stderr.toLowerCase()).toMatch(
+            /mach-o|binary|empty|size|invalid|cannot/,
+          )
+        },
+        tolerantTimeout(30_000),
+      )
     })
 
     describe('output file handling', () => {
-      it('should overwrite existing output file', async () => {
-        const inputBinary = path.join(testDir, 'overwrite_input')
-        await fs.copyFile(testBinary, inputBinary)
+      it(
+        'should overwrite existing output file',
+        async () => {
+          const inputBinary = path.join(testDir, 'overwrite_input')
+          await fs.copyFile(testBinary, inputBinary)
 
-        const output = path.join(testDir, 'overwrite_output')
+          const output = path.join(testDir, 'overwrite_output')
 
-        // Create existing file
-        await fs.writeFile(output, 'existing content')
+          // Create existing file
+          await fs.writeFile(output, 'existing content')
 
-        // Compress (should overwrite)
-        const result = await execCommand(BINPRESS, [
-          inputBinary,
-          '--output',
-          output,
-        ])
+          // Compress (should overwrite)
+          const result = await execCommand(BINPRESS, [
+            inputBinary,
+            '--output',
+            output,
+          ])
 
-        expect(result.code).toBe(0)
+          expect(result.code).toBe(0)
 
-        // On Windows, binpress adds .exe extension automatically
-        const finalPath =
-          process.platform === 'win32' ? `${output}.exe` : output
+          // On Windows, binpress adds .exe extension automatically
+          const finalPath =
+            process.platform === 'win32' ? `${output}.exe` : output
 
-        // Output should be larger than "existing content"
-        // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
-        const stats = await fs.stat(finalPath)
-        expect(stats.size).toBeGreaterThan(100)
-      }, 60_000)
+          // Output should be larger than "existing content"
+          // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
+          const stats = await fs.stat(finalPath)
+          expect(stats.size).toBeGreaterThan(100)
+        },
+        tolerantTimeout(60_000),
+      )
 
-      it('should create output in non-existent directory path', async () => {
-        const inputBinary = path.join(testDir, 'mkdir_input')
-        await fs.copyFile(testBinary, inputBinary)
+      it(
+        'should create output in non-existent directory path',
+        async () => {
+          const inputBinary = path.join(testDir, 'mkdir_input')
+          await fs.copyFile(testBinary, inputBinary)
 
-        const outputDir = path.join(testDir, 'new_dir')
-        const output = path.join(outputDir, 'output')
+          const outputDir = path.join(testDir, 'new_dir')
+          const output = path.join(outputDir, 'output')
 
-        // binpress creates parent directories automatically
-        const result = await execCommand(BINPRESS, [
-          inputBinary,
-          '--output',
-          output,
-        ])
+          // binpress creates parent directories automatically
+          const result = await execCommand(BINPRESS, [
+            inputBinary,
+            '--output',
+            output,
+          ])
 
-        expect(result.code).toBe(0)
+          expect(result.code).toBe(0)
 
-        // On Windows, binpress adds .exe extension automatically
-        const finalPath =
-          process.platform === 'win32' ? `${output}.exe` : output
+          // On Windows, binpress adds .exe extension automatically
+          const finalPath =
+            process.platform === 'win32' ? `${output}.exe` : output
 
-        expect(existsSync(finalPath)).toBeTruthy()
-        expect(existsSync(outputDir)).toBeTruthy()
-      }, 30_000)
+          expect(existsSync(finalPath)).toBeTruthy()
+          expect(existsSync(outputDir)).toBeTruthy()
+        },
+        tolerantTimeout(30_000),
+      )
     })
 
     describe('cache behavior', () => {
@@ -278,7 +303,7 @@ describe.skipIf(!existsSync(BINPRESS))(
             existsSync(DLX_DIR) ? await fs.readdir(DLX_DIR) : [],
           )
 
-          // First execution (creates cache or hits existing)
+          // First execution. It creates the cache or hits an existing one.
           const exec1 = await execCommand(finalPath, ['--version'])
           expect(exec1.code).toBe(0)
 

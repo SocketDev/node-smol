@@ -55,7 +55,9 @@ export function getCurrentLiefPlatformArch(): string {
 
 // Return the LIEF lib path for the current (or specified) platform-arch.
 // Mirrors scripts/build.mts:getLiefLibPath.
-export function getLiefLibPath(platformArch?: string): string | undefined {
+export function getLiefLibPath(
+  platformArch?: string | undefined,
+): string | undefined {
   const resolvedPlatformArch = platformArch ?? getCurrentLiefPlatformArch()
   return getLiefLibPathAt(getLiefLocalBuildDir(resolvedPlatformArch))
 }
@@ -99,7 +101,7 @@ const api = createPrebuiltApi({
 //   - Legacy (preserved from the original scripts/build.mts re-exports;
 //     in-use by binpress + binject scripts as `ensureLief`):
 //     ensureLief, liefExists, liefExistsAt, verifyLiefAt, getLiefLibPath
-//   - Factory-canonical (uniform across all builders):
+//   - Factory-canonical, uniform across all builders:
 //     downloadPrebuiltLief, getDownloadedLiefDir
 //
 // New consumers should prefer the factory-canonical names. Legacy

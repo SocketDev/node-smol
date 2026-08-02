@@ -27,11 +27,11 @@ const logger = getDefaultLogger()
  * @param {string} options.buildMode - Build mode ('prod' or 'dev')
  * @param {boolean} options.forceRebuild - Force rebuild (ignore checkpoints)
  */
-export async function optimizeWasm(options) {
+export async function optimizeWasm(config) {
   const { buildDir, optimizedDir, releaseDir } = {
     __proto__: null,
-    ...options,
-  } as typeof options
+    ...config,
+  } as typeof config
 
   logger.log('Running wasm-opt for additional size reduction…')
   logger.logNewline()

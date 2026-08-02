@@ -33,11 +33,11 @@ const logger = getDefaultLogger()
  *   external-tools.json.
  * @param {boolean} options.forceRebuild - Force rebuild (ignore checkpoints)
  */
-export async function configureCMake(options) {
+export async function configureCMake(config) {
   const { cmakeBuildDir, buildMode, emscriptenVersion, sourceDir } = {
     __proto__: null,
-    ...options,
-  } as typeof options
+    ...config,
+  } as typeof config
 
   await safeMkdir(cmakeBuildDir)
 

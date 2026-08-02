@@ -16,6 +16,7 @@ import {
   verifyNodeChecksum,
 } from '../lib/version-helpers.mts'
 import { REPO_ROOT as monorepoRoot } from '../../../scripts/fleet/paths.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 describe('version-helpers', () => {
   describe(getNodeVersion, () => {
@@ -121,44 +122,60 @@ describe('version-helpers', () => {
   })
 
   describe(fetchNodeChecksum, () => {
-    it('should fetch checksum for current Node.js version', async () => {
-      const version = getNodeVersion()
-      const result = await fetchNodeChecksum(version, { timeout: 15_000 })
+    it(
+      'should fetch checksum for current Node.js version',
+      async () => {
+        const version = getNodeVersion()
+        const result = await fetchNodeChecksum(version, { timeout: 15_000 })
 
-      expect('hash' in result).toBe(true)
-      if ('hash' in result) {
-        expect(result.hash).toMatch(/^[0-9a-f]{64}$/)
-        expect(result.version).toBe(version)
-      }
-    }, 20_000)
+        expect('hash' in result).toBe(true)
+        if ('hash' in result) {
+          expect(result.hash).toMatch(/^[0-9a-f]{64}$/)
+          expect(result.version).toBe(version)
+        }
+      },
+      tolerantTimeout(20_000),
+    )
 
-    it('should return error for non-existent version', async () => {
-      const result = await fetchNodeChecksum('0.0.1', { timeout: 10_000 })
+    it(
+      'should return error for non-existent version',
+      async () => {
+        const result = await fetchNodeChecksum('0.0.1', { timeout: 10_000 })
 
-      expect('error' in result).toBe(true)
-    }, 15_000)
+        expect('error' in result).toBe(true)
+      },
+      tolerantTimeout(15_000),
+    )
   })
 
   describe(verifyNodeChecksum, () => {
-    it('should verify checksum against nodejs.org', async () => {
-      const result = await verifyNodeChecksum({ timeout: 15_000 })
+    it(
+      'should verify checksum against nodejs.org',
+      async () => {
+        const result = await verifyNodeChecksum({ timeout: 15_000 })
 
-      // Should succeed (stored checksum matches upstream)
-      expect(result.version).toMatch(/^\d+\.\d+\.\d+$/)
-      expect(result.valid).toBe(true)
-      expect(result.expected).toMatch(/^[0-9a-f]{64}$/)
-      expect(result.actual).toMatch(/^[0-9a-f]{64}$/)
-      expect(result.expected).toBe(result.actual)
-    }, 20_000)
+        // Should succeed (stored checksum matches upstream)
+        expect(result.version).toMatch(/^\d+\.\d+\.\d+$/)
+        expect(result.valid).toBe(true)
+        expect(result.expected).toMatch(/^[0-9a-f]{64}$/)
+        expect(result.actual).toMatch(/^[0-9a-f]{64}$/)
+        expect(result.expected).toBe(result.actual)
+      },
+      tolerantTimeout(20_000),
+    )
 
-    it('should return error for invalid version', async () => {
-      const result = await verifyNodeChecksum({
-        version: '0.0.1',
-        timeout: 10_000,
-      })
+    it(
+      'should return error for invalid version',
+      async () => {
+        const result = await verifyNodeChecksum({
+          version: '0.0.1',
+          timeout: 10_000,
+        })
 
-      expect(result.valid).toBe(false)
-      expect(result.error).toBeDefined()
-    }, 15_000)
+        expect(result.valid).toBe(false)
+        expect(result.error).toBeDefined()
+      },
+      tolerantTimeout(15_000),
+    )
   })
 })

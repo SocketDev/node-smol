@@ -31,13 +31,13 @@ import { buildDeclVisitor } from './transform-decl-visitor.mts'
  *
  * @returns {Promise<string>} Transformed content
  */
-export async function applyCommonTransforms(options) {
+export async function applyCommonTransforms(config) {
   const {
     exportName,
     initFunctionName,
     logger,
     mjsContent: inputContent,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   let mjsContent = inputContent
 
@@ -184,7 +184,7 @@ export async function applyCommonTransforms(options) {
     mjsContent = s2.toString()
   }
 
-  // Pass 3: Gut WebAssembly.instantiate functions with fresh MagicString (avoid split point conflicts)
+  // Pass 3: Gut WebAssembly.instantiate functions with a fresh MagicString to avoid split-point conflicts.
   if (functionsToGut.length > 0) {
     const ast3 = Parser.parse(mjsContent, {
       ecmaVersion: 'latest',

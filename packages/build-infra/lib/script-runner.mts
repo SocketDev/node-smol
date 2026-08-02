@@ -39,7 +39,7 @@ export interface CommandSpec {
 export async function runCommand(
   command: string,
   args: string[] = [],
-  cwd: string | undefined = undefined,
+  cwd?: string | undefined,
 ): Promise<void> {
   logger.info(`Running: ${command} ${args.join(' ')}`)
 
@@ -238,10 +238,7 @@ export const pnpm = {
   /**
    * Build all packages or specific package.
    */
-  build: async (
-    packageName: string | undefined = undefined,
-    options: SpawnExtra = {},
-  ) => {
+  build: async (packageName?: string | undefined, options: SpawnExtra = {}) => {
     logger.step(packageName ? `Building ${packageName}` : 'Building packages')
     const pnpmResolved = await which('pnpm', { nothrow: true })
     // which() may return string[] under some option shapes — take the first hit.
@@ -285,10 +282,7 @@ export const pnpm = {
   /**
    * Run tests in specific package or all packages.
    */
-  test: async (
-    packageName: string | undefined = undefined,
-    options: SpawnExtra = {},
-  ) => {
+  test: async (packageName?: string | undefined, options: SpawnExtra = {}) => {
     logger.step(packageName ? `Testing ${packageName}` : 'Running tests')
     const pnpmResolved = await which('pnpm', { nothrow: true })
     // which() may return string[] under some option shapes — take the first hit.

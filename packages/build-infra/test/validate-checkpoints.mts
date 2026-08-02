@@ -142,7 +142,7 @@ export function validateCheckpoints(
     allCheckpoints.push(...findCheckpoints(sharedCheckpointDir))
   }
 
-  // No checkpoint archives found (directories exist but are empty).
+  // No checkpoint archives found. The directories exist but are empty.
   if (allCheckpoints.length === 0) {
     return {
       checkpointCount: 0,

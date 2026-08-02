@@ -31,6 +31,7 @@ import {
   getBinpressPath,
 } from './helpers/paths.mts'
 import { MACHO_SEGMENT_SMOL } from 'bin-infra/test/helpers/segment-names'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const logger = getDefaultLogger()
 
@@ -127,7 +128,7 @@ export async function isSMOLStub(binaryPath: string) {
   )
 }
 
-// Warn if binaries are missing (tests will be skipped)
+// Warn if binaries are missing. Those tests will be skipped.
 if (!binjectExists) {
   logger.warn(`binject not found at ${BINJECT}`)
   logger.warn('   Run: pnpm build in packages/binject')
@@ -163,144 +164,156 @@ describe.skipIf(!binjectExists || !binpressExists || !binflateExists)(
   'sMOL stub injection and repack workflow',
   () => {
     describe('auto-detect and inject into SMOL stub', () => {
-      it('should auto-detect SMOL stub and inject SEA resource', async () => {
-        // Step 1: Create SMOL compressed stub (use Node.js binary as consistent test input)
-        const originalBinary = testBinary
-        const compressedStub = path.join(testDir, 'inject-stub')
+      it(
+        'should auto-detect SMOL stub and inject SEA resource',
+        async () => {
+          // Step 1: Create SMOL compressed stub (use Node.js binary as consistent test input)
+          const originalBinary = testBinary
+          const compressedStub = path.join(testDir, 'inject-stub')
 
-        const compressResult = await execCommand(BINPRESS, [
-          originalBinary,
-          '-o',
-          compressedStub,
-        ])
-        expect(compressResult.code).toBe(0)
-        await expect(isSMOLStub(compressedStub)).resolves.toBeTruthy()
+          const compressResult = await execCommand(BINPRESS, [
+            originalBinary,
+            '-o',
+            compressedStub,
+          ])
+          expect(compressResult.code).toBe(0)
+          await expect(isSMOLStub(compressedStub)).resolves.toBeTruthy()
 
-        // Step 2: Create test SEA blob
-        const seaBlob = path.join(testDir, 'test-sea.blob')
-        await createTestSEABlob(seaBlob)
+          // Step 2: Create test SEA blob
+          const seaBlob = path.join(testDir, 'test-sea.blob')
+          await createTestSEABlob(seaBlob)
 
-        // Step 3: Inject SEA into SMOL stub
-        // binject should auto-detect SMOL, extract, inject, repack
-        const outputStub = path.join(testDir, 'inject-output')
-        const injectResult = await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          compressedStub,
-          '-o',
-          outputStub,
-          '--sea',
-          seaBlob,
-        ])
+          // Step 3: Inject SEA into SMOL stub
+          // binject should auto-detect SMOL, extract, inject, repack
+          const outputStub = path.join(testDir, 'inject-output')
+          const injectResult = await execCommand(BINJECT, [
+            'inject',
+            '-e',
+            compressedStub,
+            '-o',
+            outputStub,
+            '--sea',
+            seaBlob,
+          ])
 
-        // Should succeed
-        expect(injectResult.code).toBe(0)
-        expect(existsSync(outputStub)).toBeTruthy()
+          // Should succeed
+          expect(injectResult.code).toBe(0)
+          expect(existsSync(outputStub)).toBeTruthy()
 
-        // Step 4: Verify output is still a SMOL stub
-        await expect(isSMOLStub(outputStub)).resolves.toBeTruthy()
+          // Step 4: Verify output is still a SMOL stub
+          await expect(isSMOLStub(outputStub)).resolves.toBeTruthy()
 
-        // Note: After repacking, the SEA resource is INSIDE the compressed __PRESSED_DATA.
-        // It is NOT visible in `binject list` output for the SMOL stub.
-        // The SEA will only be visible after the stub runs and extracts the binary to cache.
-        // We verify the injection succeeded by confirming:
-        // 1. The injection command succeeded (code 0)
-        // 2. The output is a valid SMOL stub
-        // 3. The output size increased (verified in the next test)
-        const listResult = await execCommand(BINJECT, ['list', outputStub])
-        expect(listResult.code).toBe(0)
-        // SMOL stub should contain the SMOL segment with compressed data
-        expect(listResult.stdout).toContain('SMOL')
-        // 60s timeout for compression/decompression
-      }, 60_000)
+          // Note: After repacking, the SEA resource is INSIDE the compressed __PRESSED_DATA.
+          // It is NOT visible in `binject list` output for the SMOL stub.
+          // The SEA will only be visible after the stub runs and extracts the binary to cache.
+          // We verify the injection succeeded by confirming:
+          // 1. The injection command succeeded (code 0)
+          // 2. The output is a valid SMOL stub
+          // 3. The output size increased (verified in the next test)
+          const listResult = await execCommand(BINJECT, ['list', outputStub])
+          expect(listResult.code).toBe(0)
+          // SMOL stub should contain the SMOL segment with compressed data
+          expect(listResult.stdout).toContain('SMOL')
+          // 60s timeout for compression/decompression
+        },
+        tolerantTimeout(60_000),
+      )
 
-      it('should preserve SMOL stub size characteristics', async () => {
-        // Step 1: Create SMOL compressed stub
-        const originalBinary = testBinary
-        const compressedStub = path.join(testDir, 'size-stub')
+      it(
+        'should preserve SMOL stub size characteristics',
+        async () => {
+          // Step 1: Create SMOL compressed stub
+          const originalBinary = testBinary
+          const compressedStub = path.join(testDir, 'size-stub')
 
-        await execCommand(BINPRESS, [originalBinary, '-o', compressedStub])
-        // oxlint-disable-next-line socket/prefer-exists-sync -- four fs.stat() calls all consume stats.size to compare original vs. injected stub sizes; existsSync would lose the size data.
-        const originalStubSize = (await fs.stat(compressedStub)).size
+          await execCommand(BINPRESS, [originalBinary, '-o', compressedStub])
+          // oxlint-disable-next-line socket/prefer-exists-sync -- four fs.stat() calls all consume stats.size to compare original vs. injected stub sizes; existsSync would lose the size data.
+          const originalStubSize = (await fs.stat(compressedStub)).size
 
-        // Step 2: Inject SEA into SMOL stub
-        const seaBlob = path.join(testDir, 'size-test-sea.blob')
-        await createTestSEABlob(seaBlob)
-        const outputStub = path.join(testDir, 'size-output')
-        await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          compressedStub,
-          '-o',
-          outputStub,
-          '--sea',
-          seaBlob,
-        ])
+          // Step 2: Inject SEA into SMOL stub
+          const seaBlob = path.join(testDir, 'size-test-sea.blob')
+          await createTestSEABlob(seaBlob)
+          const outputStub = path.join(testDir, 'size-output')
+          await execCommand(BINJECT, [
+            'inject',
+            '-e',
+            compressedStub,
+            '-o',
+            outputStub,
+            '--sea',
+            seaBlob,
+          ])
 
-        // oxlint-disable-next-line socket/prefer-exists-sync -- four fs.stat() calls all consume stats.size to compare original vs. injected stub sizes; existsSync would lose the size data.
-        const outputStubSize = (await fs.stat(outputStub)).size
-        // oxlint-disable-next-line socket/prefer-exists-sync -- four fs.stat() calls all consume stats.size to compare original vs. injected stub sizes; existsSync would lose the size data.
-        const originalBinarySize = (await fs.stat(originalBinary)).size
+          // oxlint-disable-next-line socket/prefer-exists-sync -- four fs.stat() calls all consume stats.size to compare original vs. injected stub sizes; existsSync would lose the size data.
+          const outputStubSize = (await fs.stat(outputStub)).size
+          // oxlint-disable-next-line socket/prefer-exists-sync -- four fs.stat() calls all consume stats.size to compare original vs. injected stub sizes; existsSync would lose the size data.
+          const originalBinarySize = (await fs.stat(originalBinary)).size
 
-        // Output stub should be:
-        // - Larger than input (added SEA data)
-        // - Still compressed (much smaller than full uncompressed binary)
-        expect(outputStubSize).toBeGreaterThan(originalStubSize)
-        // LIEF can't resize Mach-O segments in-place — it removes the old SMOL
-        // segment then appends a new one, leaving a gap. So the output can be
-        // roughly originalStub + newCompressedData rather than a tight repack.
-        // The key invariant: output must still be much smaller than uncompressed.
-        expect(outputStubSize).toBeLessThan(originalBinarySize)
+          // Output stub should be:
+          // - Larger than input (added SEA data)
+          // - Still compressed, so much smaller than the full uncompressed binary.
+          expect(outputStubSize).toBeGreaterThan(originalStubSize)
+          // LIEF can't resize Mach-O segments in-place — it removes the old SMOL
+          // segment then appends a new one, leaving a gap. So the output can be
+          // roughly originalStub + newCompressedData rather than a tight repack.
+          // The key invariant: output must still be much smaller than uncompressed.
+          expect(outputStubSize).toBeLessThan(originalBinarySize)
 
-        // Verify both are SMOL stubs
-        await expect(isSMOLStub(compressedStub)).resolves.toBeTruthy()
-        await expect(isSMOLStub(outputStub)).resolves.toBeTruthy()
-      }, 60_000)
+          // Verify both are SMOL stubs
+          await expect(isSMOLStub(compressedStub)).resolves.toBeTruthy()
+          await expect(isSMOLStub(outputStub)).resolves.toBeTruthy()
+        },
+        tolerantTimeout(60_000),
+      )
     })
 
     describe('skip repack with --skip-repack flag', () => {
-      it('should modify cached binary without repacking when --skip-repack is used', async () => {
-        // Step 1: Create SMOL compressed stub
-        const originalBinary = testBinary
-        const compressedStub = path.join(testDir, 'skip-stub')
+      it(
+        'should modify cached binary without repacking when --skip-repack is used',
+        async () => {
+          // Step 1: Create SMOL compressed stub
+          const originalBinary = testBinary
+          const compressedStub = path.join(testDir, 'skip-stub')
 
-        await execCommand(BINPRESS, [originalBinary, '-o', compressedStub])
+          await execCommand(BINPRESS, [originalBinary, '-o', compressedStub])
 
-        // Step 2: Run the stub once to extract to cache
-        // (--skip-repack requires the extracted binary to exist in cache)
-        await execCommand(compressedStub, ['--version'])
-        // Note: This may fail if Node.js doesn't support --version in this way, but extraction happens anyway
-        // The important thing is the binary was executed and extracted to cache
+          // Step 2: Run the stub once to extract to cache
+          // (--skip-repack requires the extracted binary to exist in cache)
+          await execCommand(compressedStub, ['--version'])
+          // Note: This may fail if Node.js doesn't support --version in this way, but extraction happens anyway
+          // The important thing is the binary was executed and extracted to cache
 
-        // Step 3: Inject with --skip-repack flag
-        // With --skip-repack, binject:
-        // 1. Detects compressed stub
-        // 2. Finds extracted binary in cache
-        // 3. Injects SEA into the cached binary
-        // 4. Does NOT repack - leaves injected binary in cache for testing
-        const seaBlob = path.join(testDir, 'skip-sea.blob')
-        await createTestSEABlob(seaBlob)
+          // Step 3: Inject with --skip-repack flag
+          // With --skip-repack, binject:
+          // 1. Detects compressed stub
+          // 2. Finds extracted binary in cache
+          // 3. Injects SEA into the cached binary
+          // 4. Does NOT repack - leaves injected binary in cache for testing
+          const seaBlob = path.join(testDir, 'skip-sea.blob')
+          await createTestSEABlob(seaBlob)
 
-        const outputStub = path.join(testDir, 'skip-output')
-        const injectResult = await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          compressedStub,
-          '-o',
-          outputStub,
-          '--sea',
-          seaBlob,
-          '--skip-repack',
-        ])
+          const outputStub = path.join(testDir, 'skip-output')
+          const injectResult = await execCommand(BINJECT, [
+            'inject',
+            '-e',
+            compressedStub,
+            '-o',
+            outputStub,
+            '--sea',
+            seaBlob,
+            '--skip-repack',
+          ])
 
-        // With --skip-repack, binject modifies the cached binary and prints a message
-        // It may or may not create the output file depending on whether it's compressed
-        // The key behavior is: cached binary is modified, repacking is skipped
-        // Check output contains the skip message
-        expect(injectResult.stdout + injectResult.stderr).toMatch(
-          /skip.*repack|Modified extracted binary/i,
-        )
-      }, 60_000)
+          // With --skip-repack, binject modifies the cached binary and prints a message
+          // It may or may not create the output file depending on whether it's compressed
+          // The key behavior is: cached binary is modified, repacking is skipped
+          // Check output contains the skip message
+          expect(injectResult.stdout + injectResult.stderr).toMatch(
+            /skip.*repack|Modified extracted binary/i,
+          )
+        },
+        tolerantTimeout(60_000),
+      )
     })
 
     // NOTE: Extracting PRESSED_DATA is not supported via CLI
@@ -308,29 +321,33 @@ describe.skipIf(!binjectExists || !binpressExists || !binflateExists)(
     // SMOL stub internals (PRESSED_DATA) cannot be extracted with binject
 
     describe('error handling', () => {
-      it('should handle non-SMOL binary without --skip-repack', async () => {
-        // Use regular binary (not compressed)
-        const regularBinary = testBinary
-        const seaBlob = path.join(testDir, 'error-sea.blob')
-        await createTestSEABlob(seaBlob)
+      it(
+        'should handle non-SMOL binary without --skip-repack',
+        async () => {
+          // Use regular binary (not compressed)
+          const regularBinary = testBinary
+          const seaBlob = path.join(testDir, 'error-sea.blob')
+          await createTestSEABlob(seaBlob)
 
-        const outputPath = path.join(testDir, 'error-output')
-        const result = await execCommand(BINJECT, [
-          'inject',
-          '-e',
-          regularBinary,
-          '-o',
-          outputPath,
-          '--sea',
-          seaBlob,
-        ])
+          const outputPath = path.join(testDir, 'error-output')
+          const result = await execCommand(BINJECT, [
+            'inject',
+            '-e',
+            regularBinary,
+            '-o',
+            outputPath,
+            '--sea',
+            seaBlob,
+          ])
 
-        // Should succeed (regular injection, no SMOL auto-detection)
-        expect(result.code).toBe(0)
+          // Should succeed (regular injection, no SMOL auto-detection)
+          expect(result.code).toBe(0)
 
-        // Output should not be a SMOL stub
-        await expect(isSMOLStub(outputPath)).resolves.toBeFalsy()
-      }, 30_000)
+          // Output should not be a SMOL stub
+          await expect(isSMOLStub(outputPath)).resolves.toBeFalsy()
+        },
+        tolerantTimeout(30_000),
+      )
     })
   },
 )

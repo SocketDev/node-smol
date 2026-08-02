@@ -31,7 +31,7 @@ export function getMemoryUsageMB(pid) {
         ['-NoProfile', '-Command', `(Get-Process -Id ${pid}).WorkingSet64`],
         { encoding: 'utf8' },
       )
-      const bytes = parseInt(String(result.stdout).trim(), 10)
+      const bytes = parseInt(result.stdout.trim(), 10)
       if (Number.isNaN(bytes)) {
         return 0
       }
@@ -41,7 +41,7 @@ export function getMemoryUsageMB(pid) {
     const result = spawnSync('ps', ['-o', 'rss=', '-p', String(pid)], {
       encoding: 'utf8',
     })
-    const kb = parseInt(String(result.stdout).trim(), 10)
+    const kb = parseInt(result.stdout.trim(), 10)
     if (Number.isNaN(kb)) {
       return 0
     }

@@ -44,7 +44,7 @@ describe('node:smol-ilp TimeUnit', () => {
     it('fromDate() should convert Date milliseconds using same logic as now()', () => {
       const date = new Date('2023-11-03T12:05:45.678Z')
       const ms = date.getTime()
-      // Test conversion logic works correctly (values derived from actual date)
+      // Test that the conversion logic works correctly. Values derive from an actual date.
       expect(BigInt(ms) * MS_TO_NS).toBe(BigInt(ms) * 1_000_000n)
       expect(BigInt(ms) * MS_TO_US).toBe(BigInt(ms) * 1000n)
       expect(BigInt(ms)).toBe(BigInt(ms))

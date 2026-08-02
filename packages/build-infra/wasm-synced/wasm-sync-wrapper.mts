@@ -39,7 +39,7 @@ import { generateSyncEsm } from './generate-sync-esm.mts'
  *
  * @returns {Promise<void>}
  */
-export async function generateWasmSyncWrapper(options) {
+export async function generateWasmSyncWrapper(config) {
   const {
     customSmokeTest,
     description,
@@ -50,7 +50,7 @@ export async function generateWasmSyncWrapper(options) {
     outputSyncJs,
     packageName,
     wasmFile,
-  } = { __proto__: null, ...options }
+  } = { __proto__: null, ...config }
 
   if (!existsSync(wasmFile)) {
     throw new Error(`WASM file not found: ${wasmFile}`)
@@ -79,7 +79,7 @@ export async function generateWasmSyncWrapper(options) {
   const basename =
     lastSlash === -1 ? outputSyncCjs : outputSyncCjs.substring(lastSlash + 1)
 
-  // Validate basename is non-empty (catches trailing slash edge case)
+  // Validate the basename is non-empty, which catches the trailing-slash edge case.
   if (!basename) {
     throw new Error(
       `Invalid output path (ends with slash): ${outputSyncCjs}. ` +

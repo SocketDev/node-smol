@@ -98,7 +98,7 @@ async function main(): Promise<void> {
       ['-C', WPT_SUBMODULE_DIR, 'rev-parse', 'HEAD'],
       { stdio: ['inherit', 'pipe', 'pipe'] },
     )
-    const sha = String(shaResult.stdout ?? '').trim()
+    const sha = (shaResult.stdout ?? '').trim()
     if (sha) {
       logger.info(`WPT ref: ${sha.slice(0, 8)}`)
     }
@@ -196,7 +196,7 @@ async function main(): Promise<void> {
 
   // Summary
   logger.log('')
-  logger.log(`${'='.repeat(60)}`)
+  logger.log('='.repeat(60))
   logger.log('Results:')
   logger.substep(`Total tests: ${totalTests}`)
   logger.substep(`Passed: \x1b[32m${totalPassed}\x1b[0m`)

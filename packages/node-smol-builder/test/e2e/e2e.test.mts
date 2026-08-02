@@ -314,7 +314,7 @@ if (isSEA) {
         await fs.copyFile(finalBinaryPath, appBinary)
         await makeExecutable(appBinary)
 
-        // Step 7: Inject SEA + VFS together (binject requires both in one call)
+        // Step 7: Inject SEA + VFS together, because binject requires both in one call.
         logger.log('Injecting SEA blob…')
         logger.log('Injecting VFS blob…')
         const injectResult = await runBinject(

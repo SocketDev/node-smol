@@ -98,7 +98,7 @@ async function initBuildContext() {
   MODELS = modelsDir
   DIST_MODE = outputFinalDir
 
-  // Load model sources from package.json (single source of truth).
+  // Load model sources from package.json, the single source of truth.
   packageJsonPath = path.join(PACKAGE_ROOT, 'package.json')
   const packageJson = await readJson(packageJsonPath)
   MODEL_SOURCES = packageJson.moduleSources

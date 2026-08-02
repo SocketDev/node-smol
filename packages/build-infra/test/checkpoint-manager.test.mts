@@ -45,11 +45,7 @@ describe('checkpoint-manager', () => {
 
   describe(hasCheckpoint, () => {
     it('should return false for non-existent checkpoint', async () => {
-      const exists = await hasCheckpoint(
-        testBuildDir,
-        'test-pkg',
-        'non-existent',
-      )
+      const exists = hasCheckpoint(testBuildDir, 'test-pkg', 'non-existent')
       expect(exists).toBeFalsy()
     })
 
@@ -58,7 +54,7 @@ describe('checkpoint-manager', () => {
         ...TARGET,
         packageName: 'test-pkg',
       })
-      const exists = await hasCheckpoint(testBuildDir, 'test-pkg', 'exists')
+      const exists = hasCheckpoint(testBuildDir, 'test-pkg', 'exists')
       expect(exists).toBeTruthy()
     })
   })
@@ -202,8 +198,8 @@ describe('checkpoint-manager', () => {
 
       await removeCheckpoint(testBuildDir, 'test-pkg', 'remove')
 
-      const hasRemoved = await hasCheckpoint(testBuildDir, 'test-pkg', 'remove')
-      const hasKept = await hasCheckpoint(testBuildDir, 'test-pkg', 'keep')
+      const hasRemoved = hasCheckpoint(testBuildDir, 'test-pkg', 'remove')
+      const hasKept = hasCheckpoint(testBuildDir, 'test-pkg', 'keep')
       expect(hasRemoved).toBeFalsy()
       expect(hasKept).toBeTruthy()
     })
@@ -319,28 +315,16 @@ describe('checkpoint-manager', () => {
       })
 
       // Both should exist independently
-      const devHas = await hasCheckpoint(devBuildDir, 'test-pkg', 'checkpoint')
-      const prodHas = await hasCheckpoint(
-        prodBuildDir,
-        'test-pkg',
-        'checkpoint',
-      )
+      const devHas = hasCheckpoint(devBuildDir, 'test-pkg', 'checkpoint')
+      const prodHas = hasCheckpoint(prodBuildDir, 'test-pkg', 'checkpoint')
       expect(devHas).toBeTruthy()
       expect(prodHas).toBeTruthy()
 
       // Clean one should not affect the other
       await cleanCheckpoint(devBuildDir, 'test-pkg')
 
-      const devHasAfter = await hasCheckpoint(
-        devBuildDir,
-        'test-pkg',
-        'checkpoint',
-      )
-      const prodHasAfter = await hasCheckpoint(
-        prodBuildDir,
-        'test-pkg',
-        'checkpoint',
-      )
+      const devHasAfter = hasCheckpoint(devBuildDir, 'test-pkg', 'checkpoint')
+      const prodHasAfter = hasCheckpoint(prodBuildDir, 'test-pkg', 'checkpoint')
       expect(devHasAfter).toBeFalsy()
       expect(prodHasAfter).toBeTruthy()
     })

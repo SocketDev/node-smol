@@ -105,14 +105,14 @@ export function computeBuildCacheEnvMetadata(): string | undefined {
  * restore only when its stored fingerprint equals the fingerprint
  * computed here for the current inputs.
  */
-export function computeBuildInputsFingerprint(options: {
+export function computeBuildInputsFingerprint(config: {
   dirs: string[]
   nodeVersion: string
 }): string {
   const { dirs, nodeVersion } = {
     __proto__: null,
-    ...options,
-  } as typeof options
+    ...config,
+  } as typeof config
   const existingDirs = dirs.filter(dir => existsSync(dir))
   return computeSourceHash(existingDirs, `node-${nodeVersion}`)
 }
@@ -122,7 +122,7 @@ export function computeBuildInputsFingerprint(options: {
  * is refused because its build-inputs fingerprint is stale or missing.
  * What/Where/Saw-vs-wanted/Fix, in order.
  */
-export function formatStaleCheckpointMessage(options: {
+export function formatStaleCheckpointMessage(config: {
   checkpointFile: string
   checkpointName: string
   currentFingerprint: string
@@ -133,7 +133,7 @@ export function formatStaleCheckpointMessage(options: {
     checkpointName,
     currentFingerprint,
     savedFingerprint,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
   return [
     `Stale checkpoint: build inputs changed since '${checkpointName}' was saved — refusing to restore it.`,
     `Where: ${checkpointFile}`,
@@ -148,14 +148,14 @@ export function formatStaleCheckpointMessage(options: {
  * checkpoint format) is treated as stale, not as a free pass — freshness
  * must be proven, never assumed.
  */
-export function isCheckpointFingerprintCurrent(options: {
+export function isCheckpointFingerprintCurrent(config: {
   checkpointData: { inputsFingerprint?: string | undefined } | undefined
   currentFingerprint: string
 }): boolean {
   const { checkpointData, currentFingerprint } = {
     __proto__: null,
-    ...options,
-  } as typeof options
+    ...config,
+  } as typeof config
   return (
     checkpointData?.inputsFingerprint !== undefined &&
     checkpointData.inputsFingerprint === currentFingerprint

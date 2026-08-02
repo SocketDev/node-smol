@@ -301,11 +301,11 @@ export async function copyBoringsslArtifacts(): Promise<void> {
   logger.substep(`staged BoringSSL artifacts → ${depsBoringsslDir}`)
 }
 
-export async function prepareExternalSources(options: {
+export async function prepareExternalSources(config: {
   buildMode: string
   platformArch: string
 }) {
-  const opts = { __proto__: null, ...options }
+  const opts = { __proto__: null, ...config }
   logger.step('Preparing External Sources')
 
   // Stage VENDORED_SOURCES into additions/source-patched/ so the

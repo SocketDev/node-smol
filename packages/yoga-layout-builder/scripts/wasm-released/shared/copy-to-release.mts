@@ -24,11 +24,11 @@ const logger = getDefaultLogger()
  * @param {string} options.buildWasmFile
  * @param {string} options.buildJsFile
  */
-export async function copyToRelease(options) {
+export async function copyToRelease(config) {
   const { buildDir, buildJsFile, buildWasmFile, outputReleaseDir } = {
     __proto__: null,
-    ...options,
-  } as typeof options
+    ...config,
+  } as typeof config
 
   logger.log('Copying WASM artifacts from cmake build to out/Release…')
   logger.logNewline()

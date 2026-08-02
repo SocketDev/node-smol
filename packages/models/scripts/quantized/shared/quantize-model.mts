@@ -49,7 +49,7 @@ const QUANTIZE_PYTHON_DIR = path.resolve(
  *
  * @returns {Promise<string[]>} Array of quantized model paths
  */
-export async function quantizeModel(options) {
+export async function quantizeModel(config) {
   const {
     buildDir,
     forceRebuild,
@@ -57,7 +57,7 @@ export async function quantizeModel(options) {
     modelsDir,
     packageName,
     quantLevel,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   const suffix = quantLevel.toLowerCase()
   const checkpointKey = `${CHECKPOINTS.QUANTIZED}-${modelKey}-${suffix}`

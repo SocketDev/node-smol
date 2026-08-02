@@ -150,7 +150,7 @@ export async function buildStripped(config, buildOptions = {}) {
     logger.log('')
   } else if (IS_MACOS) {
     // macOS: Multi-phase stripping for maximum size reduction.
-    // Use -x (remove local symbols only) to preserve global/external symbols
+    // -x removes local symbols only, which preserves the global and external ones.
     // needed by native addons (.node files). Bare `strip` removes ALL symbols
     // including Node-API exports (_napi_*), causing native addons to SIGSEGV.
     logger.log('Phase 1: Basic stripping (preserving Node-API symbols)')
@@ -265,7 +265,7 @@ export async function buildStripped(config, buildOptions = {}) {
 
     if (unit === 'M' && size >= 20 && size <= 30) {
       logger.log(
-        // oxlint-disable-next-line socket/no-status-emoji -- emoji is wrapped in colors.green() decorator (composes color with marker) before being embedded in a multi-line summary string; logger.success() would drop the color.
+        // oxlint-disable-next-line socket/no-status-emoji -- emoji is wrapped in colors.green() decorator, which composes color with the marker, before being embedded in a multi-line summary string; logger.success() would drop the color.
         `${colors.green('✓')} Binary size is optimal (20-30MB with V8 Lite Mode)`,
       )
     } else if (unit === 'M' && size < 20) {

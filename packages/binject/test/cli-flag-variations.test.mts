@@ -21,6 +21,7 @@ import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 
 import { getBinjectPath } from './helpers/paths.mts'
 import { execCommand } from './helpers/exec-command.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const BINJECT = getBinjectPath()
 
@@ -54,96 +55,111 @@ describe.skipIf(!binjectExists)('cLI flag variations', () => {
 
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- first parameter is destructured
     flagCombinations.forEach(([execFlag, outFlag, description]) => {
-      it(`should inject SEA blob using ${description}`, async () => {
-        const inputBinary = path.join(
-          testDir,
-          `inject-${execFlag}-${outFlag}-input`,
-        )
+      it(
+        `should inject SEA blob using ${description}`,
+        async () => {
+          const inputBinary = path.join(
+            testDir,
+            `inject-${execFlag}-${outFlag}-input`,
+          )
+          await fs.copyFile(BINJECT, inputBinary)
+
+          const seaBlob = path.join(
+            testDir,
+            `inject-${execFlag}-${outFlag}.blob`,
+          )
+          await fs.writeFile(seaBlob, Buffer.from('test content'))
+
+          const outputBinary = path.join(
+            testDir,
+            `inject-${execFlag}-${outFlag}-output`,
+          )
+
+          const result = await execCommand(BINJECT, [
+            'inject',
+            execFlag,
+            inputBinary,
+            outFlag,
+            outputBinary,
+            '--sea',
+            seaBlob,
+          ])
+
+          expect(result.code).toBe(0)
+          expect(existsSync(outputBinary)).toBeTruthy()
+
+          // Verify binary is still executable
+          // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.mode for executable-permission assertion.
+          const stats = await fs.stat(outputBinary)
+          expect(stats.mode & 0o111).not.toBe(0)
+        },
+        tolerantTimeout(30_000),
+      )
+    })
+
+    it(
+      'should inject VFS with SEA using short forms',
+      async () => {
+        const inputBinary = path.join(testDir, 'vfs-short-input')
         await fs.copyFile(BINJECT, inputBinary)
 
-        const seaBlob = path.join(testDir, `inject-${execFlag}-${outFlag}.blob`)
-        await fs.writeFile(seaBlob, Buffer.from('test content'))
+        const seaBlob = path.join(testDir, 'vfs-short.blob')
+        await fs.writeFile(seaBlob, Buffer.from('test'))
 
-        const outputBinary = path.join(
-          testDir,
-          `inject-${execFlag}-${outFlag}-output`,
-        )
+        const vfsArchive = path.join(testDir, 'vfs-short.vfs')
+        await fs.writeFile(vfsArchive, Buffer.from('vfs content'))
+
+        const outputBinary = path.join(testDir, 'vfs-short-output')
 
         const result = await execCommand(BINJECT, [
           'inject',
-          execFlag,
+          '-e',
           inputBinary,
-          outFlag,
+          '-o',
           outputBinary,
           '--sea',
           seaBlob,
+          '--vfs',
+          vfsArchive,
         ])
 
         expect(result.code).toBe(0)
         expect(existsSync(outputBinary)).toBeTruthy()
+      },
+      tolerantTimeout(30_000),
+    )
 
-        // Verify binary is still executable
-        // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.mode for executable-permission assertion.
-        const stats = await fs.stat(outputBinary)
-        expect(stats.mode & 0o111).not.toBe(0)
-      }, 30_000)
-    })
+    it(
+      'should inject VFS with SEA using long forms',
+      async () => {
+        const inputBinary = path.join(testDir, 'vfs-long-input')
+        await fs.copyFile(BINJECT, inputBinary)
 
-    it('should inject VFS with SEA using short forms', async () => {
-      const inputBinary = path.join(testDir, 'vfs-short-input')
-      await fs.copyFile(BINJECT, inputBinary)
+        const seaBlob = path.join(testDir, 'vfs-long.blob')
+        await fs.writeFile(seaBlob, Buffer.from('test'))
 
-      const seaBlob = path.join(testDir, 'vfs-short.blob')
-      await fs.writeFile(seaBlob, Buffer.from('test'))
+        const vfsArchive = path.join(testDir, 'vfs-long.vfs')
+        await fs.writeFile(vfsArchive, Buffer.from('vfs content'))
 
-      const vfsArchive = path.join(testDir, 'vfs-short.vfs')
-      await fs.writeFile(vfsArchive, Buffer.from('vfs content'))
+        const outputBinary = path.join(testDir, 'vfs-long-output')
 
-      const outputBinary = path.join(testDir, 'vfs-short-output')
+        const result = await execCommand(BINJECT, [
+          'inject',
+          '--executable',
+          inputBinary,
+          '--output',
+          outputBinary,
+          '--sea',
+          seaBlob,
+          '--vfs',
+          vfsArchive,
+        ])
 
-      const result = await execCommand(BINJECT, [
-        'inject',
-        '-e',
-        inputBinary,
-        '-o',
-        outputBinary,
-        '--sea',
-        seaBlob,
-        '--vfs',
-        vfsArchive,
-      ])
-
-      expect(result.code).toBe(0)
-      expect(existsSync(outputBinary)).toBeTruthy()
-    }, 30_000)
-
-    it('should inject VFS with SEA using long forms', async () => {
-      const inputBinary = path.join(testDir, 'vfs-long-input')
-      await fs.copyFile(BINJECT, inputBinary)
-
-      const seaBlob = path.join(testDir, 'vfs-long.blob')
-      await fs.writeFile(seaBlob, Buffer.from('test'))
-
-      const vfsArchive = path.join(testDir, 'vfs-long.vfs')
-      await fs.writeFile(vfsArchive, Buffer.from('vfs content'))
-
-      const outputBinary = path.join(testDir, 'vfs-long-output')
-
-      const result = await execCommand(BINJECT, [
-        'inject',
-        '--executable',
-        inputBinary,
-        '--output',
-        outputBinary,
-        '--sea',
-        seaBlob,
-        '--vfs',
-        vfsArchive,
-      ])
-
-      expect(result.code).toBe(0)
-      expect(existsSync(outputBinary)).toBeTruthy()
-    }, 30_000)
+        expect(result.code).toBe(0)
+        expect(existsSync(outputBinary)).toBeTruthy()
+      },
+      tolerantTimeout(30_000),
+    )
   })
 
   describe('list command', () => {
@@ -229,52 +245,60 @@ describe.skipIf(!binjectExists)('cLI flag variations', () => {
 
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- first parameter is destructured
     flagCombinations.forEach(([execFlag, outFlag, description]) => {
-      it(`should extract SEA blob using ${description}`, async () => {
-        const extractedSea = path.join(
-          testDir,
-          `extracted-sea-${execFlag}-${outFlag}.blob`,
-        )
+      it(
+        `should extract SEA blob using ${description}`,
+        async () => {
+          const extractedSea = path.join(
+            testDir,
+            `extracted-sea-${execFlag}-${outFlag}.blob`,
+          )
 
-        const result = await execCommand(BINJECT, [
-          'extract',
-          execFlag,
-          binaryWithSea,
-          outFlag,
-          extractedSea,
-          '--sea',
-        ])
+          const result = await execCommand(BINJECT, [
+            'extract',
+            execFlag,
+            binaryWithSea,
+            outFlag,
+            extractedSea,
+            '--sea',
+          ])
 
-        expect(result.code).toBe(0)
-        expect(existsSync(extractedSea)).toBeTruthy()
+          expect(result.code).toBe(0)
+          expect(existsSync(extractedSea)).toBeTruthy()
 
-        const content = await fs.readFile(extractedSea, 'utf8')
-        expect(content).toBe('EXTRACT_TEST_CONTENT')
-      }, 30_000)
+          const content = await fs.readFile(extractedSea, 'utf8')
+          expect(content).toBe('EXTRACT_TEST_CONTENT')
+        },
+        tolerantTimeout(30_000),
+      )
 
-      it(`should extract VFS archive using ${description}`, async () => {
-        const extractedVfs = path.join(
-          testDir,
-          `extracted-vfs-${execFlag}-${outFlag}.vfs`,
-        )
+      it(
+        `should extract VFS archive using ${description}`,
+        async () => {
+          const extractedVfs = path.join(
+            testDir,
+            `extracted-vfs-${execFlag}-${outFlag}.vfs`,
+          )
 
-        const result = await execCommand(BINJECT, [
-          'extract',
-          execFlag,
-          binaryWithVfs,
-          outFlag,
-          extractedVfs,
-          '--vfs',
-        ])
+          const result = await execCommand(BINJECT, [
+            'extract',
+            execFlag,
+            binaryWithVfs,
+            outFlag,
+            extractedVfs,
+            '--vfs',
+          ])
 
-        expect(result.code).toBe(0)
-        expect(existsSync(extractedVfs)).toBeTruthy()
+          expect(result.code).toBe(0)
+          expect(existsSync(extractedVfs)).toBeTruthy()
 
-        // VFS is stored as compressed tar.gz, so check it's a valid archive
-        const content = await fs.readFile(extractedVfs)
-        // Gzip magic number: 0x1f 0x8b
-        expect(content[0]).toBe(0x1f)
-        expect(content[1]).toBe(0x8b)
-      }, 30_000)
+          // VFS is stored as compressed tar.gz, so check it's a valid archive
+          const content = await fs.readFile(extractedVfs)
+          // Gzip magic number: 0x1f 0x8b
+          expect(content[0]).toBe(0x1f)
+          expect(content[1]).toBe(0x8b)
+        },
+        tolerantTimeout(30_000),
+      )
     })
   })
 
@@ -336,27 +360,35 @@ describe.skipIf(!binjectExists)('cLI flag variations', () => {
 
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- first parameter is destructured
     execFlags.forEach(([execFlag, description]) => {
-      it(`should verify SEA blob using ${description}`, async () => {
-        const result = await execCommand(BINJECT, [
-          'verify',
-          execFlag,
-          binaryWithSea,
-          '--sea',
-        ])
+      it(
+        `should verify SEA blob using ${description}`,
+        async () => {
+          const result = await execCommand(BINJECT, [
+            'verify',
+            execFlag,
+            binaryWithSea,
+            '--sea',
+          ])
 
-        expect(result.code).toBe(0)
-      }, 30_000)
+          expect(result.code).toBe(0)
+        },
+        tolerantTimeout(30_000),
+      )
 
-      it(`should verify VFS archive using ${description}`, async () => {
-        const result = await execCommand(BINJECT, [
-          'verify',
-          execFlag,
-          binaryWithVfs,
-          '--vfs',
-        ])
+      it(
+        `should verify VFS archive using ${description}`,
+        async () => {
+          const result = await execCommand(BINJECT, [
+            'verify',
+            execFlag,
+            binaryWithVfs,
+            '--vfs',
+          ])
 
-        expect(result.code).toBe(0)
-      }, 30_000)
+          expect(result.code).toBe(0)
+        },
+        tolerantTimeout(30_000),
+      )
     })
 
     it('should fail verification when resource does not exist (short form)', async () => {

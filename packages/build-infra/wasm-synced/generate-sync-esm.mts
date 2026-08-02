@@ -30,7 +30,7 @@ import { applyCommonTransforms } from './transform.mts'
  *
  * @returns {Promise<string>} Path to generated file
  */
-export async function generateSyncEsm(options) {
+export async function generateSyncEsm(config) {
   const {
     base64Wasm,
     description,
@@ -42,7 +42,7 @@ export async function generateSyncEsm(options) {
     outputSyncMjs,
     packageName,
     wasmBinary,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   let mjsContent = inputMjsContent
 

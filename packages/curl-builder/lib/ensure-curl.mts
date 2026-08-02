@@ -82,7 +82,7 @@ const api = createPrebuiltApi({
 //     in-use by bin-infra/lib/build-stubs.mts + bin-stub-builder/scripts/
 //     build.mts as `ensureCurl`):
 //     curlExistsAt, downloadCurl, ensureCurl
-//   - Factory-canonical (uniform across all builders):
+//   - Factory-canonical, uniform across all builders:
 //     curlExists, downloadPrebuiltCurl, verifyCurlAt, getDownloadedCurlDir
 //
 // New consumers should prefer the factory-canonical names. Legacy

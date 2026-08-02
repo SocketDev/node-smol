@@ -37,14 +37,14 @@ const WRAP_ASSEMBLY_FILE = path.join(WRAPPER_DIR, 'wrapAssembly.mts')
  *
  * @param {object} options - Sync generation options.
  */
-export async function generateSync(options) {
+export async function generateSync(config) {
   const {
     buildDir,
     buildMode,
     outputOptimizedDir,
     outputReleaseDir,
     outputSyncDir,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   logger.log('Creating synchronous wrapper with wrapAssembly wrapper…')
   logger.logNewline()
@@ -341,7 +341,7 @@ export function transformEsmForInlining(code, options = {}) {
   const {
     convertDefaultExport = false,
     convertExportConst = false,
-    defaultExportName = undefined,
+    defaultExportName,
     removeDefaultExport = false,
     removeImports = true,
   } = options

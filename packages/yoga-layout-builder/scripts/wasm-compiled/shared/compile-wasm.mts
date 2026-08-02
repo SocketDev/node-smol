@@ -31,7 +31,7 @@ const logger = getDefaultLogger()
  * @param {string} options.buildMode - Build mode ('prod' or 'dev')
  * @param {boolean} options.forceRebuild - Force rebuild (ignore checkpoints)
  */
-export async function compileWasm(options) {
+export async function compileWasm(config) {
   const {
     bindingsDir,
     bindingsFiles,
@@ -42,7 +42,7 @@ export async function compileWasm(options) {
     cmakeBuildDir,
     sourceDir,
     staticLibFile,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   const startTime = Date.now()
 

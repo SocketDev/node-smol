@@ -38,7 +38,7 @@ const logger = getDefaultLogger()
  * @param {string} options.packageName - Package name.
  * @param {boolean} options.cleanBuild - Force clean build.
  */
-export async function cloneNodeSource(options) {
+export async function cloneNodeSource(config) {
   const {
     cleanBuild,
     nodeSha,
@@ -46,7 +46,7 @@ export async function cloneNodeSource(options) {
     packageName,
     sharedBuildDir,
     sharedSourceDir,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   const needsClone = await shouldRun(
     sharedBuildDir,
@@ -134,7 +134,7 @@ export async function cloneNodeSource(options) {
         throw new Error('Failed to verify upstream commit SHA')
       }
 
-      const upstreamSha = verifyResult.stdout.toString().trim()
+      const upstreamSha = verifyResult.stdout.trim()
       if (upstreamSha !== nodeSha) {
         throw new Error(
           `Upstream SHA mismatch: expected ${nodeSha}, got ${upstreamSha}. ` +
@@ -194,7 +194,7 @@ export async function cloneNodeSource(options) {
       await safeDelete(sharedSourceDir, { force: true, recursive: true })
 
       // Recursively call to handle the fresh clone
-      await cloneNodeSource(options)
+      await cloneNodeSource(config)
       return
     }
 

@@ -38,9 +38,9 @@ function abortError() {
   return new DOMException('GGUF model acquisition was aborted', 'AbortError')
 }
 
-async function acquireModel(manifest, options) {
+async function acquireModel(manifest, config) {
   validateModelManifest(manifest)
-  const opts = { __proto__: null, ...options }
+  const opts = { __proto__: null, ...config }
   const finalPath = modelCachePath(opts.cacheRoot, manifest)
   const active = activeAcquisitions.get(finalPath)
   if (active) {
@@ -53,8 +53,8 @@ async function acquireModel(manifest, options) {
   return await acquisition
 }
 
-async function acquireModelOnce(manifest, options) {
-  const opts = { __proto__: null, ...options }
+async function acquireModelOnce(manifest, config) {
+  const opts = { __proto__: null, ...config }
   const finalPath = modelCachePath(opts.cacheRoot, manifest)
   const partialPath = modelPartialPath(opts.cacheRoot, manifest)
   await mkdir(path.dirname(finalPath), { recursive: true })
@@ -131,8 +131,8 @@ async function acquireModelOnce(manifest, options) {
   return finalPath
 }
 
-async function acquireModelWithRetries(manifest, options) {
-  const opts = { __proto__: null, ...options }
+async function acquireModelWithRetries(manifest, config) {
+  const opts = { __proto__: null, ...config }
   const maxRetries = opts.maxRetries ?? 2
   if (!Number.isSafeInteger(maxRetries) || maxRetries < 0 || maxRetries > 10) {
     throw new RangeError('maxRetries must be an integer from 0 through 10')
@@ -217,8 +217,8 @@ function isRetryable(error) {
   ].includes(error?.code)
 }
 
-async function modelAvailability(manifest, options) {
-  const opts = { __proto__: null, ...options }
+async function modelAvailability(manifest, config) {
+  const opts = { __proto__: null, ...config }
   const finalPath = modelCachePath(opts.cacheRoot, manifest)
   if (activeAcquisitions.has(finalPath)) {
     return 'downloading'

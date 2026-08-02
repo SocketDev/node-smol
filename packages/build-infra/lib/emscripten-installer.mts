@@ -88,7 +88,7 @@ export async function activateEmscripten({
     // Parse environment variables from output.
     const envVars = {}
     if (constructResult.stdout) {
-      const lines = constructResult.stdout.toString().split('\n')
+      const lines = constructResult.stdout.split('\n')
       for (let i = 0, { length } = lines; i < length; i += 1) {
         const line = lines[i]
         // ^(?<key>\w+): env var name; =: separator; (?<value>.*): value to

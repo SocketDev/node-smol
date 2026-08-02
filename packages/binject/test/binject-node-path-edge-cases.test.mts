@@ -16,6 +16,7 @@ import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 
 import { execCommand } from './binject-node-path-env.test.mts'
 import { getBinjectPath } from './helpers/paths.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const BINJECT = getBinjectPath()
 
@@ -51,41 +52,45 @@ describe('bINJECT_NODE_PATH edge cases', () => {
     }
   })
 
-  it('should reject paths longer than PATH_MAX', async () => {
-    const jsFile = path.join(testDir, 'app-longpath.js')
-    await fs.writeFile(jsFile, "console.log('Hello');\n")
+  it(
+    'should reject paths longer than PATH_MAX',
+    async () => {
+      const jsFile = path.join(testDir, 'app-longpath.js')
+      await fs.writeFile(jsFile, "console.log('Hello');\n")
 
-    const configFile = path.join(testDir, 'sea-config-longpath.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app-longpath.js',
-        output: 'app-longpath.blob',
-      }),
-    )
+      const configFile = path.join(testDir, 'sea-config-longpath.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app-longpath.js',
+          output: 'app-longpath.blob',
+        }),
+      )
 
-    const outputBinary = path.join(testDir, 'output-longpath')
-    const testBinject = await createTestBinject('test-binject-longpath')
+      const outputBinary = path.join(testDir, 'output-longpath')
+      const testBinject = await createTestBinject('test-binject-longpath')
 
-    const longPath = `/tmp/${'a'.repeat(5000)}/node`
+      const longPath = `/tmp/${'a'.repeat(5000)}/node`
 
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
-      {
-        cwd: testDir,
-        env: {
-          ...process.env,
-          BINJECT_NODE_PATH: longPath,
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', testBinject, '-o', outputBinary, '--sea', configFile],
+        {
+          cwd: testDir,
+          env: {
+            ...process.env,
+            BINJECT_NODE_PATH: longPath,
+          },
         },
-      },
-    )
+      )
 
-    expect(result.code).not.toBe(0)
-    expect(result.output).toMatch(
-      /BINJECT_NODE_PATH is set but binary is invalid/,
-    )
-  }, 30_000)
+      expect(result.code).not.toBe(0)
+      expect(result.output).toMatch(
+        /BINJECT_NODE_PATH is set but binary is invalid/,
+      )
+    },
+    tolerantTimeout(30_000),
+  )
 
   it.skipIf(process.platform === 'win32')(
     'should handle symlinks to valid node binary',

@@ -15,6 +15,7 @@ import { getBinjectPath } from './helpers/paths.mts'
 import { execCommand } from './helpers/exec-command-with-output.mts'
 import { findNodeBinary } from './helpers/find-node-smol-binary.mts'
 import { setupSeaConfigVfsTestDir } from './helpers/sea-config-vfs-setup.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const BINJECT = getBinjectPath()
 
@@ -50,82 +51,90 @@ describe('sEA Config VFS Configuration (edge cases)', () => {
     }
   })
 
-  it('should handle vfs: false correctly', async () => {
-    if (!nodeBinary) {
-      return
-    }
-    // Create JS file.
-    const jsFile = path.join(testDir, 'app-false.js')
-    await fs.writeFile(jsFile, "console.log('No VFS');\n")
+  it(
+    'should handle vfs: false correctly',
+    async () => {
+      if (!nodeBinary) {
+        return
+      }
+      // Create JS file.
+      const jsFile = path.join(testDir, 'app-false.js')
+      await fs.writeFile(jsFile, "console.log('No VFS');\n")
 
-    // Create SEA config with vfs: false.
-    const configFile = path.join(testDir, 'sea-config-false.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app-false.js',
-        output: 'sea-false.blob',
-        smol: {
-          vfs: false,
-        },
-      }),
-    )
-
-    const outputBinary = path.join(testDir, 'output-false')
-    // Removed: const testBinject = await createTestBinject('test-binject-false')
-
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', nodeBinary, '-o', outputBinary, '--sea', configFile],
-      { cwd: testDir },
-    )
-
-    // Should succeed.
-    expect(result.code).toBe(0)
-
-    // Should NOT show VFS configuration messages.
-    expect(result.output).not.toMatch(
-      /VFS: Using configuration from sea-config.json/,
-    )
-  }, 60_000)
-
-  it('should skip VFS gracefully when source not found', async () => {
-    if (!nodeBinary) {
-      return
-    }
-    // Create JS file.
-    const jsFile = path.join(testDir, 'app-skip.js')
-    await fs.writeFile(jsFile, "console.log('Skip VFS');\n")
-
-    // Create SEA config with non-existent source.
-    const configFile = path.join(testDir, 'sea-config-skip.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'app-skip.js',
-        output: 'sea-skip.blob',
-        smol: {
-          vfs: {
-            mode: 'on-disk',
-            source: 'non-existent-directory',
+      // Create SEA config with vfs: false.
+      const configFile = path.join(testDir, 'sea-config-false.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app-false.js',
+          output: 'sea-false.blob',
+          smol: {
+            vfs: false,
           },
-        },
-      }),
-    )
+        }),
+      )
 
-    const outputBinary = path.join(testDir, 'output-skip')
-    // Removed: const testBinject = await createTestBinject('test-binject-skip')
+      const outputBinary = path.join(testDir, 'output-false')
+      // Removed: const testBinject = await createTestBinject('test-binject-false')
 
-    const result = await execCommand(
-      BINJECT,
-      ['inject', '-e', nodeBinary, '-o', outputBinary, '--sea', configFile],
-      { cwd: testDir },
-    )
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', nodeBinary, '-o', outputBinary, '--sea', configFile],
+        { cwd: testDir },
+      )
 
-    // Should succeed (skip VFS gracefully).
-    expect(result.code).toBe(0)
+      // Should succeed.
+      expect(result.code).toBe(0)
 
-    // Should show skip message.
-    expect(result.output).toMatch(/VFS: Source not found.*skipping VFS/)
-  }, 60_000)
+      // Should NOT show VFS configuration messages.
+      expect(result.output).not.toMatch(
+        /VFS: Using configuration from sea-config.json/,
+      )
+    },
+    tolerantTimeout(60_000),
+  )
+
+  it(
+    'should skip VFS gracefully when source not found',
+    async () => {
+      if (!nodeBinary) {
+        return
+      }
+      // Create JS file.
+      const jsFile = path.join(testDir, 'app-skip.js')
+      await fs.writeFile(jsFile, "console.log('Skip VFS');\n")
+
+      // Create SEA config with non-existent source.
+      const configFile = path.join(testDir, 'sea-config-skip.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'app-skip.js',
+          output: 'sea-skip.blob',
+          smol: {
+            vfs: {
+              mode: 'on-disk',
+              source: 'non-existent-directory',
+            },
+          },
+        }),
+      )
+
+      const outputBinary = path.join(testDir, 'output-skip')
+      // Removed: const testBinject = await createTestBinject('test-binject-skip')
+
+      const result = await execCommand(
+        BINJECT,
+        ['inject', '-e', nodeBinary, '-o', outputBinary, '--sea', configFile],
+        { cwd: testDir },
+      )
+
+      // Should succeed (skip VFS gracefully).
+      expect(result.code).toBe(0)
+
+      // Should show skip message.
+      expect(result.output).toMatch(/VFS: Source not found.*skipping VFS/)
+    },
+    tolerantTimeout(60_000),
+  )
 })

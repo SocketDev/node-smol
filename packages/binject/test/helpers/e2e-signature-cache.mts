@@ -173,7 +173,7 @@ export async function cleanCacheBeforeTest() {
 export async function generateValidSEABlob(
   baseDir: string,
   prefix: string,
-  nodeBinaryPath?: string,
+  nodeBinaryPath?: string | undefined,
 ) {
   const uuid = crypto.randomUUID()
 

@@ -41,14 +41,14 @@ const logger = getDefaultLogger()
  *
  * @returns {Promise<{ pythonPackages: Array; externalTools: object }>}
  */
-export async function checkModelBuildPrerequisites(options) {
+export async function checkModelBuildPrerequisites(config) {
   const {
     buildDir,
     packageJsonPath,
     packageRoot,
     quiet = false,
     requiredDiskGB = 1,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   if (!quiet) {
     logger.step('Pre-flight Checks')

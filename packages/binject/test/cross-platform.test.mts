@@ -39,7 +39,7 @@ describeIf(existsSync(BINJECT_PATH))(
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
     for (const { arch, format, platform } of getSupportedPlatforms()) {
       // Determine if this format can be injected on the current platform
-      // With LIEF library (built with matching toolchain):
+      // With the LIEF library, built with a matching toolchain:
       // PE: native APIs on all platforms
       // ELF: native (Linux), LIEF (macOS/Windows when available)
       // Mach-O: native (macOS), LIEF (Linux/Windows when available)

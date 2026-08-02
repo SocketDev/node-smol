@@ -19,8 +19,8 @@ function isMuslRuntime() {
   return !report?.header?.glibcVersionRuntime
 }
 
-function loadNativeBinding(options) {
-  const opts = { __proto__: null, ...options }
+function loadNativeBinding(config) {
+  const opts = { __proto__: null, ...config }
   if (process.env.SMOL_AI_NATIVE_PATH) {
     return opts.require(process.env.SMOL_AI_NATIVE_PATH)
   }

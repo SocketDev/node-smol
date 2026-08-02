@@ -58,7 +58,7 @@ export function smolBuiltinIsAvailable(name: string): boolean {
       ],
       { stdio: ['ignore', 'pipe', 'ignore'], timeout: PROBE_TIMEOUT_MS },
     )
-    return String(result.stdout || '').trim() === 'true'
+    return (result.stdout || '').trim() === 'true'
   } catch {
     return false
   }
@@ -103,8 +103,8 @@ export async function runOnSmolBinary(
   })
   return {
     code: result.code,
-    stdout: String(result.stdout || ''),
-    stderr: String(result.stderr || ''),
+    stdout: result.stdout || '',
+    stderr: result.stderr || '',
   }
 }
 

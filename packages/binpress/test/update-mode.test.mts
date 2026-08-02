@@ -33,6 +33,7 @@ import { codeSignBinary, execCommand } from 'bin-infra/test/helpers/test-utils'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../../../scripts/fleet/paths.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const logger = getDefaultLogger()
 
@@ -106,81 +107,89 @@ describe.skipIf(
   !existsSync(BINPRESS) || !existsSync(TEST_INPUT) || isDockerBuild,
 )('binpress auto-repack detection', () => {
   describe('basic auto-repack workflow', () => {
-    it('should create initial stub then auto-detect and repack with new compressed data', async () => {
-      // Step 1: Create initial compressed binary
-      const initialStub = getStubPath('initial-stub')
+    it(
+      'should create initial stub then auto-detect and repack with new compressed data',
+      async () => {
+        // Step 1: Create initial compressed binary
+        const initialStub = getStubPath('initial-stub')
 
-      const createResult = await execCommand(BINPRESS, [
-        TEST_INPUT,
-        '-o',
-        initialStub,
-      ])
-      expect(createResult.code).toBe(0)
-      expect(existsSync(initialStub)).toBeTruthy()
+        const createResult = await execCommand(BINPRESS, [
+          TEST_INPUT,
+          '-o',
+          initialStub,
+        ])
+        expect(createResult.code).toBe(0)
+        expect(existsSync(initialStub)).toBeTruthy()
 
-      // Hashing doubles as a readability check on the fresh stub.
-      await hashFile(initialStub)
+        // Hashing doubles as a readability check on the fresh stub.
+        await hashFile(initialStub)
 
-      // Step 2: Recompress the stub (auto-detection should trigger repack)
-      const updatedStub = getStubPath('updated-stub')
-      const updateResult = await execCommand(BINPRESS, [
-        initialStub,
-        '-o',
-        updatedStub,
-      ])
+        // Step 2: Recompress the stub (auto-detection should trigger repack)
+        const updatedStub = getStubPath('updated-stub')
+        const updateResult = await execCommand(BINPRESS, [
+          initialStub,
+          '-o',
+          updatedStub,
+        ])
 
-      expect(updateResult.code).toBe(0)
-      expect(existsSync(updatedStub)).toBeTruthy()
+        expect(updateResult.code).toBe(0)
+        expect(existsSync(updatedStub)).toBeTruthy()
 
-      // Step 3: Verify the updated stub exists and is valid
-      const updatedStubHash = await hashFile(updatedStub)
-      expect(updatedStubHash).toBeTruthy()
+        // Step 3: Verify the updated stub exists and is valid
+        const updatedStubHash = await hashFile(updatedStub)
+        expect(updatedStubHash).toBeTruthy()
 
-      // Verify stub is executable and extracts correctly
-      await makeExecutable(updatedStub)
-      await codeSignBinary(updatedStub)
+        // Verify stub is executable and extracts correctly
+        await makeExecutable(updatedStub)
+        await codeSignBinary(updatedStub)
 
-      // Run the stub to verify it extracts and executes
-      const execResult = await execStub(updatedStub, ['--version'])
-      if (execResult.code !== 0) {
-        logger.fail(
-          'Stub execution failed:',
-          execResult.stderr || execResult.stdout,
-        )
-      }
-      expect(execResult.code).toBe(0)
-      expect(execResult.stdout).toBeTruthy()
-    }, 60_000)
+        // Run the stub to verify it extracts and executes
+        const execResult = await execStub(updatedStub, ['--version'])
+        if (execResult.code !== 0) {
+          logger.fail(
+            'Stub execution failed:',
+            execResult.stderr || execResult.stdout,
+          )
+        }
+        expect(execResult.code).toBe(0)
+        expect(execResult.stdout).toBeTruthy()
+      },
+      tolerantTimeout(60_000),
+    )
 
-    it('should preserve stub functionality when repacking', async () => {
-      // Create initial stub
-      const initialStub = getStubPath('preserve-stub')
+    it(
+      'should preserve stub functionality when repacking',
+      async () => {
+        // Create initial stub
+        const initialStub = getStubPath('preserve-stub')
 
-      await execCommand(BINPRESS, [TEST_INPUT, '-o', initialStub])
+        await execCommand(BINPRESS, [TEST_INPUT, '-o', initialStub])
 
-      // Initial stub should be executable
-      await makeExecutable(initialStub)
-      await codeSignBinary(initialStub)
+        // Initial stub should be executable
+        await makeExecutable(initialStub)
+        await codeSignBinary(initialStub)
 
-      const initialResult = await execStub(initialStub, ['--version'])
-      expect(initialResult.code).toBe(0)
+        const initialResult = await execStub(initialStub, ['--version'])
+        expect(initialResult.code).toBe(0)
 
-      // Recompress stub (triggers auto-repack)
-      const updatedStub = getStubPath('preserve-updated')
+        // Recompress stub (triggers auto-repack)
+        const updatedStub = getStubPath('preserve-updated')
 
-      await execCommand(BINPRESS, [initialStub, '-o', updatedStub])
+        await execCommand(BINPRESS, [initialStub, '-o', updatedStub])
 
-      // Updated stub should still be executable and functional
-      await makeExecutable(updatedStub)
-      await codeSignBinary(updatedStub)
+        // Updated stub should still be executable and functional
+        await makeExecutable(updatedStub)
+        await codeSignBinary(updatedStub)
 
-      const updatedResult = await execStub(updatedStub, ['--version'])
-      expect(updatedResult.code).toBe(0)
+        const updatedResult = await execStub(updatedStub, ['--version'])
+        expect(updatedResult.code).toBe(0)
 
-      // Both should extract and run successfully (stub functionality preserved)
-      expect(initialResult.stdout).toBeTruthy()
-      expect(updatedResult.stdout).toBeTruthy()
-    }, 60_000)
+        // Both should extract and run successfully (stub functionality preserved)
+        expect(initialResult.stdout).toBeTruthy()
+        expect(updatedResult.stdout).toBeTruthy()
+      },
+      tolerantTimeout(60_000),
+    )
   })
 
   describe('repack validation', () => {

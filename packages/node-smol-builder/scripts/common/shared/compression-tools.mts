@@ -151,19 +151,19 @@ export async function downloadToolIfMissing(tool, platform, arch, libc) {
  *
  * @returns {Promise<string>} Path to binpress binary.
  */
-export async function ensureBinpress(options) {
+export async function ensureBinpress(config) {
   const {
     hostArch = process.arch,
     hostLibc = detectLibc(),
     hostPlatform = process.platform,
     silent = false,
-  } = options || {}
+  } = config || {}
 
   if (!silent) {
     logger.step('Ensuring binpress')
   }
 
-  // Download binpress for host platform (compressor runs on host).
+  // Download binpress for the host platform. The compressor runs on the host.
   const binpressPath = await downloadToolIfMissing(
     'binpress',
     hostPlatform,

@@ -34,7 +34,7 @@ import { getLatestFinalBinary } from '../paths.mts'
 
 const IS_MACOS = os.platform() === 'darwin'
 
-// Get the latest Final binary (the stub with embedded compressed node)
+// Get the latest Final binary — the stub with the embedded compressed node.
 const stubBinaryPath = getLatestFinalBinary()
 
 // Skip all tests if no final binary is available
@@ -199,7 +199,7 @@ describe.skipIf(skipTests)('stub signing and extraction flow', () => {
   beforeAll(async () => {
     await fs.mkdir(testTmpDir, { recursive: true })
 
-    // Read cache key from binary header (same way the stub does)
+    // Read the cache key from the binary header the same way the stub does.
     const binaryData = await fs.readFile(stubBinaryPath)
     const magicMarker = Buffer.from(SMOL_PRESSED_DATA_MAGIC_MARKER, 'utf8')
     const markerIndex = binaryData.indexOf(magicMarker)
@@ -283,7 +283,7 @@ describe.skipIf(skipTests)('stub signing and extraction flow', () => {
         const binaryData = await fs.readFile(extractedNodePath)
         const segments = parseMachoSegments(binaryData)
 
-        // Extracted node should NOT have SMOL segment (that's only in stub)
+        // The extracted node should NOT have a SMOL segment; that lives only in the stub.
         const smolSegment = segments.find(
           s => s.segmentName === MACHO_SEGMENT_SMOL,
         )

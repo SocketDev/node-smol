@@ -11,7 +11,7 @@ const logger = getDefaultLogger()
  * Print an error message to stderr, with the causing error's detail when one
  * is provided.
  */
-export function printError(message: string, error?: unknown): void {
+export function printError(message: string, error?: unknown | undefined): void {
   logger.fail(message)
   if (error !== undefined) {
     logger.fail(errorMessage(error))

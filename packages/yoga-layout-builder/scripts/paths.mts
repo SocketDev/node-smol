@@ -18,7 +18,7 @@ const __dirname = path.dirname(__filename)
 // Package root: scripts/../
 export const PACKAGE_ROOT = path.resolve(__dirname, '..')
 
-// Source files - use official yoga bindings from cloned source (matches yoga core version).
+// Source files: use the official yoga bindings from the cloned source. They match the yoga core version.
 // These are resolved dynamically based on the build mode's source directory.
 export function getBindingsPaths(sourceDir) {
   const bindingsDir = path.join(sourceDir, 'javascript/src')

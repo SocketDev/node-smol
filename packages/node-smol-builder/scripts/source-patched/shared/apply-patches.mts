@@ -36,7 +36,7 @@ const logger = getDefaultLogger()
  * @param {string} options.buildPatchesDir - Dynamic patches directory.
  * @param {boolean} options.cleanBuild - Force clean build.
  */
-export async function applySocketPatches(options) {
+export async function applySocketPatches(config) {
   const {
     buildDir,
     buildPatchesDir,
@@ -46,7 +46,7 @@ export async function applySocketPatches(options) {
     packageName,
     patchedFile,
     patchesReleaseDir,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   const socketPatches = findSocketPatches(patchesReleaseDir, buildPatchesDir)
   const allSourcePaths = await computeSourcePatchedCachePaths({
@@ -205,15 +205,15 @@ export async function applySocketPatches(options) {
  * the patched source tree is still valid and just needs a re-overlay
  * (copyBuildAdditions handles that, ninja recompiles affected .o).
  */
-export function computePatchChainCachePaths(options: {
+export function computePatchChainCachePaths(config: {
   buildPatchesDir: string
   modeSourceDir: string
   patchesReleaseDir: string
 }): string[] {
   const { buildPatchesDir, modeSourceDir, patchesReleaseDir } = {
     __proto__: null,
-    ...options,
-  } as typeof options
+    ...config,
+  } as typeof config
   const socketPatches = findSocketPatches(patchesReleaseDir, buildPatchesDir)
   const patchFilePaths = socketPatches.map(p => p.path)
 
@@ -238,12 +238,12 @@ export function computePatchChainCachePaths(options: {
  * re-apply over stale source dir with leftover out/Release" state that
  * trips the checkpoint guardrail.
  */
-export async function computeSourcePatchedCachePaths(options: {
+export async function computeSourcePatchedCachePaths(config: {
   buildPatchesDir: string
   modeSourceDir: string
   patchesReleaseDir: string
 }): Promise<string[]> {
-  const patchChainPaths = computePatchChainCachePaths(options)
+  const patchChainPaths = computePatchChainCachePaths(config)
 
   const sourcePackageFiles: string[] = []
   for (let i = 0, { length } = MONOREPO_PACKAGE_SOURCES; i < length; i += 1) {

@@ -171,11 +171,9 @@ export async function runObjdump(binary: string): Promise<string> {
   // symlink is provided as `objdump` inside its bin dir.
   const result = await spawn('objdump', ['-T', binary], { stdio: 'pipe' })
   if (result.code !== 0) {
-    throw new Error(
-      `objdump failed with exit ${result.code}: ${result.stderr?.toString()}`,
-    )
+    throw new Error(`objdump failed with exit ${result.code}: ${result.stderr}`)
   }
-  return result.stdout?.toString() ?? ''
+  return result.stdout ?? ''
 }
 
 export function uniqueSortedByVersion(rows: readonly SymbolRow[]): SymbolRow[] {

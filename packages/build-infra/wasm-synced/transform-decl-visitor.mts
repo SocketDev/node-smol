@@ -24,7 +24,7 @@ import { simple as walkSimple } from 'acorn-walk'
  *
  * @returns {object} Visitor handlers object for acorn-walk ancestor().
  */
-export function buildDeclVisitor(options) {
+export function buildDeclVisitor(config) {
   const {
     exportName,
     functionsToGut,
@@ -33,7 +33,7 @@ export function buildDeclVisitor(options) {
     safeOverwrite,
     safeRemove,
     topLevelStatementsToRemove,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   return {
     // Remove ALL export statements

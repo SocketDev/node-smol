@@ -16,6 +16,14 @@ import { getFeature } from '../../lib/smol-features.mts'
 
 const logger = getDefaultLogger()
 
+// `parseArgs` widens every value to the union of every declared option type, so
+// a `{ type: 'string' }` option still reads as string-or-boolean downstream and
+// interpolating it stringifies a non-string. Narrow once, here, instead of
+// asserting at each of the dozen call sites.
+function stringArg(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
 const VALID_CHECKPOINTS = [
   CHECKPOINTS.BINARY_RELEASED,
   CHECKPOINTS.BINARY_STRIPPED,
@@ -108,9 +116,9 @@ export function parseBuildArgs() {
     strict: false,
   })
 
-  const TARGET_PLATFORM = values['platform'] || process.platform
-  const TARGET_ARCH = values['arch'] || process.arch
-  const TARGET_LIBC = values['libc']
+  const TARGET_PLATFORM = stringArg(values['platform']) || process.platform
+  const TARGET_ARCH = stringArg(values['arch']) || process.arch
+  const TARGET_LIBC = stringArg(values['libc'])
 
   // Validate libc parameter
   if (TARGET_LIBC && TARGET_LIBC !== 'musl' && TARGET_LIBC !== 'glibc') {
@@ -126,9 +134,9 @@ export function parseBuildArgs() {
 
   const CLEAN_BUILD = Boolean(values['clean'])
   const AUTO_YES = Boolean(values['yes'])
-  const FROM_CHECKPOINT = values['from-checkpoint']
-  const STOP_AT = values['stop-at']
-  const BUILD_ONLY = values['build-only']
+  const FROM_CHECKPOINT = stringArg(values['from-checkpoint'])
+  const STOP_AT = stringArg(values['stop-at'])
+  const BUILD_ONLY = stringArg(values['build-only'])
 
   // Validate checkpoint name if provided.
   if (FROM_CHECKPOINT && !VALID_CHECKPOINTS.includes(FROM_CHECKPOINT)) {

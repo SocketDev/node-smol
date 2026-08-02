@@ -6,8 +6,8 @@
  * same API so additions/ JS files can be imported in vitest.
  */
 
-export function uncurryThis(fn) {
-  return (thisArg, ...args) => fn.call(thisArg, ...args)
+export function uncurryThis(proto, key) {
+  return (thisArg, ...args) => proto[key].call(thisArg, ...args)
 }
 
 // Hoist prototype refs so each entry below is a one-liner instead of
@@ -29,28 +29,28 @@ globalThis.primordials = {
   Array,
   ArrayFrom: Array.from.bind(Array),
   ArrayIsArray: Array.isArray,
-  ArrayPrototypeAt: uncurryThis(ArrayProto.at),
-  ArrayPrototypeConcat: uncurryThis(ArrayProto.concat),
-  ArrayPrototypeEvery: uncurryThis(ArrayProto.every),
-  ArrayPrototypeFilter: uncurryThis(ArrayProto.filter),
-  ArrayPrototypeFind: uncurryThis(ArrayProto.find),
-  ArrayPrototypeFindIndex: uncurryThis(ArrayProto.findIndex),
-  ArrayPrototypeFlat: uncurryThis(ArrayProto.flat),
-  ArrayPrototypeForEach: uncurryThis(ArrayProto.forEach),
-  ArrayPrototypeIncludes: uncurryThis(ArrayProto.includes),
-  ArrayPrototypeIndexOf: uncurryThis(ArrayProto.indexOf),
-  ArrayPrototypeJoin: uncurryThis(ArrayProto.join),
-  ArrayPrototypeMap: uncurryThis(ArrayProto.map),
-  ArrayPrototypePop: uncurryThis(ArrayProto.pop),
-  ArrayPrototypePush: uncurryThis(ArrayProto.push),
-  ArrayPrototypeReduce: uncurryThis(ArrayProto.reduce),
-  ArrayPrototypeReverse: uncurryThis(ArrayProto.reverse),
-  ArrayPrototypeShift: uncurryThis(ArrayProto.shift),
-  ArrayPrototypeSlice: uncurryThis(ArrayProto.slice),
-  ArrayPrototypeSome: uncurryThis(ArrayProto.some),
-  ArrayPrototypeSort: uncurryThis(ArrayProto.sort),
-  ArrayPrototypeSplice: uncurryThis(ArrayProto.splice),
-  ArrayPrototypeUnshift: uncurryThis(ArrayProto.unshift),
+  ArrayPrototypeAt: uncurryThis(ArrayProto, 'at'),
+  ArrayPrototypeConcat: uncurryThis(ArrayProto, 'concat'),
+  ArrayPrototypeEvery: uncurryThis(ArrayProto, 'every'),
+  ArrayPrototypeFilter: uncurryThis(ArrayProto, 'filter'),
+  ArrayPrototypeFind: uncurryThis(ArrayProto, 'find'),
+  ArrayPrototypeFindIndex: uncurryThis(ArrayProto, 'findIndex'),
+  ArrayPrototypeFlat: uncurryThis(ArrayProto, 'flat'),
+  ArrayPrototypeForEach: uncurryThis(ArrayProto, 'forEach'),
+  ArrayPrototypeIncludes: uncurryThis(ArrayProto, 'includes'),
+  ArrayPrototypeIndexOf: uncurryThis(ArrayProto, 'indexOf'),
+  ArrayPrototypeJoin: uncurryThis(ArrayProto, 'join'),
+  ArrayPrototypeMap: uncurryThis(ArrayProto, 'map'),
+  ArrayPrototypePop: uncurryThis(ArrayProto, 'pop'),
+  ArrayPrototypePush: uncurryThis(ArrayProto, 'push'),
+  ArrayPrototypeReduce: uncurryThis(ArrayProto, 'reduce'),
+  ArrayPrototypeReverse: uncurryThis(ArrayProto, 'reverse'),
+  ArrayPrototypeShift: uncurryThis(ArrayProto, 'shift'),
+  ArrayPrototypeSlice: uncurryThis(ArrayProto, 'slice'),
+  ArrayPrototypeSome: uncurryThis(ArrayProto, 'some'),
+  ArrayPrototypeSort: uncurryThis(ArrayProto, 'sort'),
+  ArrayPrototypeSplice: uncurryThis(ArrayProto, 'splice'),
+  ArrayPrototypeUnshift: uncurryThis(ArrayProto, 'unshift'),
 
   // ArrayBuffer
   ArrayBufferIsView: ArrayBuffer.isView.bind(ArrayBuffer),
@@ -64,7 +64,7 @@ globalThis.primordials = {
   // Date
   Date,
   DateNow: Date.now.bind(Date),
-  DatePrototypeGetTime: uncurryThis(DateProto.getTime),
+  DatePrototypeGetTime: uncurryThis(DateProto, 'getTime'),
 
   // Error
   Error,
@@ -77,35 +77,37 @@ globalThis.primordials = {
     Error.isError?.bind(Error) ?? ((value: unknown) => value instanceof Error),
 
   // Function
-  FunctionPrototypeBind: uncurryThis(FunctionProto.bind),
-  FunctionPrototypeCall: uncurryThis(FunctionProto.call),
+  FunctionPrototypeBind: uncurryThis(FunctionProto, 'bind'),
+  FunctionPrototypeCall: uncurryThis(FunctionProto, 'call'),
 
   // JSON
   JSONParse: JSON.parse,
   JSONStringify: JSON.stringify,
 
-  // Iterator (shared prototype of Array/Map/Set iterators)
-  IteratorPrototypeNext: uncurryThis(
-    Object.getPrototypeOf(Object.getPrototypeOf([].keys())).next,
-  ),
-  IteratorPrototypeReturn: uncurryThis(
-    Object.getPrototypeOf(Object.getPrototypeOf([].keys())).return ??
-      function () {
-        return { value: undefined, done: true }
-      },
-  ),
+  // Iterator. Dispatch on the receiver rather than uncurrying a shared
+  // prototype method: `next` does NOT live on `%IteratorPrototype%` (two hops
+  // up from `[].keys()`) — each concrete iterator prototype carries its own.
+  // The previous form uncurried that two-hop `.next`, i.e. `undefined`, so the
+  // entry was a function that threw the moment anything called it. Nothing did.
+  IteratorPrototypeNext: (thisArg, ...args) => thisArg.next(...args),
+  // `return` is genuinely optional on an iterator; stand in a closed-iterator
+  // result when the receiver has none.
+  IteratorPrototypeReturn: (thisArg, ...args) =>
+    typeof thisArg.return === 'function'
+      ? thisArg.return(...args)
+      : { value: undefined, done: true },
 
   // Map
   Map,
-  MapPrototypeClear: uncurryThis(MapProto.clear),
-  MapPrototypeDelete: uncurryThis(MapProto.delete),
-  MapPrototypeEntries: uncurryThis(MapProto.entries),
-  MapPrototypeForEach: uncurryThis(MapProto.forEach),
-  MapPrototypeGet: uncurryThis(MapProto.get),
-  MapPrototypeHas: uncurryThis(MapProto.has),
-  MapPrototypeKeys: uncurryThis(MapProto.keys),
-  MapPrototypeSet: uncurryThis(MapProto.set),
-  MapPrototypeValues: uncurryThis(MapProto.values),
+  MapPrototypeClear: uncurryThis(MapProto, 'clear'),
+  MapPrototypeDelete: uncurryThis(MapProto, 'delete'),
+  MapPrototypeEntries: uncurryThis(MapProto, 'entries'),
+  MapPrototypeForEach: uncurryThis(MapProto, 'forEach'),
+  MapPrototypeGet: uncurryThis(MapProto, 'get'),
+  MapPrototypeHas: uncurryThis(MapProto, 'has'),
+  MapPrototypeKeys: uncurryThis(MapProto, 'keys'),
+  MapPrototypeSet: uncurryThis(MapProto, 'set'),
+  MapPrototypeValues: uncurryThis(MapProto, 'values'),
 
   // Math
   MathAbs: Math.abs,
@@ -124,8 +126,8 @@ globalThis.primordials = {
   NumberIsSafeInteger: Number.isSafeInteger,
   NumberParseFloat: Number.parseFloat,
   NumberParseInt: Number.parseInt,
-  NumberPrototypeToFixed: uncurryThis(NumberProto.toFixed),
-  NumberPrototypeToString: uncurryThis(NumberProto.toString),
+  NumberPrototypeToFixed: uncurryThis(NumberProto, 'toFixed'),
+  NumberPrototypeToString: uncurryThis(NumberProto, 'toString'),
 
   // Object
   ObjectAssign: Object.assign,
@@ -144,39 +146,39 @@ globalThis.primordials = {
 
   // RegExp
   RegExp,
-  RegExpPrototypeExec: uncurryThis(RegExpProto.exec),
-  RegExpPrototypeTest: uncurryThis(RegExpProto.test),
-  RegExpPrototypeSymbolMatch: uncurryThis(RegExpProto[Symbol.match]),
-  RegExpPrototypeSymbolReplace: uncurryThis(RegExpProto[Symbol.replace]),
+  RegExpPrototypeExec: uncurryThis(RegExpProto, 'exec'),
+  RegExpPrototypeTest: uncurryThis(RegExpProto, 'test'),
+  RegExpPrototypeSymbolMatch: uncurryThis(RegExpProto, Symbol.match),
+  RegExpPrototypeSymbolReplace: uncurryThis(RegExpProto, Symbol.replace),
 
   // Set
   Set,
-  SetPrototypeAdd: uncurryThis(SetProto.add),
-  SetPrototypeDelete: uncurryThis(SetProto.delete),
-  SetPrototypeForEach: uncurryThis(SetProto.forEach),
-  SetPrototypeHas: uncurryThis(SetProto.has),
+  SetPrototypeAdd: uncurryThis(SetProto, 'add'),
+  SetPrototypeDelete: uncurryThis(SetProto, 'delete'),
+  SetPrototypeForEach: uncurryThis(SetProto, 'forEach'),
+  SetPrototypeHas: uncurryThis(SetProto, 'has'),
 
   // String
   String,
-  StringPrototypeCharCodeAt: uncurryThis(StringProto.charCodeAt),
-  StringPrototypeEndsWith: uncurryThis(StringProto.endsWith),
-  StringPrototypeIncludes: uncurryThis(StringProto.includes),
-  StringPrototypeIndexOf: uncurryThis(StringProto.indexOf),
-  StringPrototypeLastIndexOf: uncurryThis(StringProto.lastIndexOf),
-  StringPrototypeMatch: uncurryThis(StringProto.match),
-  StringPrototypePadStart: uncurryThis(StringProto.padStart),
-  StringPrototypeRepeat: uncurryThis(StringProto.repeat),
-  StringPrototypeReplace: uncurryThis(StringProto.replace),
-  StringPrototypeReplaceAll: uncurryThis(StringProto.replaceAll),
-  StringPrototypeSlice: uncurryThis(StringProto.slice),
-  StringPrototypeSplit: uncurryThis(StringProto.split),
-  StringPrototypeStartsWith: uncurryThis(StringProto.startsWith),
-  StringPrototypeSubstring: uncurryThis(StringProto.substring),
-  StringPrototypeToLowerCase: uncurryThis(StringProto.toLowerCase),
-  StringPrototypeToUpperCase: uncurryThis(StringProto.toUpperCase),
-  StringPrototypeTrim: uncurryThis(StringProto.trim),
-  StringPrototypeTrimEnd: uncurryThis(StringProto.trimEnd),
-  StringPrototypeTrimStart: uncurryThis(StringProto.trimStart),
+  StringPrototypeCharCodeAt: uncurryThis(StringProto, 'charCodeAt'),
+  StringPrototypeEndsWith: uncurryThis(StringProto, 'endsWith'),
+  StringPrototypeIncludes: uncurryThis(StringProto, 'includes'),
+  StringPrototypeIndexOf: uncurryThis(StringProto, 'indexOf'),
+  StringPrototypeLastIndexOf: uncurryThis(StringProto, 'lastIndexOf'),
+  StringPrototypeMatch: uncurryThis(StringProto, 'match'),
+  StringPrototypePadStart: uncurryThis(StringProto, 'padStart'),
+  StringPrototypeRepeat: uncurryThis(StringProto, 'repeat'),
+  StringPrototypeReplace: uncurryThis(StringProto, 'replace'),
+  StringPrototypeReplaceAll: uncurryThis(StringProto, 'replaceAll'),
+  StringPrototypeSlice: uncurryThis(StringProto, 'slice'),
+  StringPrototypeSplit: uncurryThis(StringProto, 'split'),
+  StringPrototypeStartsWith: uncurryThis(StringProto, 'startsWith'),
+  StringPrototypeSubstring: uncurryThis(StringProto, 'substring'),
+  StringPrototypeToLowerCase: uncurryThis(StringProto, 'toLowerCase'),
+  StringPrototypeToUpperCase: uncurryThis(StringProto, 'toUpperCase'),
+  StringPrototypeTrim: uncurryThis(StringProto, 'trim'),
+  StringPrototypeTrimEnd: uncurryThis(StringProto, 'trimEnd'),
+  StringPrototypeTrimStart: uncurryThis(StringProto, 'trimStart'),
 
   // Symbol
   Symbol,
@@ -189,7 +191,7 @@ globalThis.primordials = {
 
   // URL
   URL,
-  URLSearchParamsPrototypeForEach: uncurryThis(URLSearchParamsProto.forEach),
+  URLSearchParamsPrototypeForEach: uncurryThis(URLSearchParamsProto, 'forEach'),
 
   // Safe collections (in test shim, just use regular Map/Set)
   SafeMap: Map,

@@ -29,10 +29,10 @@ function assertModality(modalities, field) {
   }
 }
 
-function createLanguageModel(options) {
+function createLanguageModel(config) {
   const { acquire, availability, backend, manifest } = {
     __proto__: null,
-    ...options,
+    ...config,
   }
   return Object.freeze({
     async availability() {
@@ -127,8 +127,8 @@ function createLanguageModel(options) {
 
 function createNativeBackend(binding, manifest) {
   const backend = {
-    async createSession(modelPath, options) {
-      const opts = { __proto__: null, ...options }
+    async createSession(modelPath, config) {
+      const opts = { __proto__: null, ...config }
       const native = await binding.createSession(modelPath, opts)
       let destroyed = false
       let pending = false
@@ -310,13 +310,13 @@ function wrapSession(nativeSession, reproducibility) {
       assertActive(destroyed)
       return nativeSession.measureInputUsage(input)
     },
-    prompt(input, options) {
+    prompt(input, config) {
       assertActive(destroyed)
-      return nativeSession.prompt(input, options)
+      return nativeSession.prompt(input, config)
     },
-    promptStreaming(input, options) {
+    promptStreaming(input, config) {
       assertActive(destroyed)
-      return nativeSession.promptStreaming(input, options)
+      return nativeSession.promptStreaming(input, config)
     },
     reproducibility,
   }

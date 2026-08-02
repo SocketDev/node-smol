@@ -254,7 +254,7 @@ export async function setupQemuEmulation() {
 
     printError('Failed to setup QEMU emulation')
     if (result.stderr) {
-      printError(result.stderr.toString?.() ?? String(result.stderr))
+      printError(result.stderr)
     }
     return false
   } catch (e) {

@@ -269,7 +269,7 @@ export async function getGccVersion(gccPath = 'gcc') {
       return undefined
     }
 
-    const stdout = result.stdout?.toString() || ''
+    const stdout = result.stdout || ''
     const match = stdout.match(/gcc.*?(\d+\.\d+\.\d+)/)
     return match ? match[1] : undefined
   } catch {

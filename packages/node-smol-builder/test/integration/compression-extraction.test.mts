@@ -388,7 +388,7 @@ describe.skipIf(skipTests)('final binary extraction to ~/.socket/_dlx/', () => {
     })
 
     it('should output to stdout on subsequent runs (cache hit)', async () => {
-      // Run --version again (cache should exist from previous test)
+      // Run --version again. The cache should exist from the previous test.
       const result = await spawn(compressedBinaryPath, ['--version'], {
         stdio: 'pipe',
       })

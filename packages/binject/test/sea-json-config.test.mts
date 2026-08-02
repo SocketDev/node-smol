@@ -24,6 +24,7 @@ import { MAX_NODE_BINARY_SIZE } from './helpers/constants.mts'
 import { getBinjectPath } from './helpers/paths.mts'
 import { execCommand } from './helpers/exec-command-with-output.mts'
 import { downloadNodeSmolRelease } from './helpers/download-node-smol-release.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const logger = getDefaultLogger()
 
@@ -148,35 +149,207 @@ describe('sEA JSON Config', () => {
     }
   })
 
-  it('should auto-generate blob from JSON config with relative path', async () => {
-    // Create a simple JS file
-    const jsFile = path.join(testDir, 'hello.js')
-    await fs.writeFile(jsFile, "console.log('Hello from SEA!');\n")
+  it(
+    'should auto-generate blob from JSON config with relative path',
+    async () => {
+      // Create a simple JS file
+      const jsFile = path.join(testDir, 'hello.js')
+      await fs.writeFile(jsFile, "console.log('Hello from SEA!');\n")
 
-    // Create SEA config with relative output path
-    const configFile = path.join(testDir, 'sea-config.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'hello.js',
-        output: 'sea-prep.blob',
-      }),
-    )
+      // Create SEA config with relative output path
+      const configFile = path.join(testDir, 'sea-config.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'hello.js',
+          output: 'sea-prep.blob',
+        }),
+      )
 
-    // Create VFS blob
-    const vfsBlob = path.join(testDir, 'vfs.blob')
-    await fs.writeFile(vfsBlob, 'VFS data\n')
+      // Create VFS blob
+      const vfsBlob = path.join(testDir, 'vfs.blob')
+      await fs.writeFile(vfsBlob, 'VFS data\n')
 
-    // Create output binary
-    const outputBinary = path.join(testDir, 'output-relative')
+      // Create output binary
+      const outputBinary = path.join(testDir, 'output-relative')
 
-    // Create a copy of binject for this test (injection modifies input in-place)
-    const testBinject = await createTestBinject('test-binject-relative')
+      // Create a copy of binject for this test (injection modifies input in-place)
+      const testBinject = await createTestBinject('test-binject-relative')
 
-    // Run binject from the test directory (so relative paths work)
-    const result = await execCommand(
-      BINJECT,
-      [
+      // Run binject from the test directory (so relative paths work)
+      const result = await execCommand(
+        BINJECT,
+        [
+          'inject',
+          '-e',
+          testBinject,
+          '-o',
+          outputBinary,
+          '--sea',
+          configFile,
+          '--vfs',
+          vfsBlob,
+        ],
+        { cwd: testDir },
+      )
+
+      // Should succeed
+      expect(result.code).toBe(0)
+
+      // Should show it detected JSON config
+      expect(result.output).toMatch(/Detected SEA config file/)
+      expect(result.output).toMatch(/Generating SEA blob/)
+      expect(result.output).toMatch(/Generated SEA blob/)
+
+      // Should have created the blob file in the same directory
+      const generatedBlob = path.join(testDir, 'sea-prep.blob')
+      expect(existsSync(generatedBlob)).toBeTruthy()
+
+      // Should have created output binary
+      expect(existsSync(outputBinary)).toBeTruthy()
+    },
+    tolerantTimeout(60_000),
+  )
+
+  it(
+    'should auto-generate blob from JSON config with absolute path',
+    async () => {
+      // Create a simple JS file
+      const jsFile = path.join(testDir, 'app.js')
+      await fs.writeFile(jsFile, "console.log('App running');\n")
+
+      // Create SEA config with absolute path for main, relative for output
+      // binject rejects absolute paths in output for security.
+      const configFile = path.join(testDir, 'sea-config-abs.json')
+      const relativeBlobPath = 'absolute-output.blob'
+      const absoluteBlobPath = path.join(testDir, relativeBlobPath)
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          // Absolute path for main too
+          main: path.join(testDir, 'app.js'),
+          // Must be relative for security
+          output: relativeBlobPath,
+        }),
+      )
+
+      // Create VFS blob
+      const vfsBlob = path.join(testDir, 'vfs-abs.blob')
+      await fs.writeFile(vfsBlob, 'VFS\n')
+
+      // Create output binary
+      const outputBinary = path.join(testDir, 'output-absolute')
+
+      // Create a copy of binject for this test (injection modifies input in-place)
+      const testBinject = await createTestBinject('test-binject-absolute')
+
+      const result = await execCommand(
+        BINJECT,
+        [
+          'inject',
+          '-e',
+          testBinject,
+          '-o',
+          outputBinary,
+          '--sea',
+          configFile,
+          '--vfs',
+          vfsBlob,
+        ],
+        // Run from testDir so relative output path works
+        { cwd: testDir },
+      )
+
+      // Should succeed
+      expect(result.code).toBe(0)
+
+      // Should show it detected JSON config
+      expect(result.output).toMatch(/Detected SEA config file/)
+      expect(result.output).toMatch(/Generating SEA blob/)
+
+      // Should have created the blob at absolute path
+      expect(existsSync(absoluteBlobPath)).toBeTruthy()
+
+      // Should have created output binary
+      expect(existsSync(outputBinary)).toBeTruthy()
+    },
+    tolerantTimeout(60_000),
+  )
+
+  it(
+    'should handle JSON config in subdirectory',
+    async () => {
+      // Create subdirectory
+      const subdir = path.join(testDir, 'config')
+      await fs.mkdir(subdir, { recursive: true })
+
+      // Create JS file in subdirectory
+      const jsFile = path.join(subdir, 'index.js')
+      await fs.writeFile(jsFile, "console.log('Subdir app');\n")
+
+      // Create SEA config in subdirectory
+      const configFile = path.join(subdir, 'sea-config.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'index.js',
+          output: 'app.blob',
+        }),
+      )
+
+      // Create VFS blob
+      const vfsBlob = path.join(subdir, 'vfs-subdir.blob')
+      await fs.writeFile(vfsBlob, 'VFS\n')
+
+      // Create output binary (parent directory)
+      const outputBinary = path.join(testDir, 'output-subdir')
+
+      // Create a copy of binject for this test (injection modifies input in-place)
+      const testBinject = await createTestBinject('test-binject-subdir')
+
+      const result = await execCommand(
+        BINJECT,
+        [
+          'inject',
+          '-e',
+          testBinject,
+          '-o',
+          outputBinary,
+          '--sea',
+          configFile,
+          '--vfs',
+          vfsBlob,
+        ],
+        { cwd: subdir },
+      )
+
+      // Should succeed
+      expect(result.code).toBe(0)
+
+      // Should have created the blob file in subdirectory
+      const generatedBlob = path.join(subdir, 'app.blob')
+      expect(existsSync(generatedBlob)).toBeTruthy()
+    },
+    tolerantTimeout(60_000),
+  )
+
+  it(
+    'should error gracefully if JSON config is invalid',
+    async () => {
+      // Create invalid JSON config
+      const configFile = path.join(testDir, 'invalid-config.json')
+      await fs.writeFile(configFile, '{ "main": "app.js", invalid json }')
+
+      // Create VFS blob
+      const vfsBlob = path.join(testDir, 'vfs-invalid.blob')
+      await fs.writeFile(vfsBlob, 'VFS\n')
+
+      const outputBinary = path.join(testDir, 'output-invalid')
+
+      // Create a copy of binject for this test (injection modifies input in-place)
+      const testBinject = await createTestBinject('test-binject-invalid')
+
+      const result = await execCommand(BINJECT, [
         'inject',
         '-e',
         testBinject,
@@ -186,59 +359,43 @@ describe('sEA JSON Config', () => {
         configFile,
         '--vfs',
         vfsBlob,
-      ],
-      { cwd: testDir },
-    )
+      ])
 
-    // Should succeed
-    expect(result.code).toBe(0)
+      // Should fail
+      expect(result.code).not.toBe(0)
 
-    // Should show it detected JSON config
-    expect(result.output).toMatch(/Detected SEA config file/)
-    expect(result.output).toMatch(/Generating SEA blob/)
-    expect(result.output).toMatch(/Generated SEA blob/)
+      // Should show error about node command failing
+      expect(result.output).toMatch(/node --experimental-sea-config failed/)
+    },
+    tolerantTimeout(30_000),
+  )
 
-    // Should have created the blob file in the same directory
-    const generatedBlob = path.join(testDir, 'sea-prep.blob')
-    expect(existsSync(generatedBlob)).toBeTruthy()
+  it(
+    'should error if output field is missing from config',
+    async () => {
+      // Create JS file
+      const jsFile = path.join(testDir, 'missing-output.js')
+      await fs.writeFile(jsFile, "console.log('test');\n")
 
-    // Should have created output binary
-    expect(existsSync(outputBinary)).toBeTruthy()
-  }, 60_000)
+      // Create config without output field
+      const configFile = path.join(testDir, 'no-output.json')
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          main: 'missing-output.js',
+        }),
+      )
 
-  it('should auto-generate blob from JSON config with absolute path', async () => {
-    // Create a simple JS file
-    const jsFile = path.join(testDir, 'app.js')
-    await fs.writeFile(jsFile, "console.log('App running');\n")
+      // Create VFS blob
+      const vfsBlob = path.join(testDir, 'vfs-no-output.blob')
+      await fs.writeFile(vfsBlob, 'VFS\n')
 
-    // Create SEA config with absolute path for main, relative for output
-    // (binject rejects absolute paths in output for security)
-    const configFile = path.join(testDir, 'sea-config-abs.json')
-    const relativeBlobPath = 'absolute-output.blob'
-    const absoluteBlobPath = path.join(testDir, relativeBlobPath)
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        // Absolute path for main too
-        main: path.join(testDir, 'app.js'),
-        // Must be relative for security
-        output: relativeBlobPath,
-      }),
-    )
+      const outputBinary = path.join(testDir, 'output-no-field')
 
-    // Create VFS blob
-    const vfsBlob = path.join(testDir, 'vfs-abs.blob')
-    await fs.writeFile(vfsBlob, 'VFS\n')
+      // Create a copy of binject for this test (injection modifies input in-place)
+      const testBinject = await createTestBinject('test-binject-no-output')
 
-    // Create output binary
-    const outputBinary = path.join(testDir, 'output-absolute')
-
-    // Create a copy of binject for this test (injection modifies input in-place)
-    const testBinject = await createTestBinject('test-binject-absolute')
-
-    const result = await execCommand(
-      BINJECT,
-      [
+      const result = await execCommand(BINJECT, [
         'inject',
         '-e',
         testBinject,
@@ -248,186 +405,54 @@ describe('sEA JSON Config', () => {
         configFile,
         '--vfs',
         vfsBlob,
-      ],
-      // Run from testDir so relative output path works
-      { cwd: testDir },
-    )
+      ])
 
-    // Should succeed
-    expect(result.code).toBe(0)
+      // Should fail
+      expect(result.code).not.toBe(0)
 
-    // Should show it detected JSON config
-    expect(result.output).toMatch(/Detected SEA config file/)
-    expect(result.output).toMatch(/Generating SEA blob/)
+      // Should show error about parsing output field
+      expect(result.output).toMatch(
+        /Could not parse 'output' field from config|node --experimental-sea-config failed/,
+      )
+    },
+    tolerantTimeout(30_000),
+  )
 
-    // Should have created the blob at absolute path
-    expect(existsSync(absoluteBlobPath)).toBeTruthy()
+  it(
+    'should work with .blob file directly (not JSON)',
+    async () => {
+      // Create a pre-generated blob file
+      const blobFile = path.join(testDir, 'manual.blob')
+      await fs.writeFile(blobFile, 'Pre-generated SEA blob\n')
 
-    // Should have created output binary
-    expect(existsSync(outputBinary)).toBeTruthy()
-  }, 60_000)
+      // Create VFS blob
+      const vfsBlob = path.join(testDir, 'vfs-manual.blob')
+      await fs.writeFile(vfsBlob, 'VFS\n')
 
-  it('should handle JSON config in subdirectory', async () => {
-    // Create subdirectory
-    const subdir = path.join(testDir, 'config')
-    await fs.mkdir(subdir, { recursive: true })
+      const outputBinary = path.join(testDir, 'output-manual')
 
-    // Create JS file in subdirectory
-    const jsFile = path.join(subdir, 'index.js')
-    await fs.writeFile(jsFile, "console.log('Subdir app');\n")
+      // Create a copy of binject for this test (injection modifies input in-place)
+      const testBinject = await createTestBinject('test-binject-manual')
 
-    // Create SEA config in subdirectory
-    const configFile = path.join(subdir, 'sea-config.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'index.js',
-        output: 'app.blob',
-      }),
-    )
-
-    // Create VFS blob
-    const vfsBlob = path.join(subdir, 'vfs-subdir.blob')
-    await fs.writeFile(vfsBlob, 'VFS\n')
-
-    // Create output binary (parent directory)
-    const outputBinary = path.join(testDir, 'output-subdir')
-
-    // Create a copy of binject for this test (injection modifies input in-place)
-    const testBinject = await createTestBinject('test-binject-subdir')
-
-    const result = await execCommand(
-      BINJECT,
-      [
+      const result = await execCommand(BINJECT, [
         'inject',
         '-e',
         testBinject,
         '-o',
         outputBinary,
         '--sea',
-        configFile,
+        blobFile,
         '--vfs',
         vfsBlob,
-      ],
-      { cwd: subdir },
-    )
+      ])
 
-    // Should succeed
-    expect(result.code).toBe(0)
+      // Should succeed
+      expect(result.code).toBe(0)
 
-    // Should have created the blob file in subdirectory
-    const generatedBlob = path.join(subdir, 'app.blob')
-    expect(existsSync(generatedBlob)).toBeTruthy()
-  }, 60_000)
-
-  it('should error gracefully if JSON config is invalid', async () => {
-    // Create invalid JSON config
-    const configFile = path.join(testDir, 'invalid-config.json')
-    await fs.writeFile(configFile, '{ "main": "app.js", invalid json }')
-
-    // Create VFS blob
-    const vfsBlob = path.join(testDir, 'vfs-invalid.blob')
-    await fs.writeFile(vfsBlob, 'VFS\n')
-
-    const outputBinary = path.join(testDir, 'output-invalid')
-
-    // Create a copy of binject for this test (injection modifies input in-place)
-    const testBinject = await createTestBinject('test-binject-invalid')
-
-    const result = await execCommand(BINJECT, [
-      'inject',
-      '-e',
-      testBinject,
-      '-o',
-      outputBinary,
-      '--sea',
-      configFile,
-      '--vfs',
-      vfsBlob,
-    ])
-
-    // Should fail
-    expect(result.code).not.toBe(0)
-
-    // Should show error about node command failing
-    expect(result.output).toMatch(/node --experimental-sea-config failed/)
-  }, 30_000)
-
-  it('should error if output field is missing from config', async () => {
-    // Create JS file
-    const jsFile = path.join(testDir, 'missing-output.js')
-    await fs.writeFile(jsFile, "console.log('test');\n")
-
-    // Create config without output field
-    const configFile = path.join(testDir, 'no-output.json')
-    await fs.writeFile(
-      configFile,
-      JSON.stringify({
-        main: 'missing-output.js',
-      }),
-    )
-
-    // Create VFS blob
-    const vfsBlob = path.join(testDir, 'vfs-no-output.blob')
-    await fs.writeFile(vfsBlob, 'VFS\n')
-
-    const outputBinary = path.join(testDir, 'output-no-field')
-
-    // Create a copy of binject for this test (injection modifies input in-place)
-    const testBinject = await createTestBinject('test-binject-no-output')
-
-    const result = await execCommand(BINJECT, [
-      'inject',
-      '-e',
-      testBinject,
-      '-o',
-      outputBinary,
-      '--sea',
-      configFile,
-      '--vfs',
-      vfsBlob,
-    ])
-
-    // Should fail
-    expect(result.code).not.toBe(0)
-
-    // Should show error about parsing output field
-    expect(result.output).toMatch(
-      /Could not parse 'output' field from config|node --experimental-sea-config failed/,
-    )
-  }, 30_000)
-
-  it('should work with .blob file directly (not JSON)', async () => {
-    // Create a pre-generated blob file
-    const blobFile = path.join(testDir, 'manual.blob')
-    await fs.writeFile(blobFile, 'Pre-generated SEA blob\n')
-
-    // Create VFS blob
-    const vfsBlob = path.join(testDir, 'vfs-manual.blob')
-    await fs.writeFile(vfsBlob, 'VFS\n')
-
-    const outputBinary = path.join(testDir, 'output-manual')
-
-    // Create a copy of binject for this test (injection modifies input in-place)
-    const testBinject = await createTestBinject('test-binject-manual')
-
-    const result = await execCommand(BINJECT, [
-      'inject',
-      '-e',
-      testBinject,
-      '-o',
-      outputBinary,
-      '--sea',
-      blobFile,
-      '--vfs',
-      vfsBlob,
-    ])
-
-    // Should succeed
-    expect(result.code).toBe(0)
-
-    // Should NOT show JSON detection messages
-    expect(result.output).not.toMatch(/Detected SEA config file/)
-    expect(result.output).not.toMatch(/Generating SEA blob/)
-  }, 30_000)
+      // Should NOT show JSON detection messages
+      expect(result.output).not.toMatch(/Detected SEA config file/)
+      expect(result.output).not.toMatch(/Generating SEA blob/)
+    },
+    tolerantTimeout(30_000),
+  )
 })

@@ -175,7 +175,7 @@ describe('pinned-versions', () => {
       if (version) {
         // Should be a version string
         expectTypeOf(version).toBeString()
-        // Should look like a version (starts with a number)
+        // Should look like a version, i.e. start with a number.
         expect(version).toMatch(/^\d/)
       }
     })

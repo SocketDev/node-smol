@@ -12,9 +12,9 @@ import { generateSync as generateSyncShared } from 'build-infra/wasm-synced/gene
  * @param {object} options - Sync generation options (see
  *   generate-sync-phase.mts)
  */
-export async function generateSync(options) {
+export async function generateSync(config) {
   return generateSyncShared({
-    ...options,
+    ...config,
     packageConfig: {
       description:
         'Built with WASM threading + SIMD for synchronous instantiation.',

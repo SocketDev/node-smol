@@ -15,6 +15,7 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { getBinjectPath } from './helpers/paths.mts'
 import { execCommand } from './helpers/exec-command.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const logger = getDefaultLogger()
 
@@ -45,53 +46,61 @@ describe.skipIf(!binjectExists)(
   'round-trip extraction (error handling)',
   () => {
     describe('error handling in extraction', () => {
-      it('should fail gracefully when extracting non-existent SEA blob', async () => {
-        // Binary without SEA blob
-        const binaryWithoutSea = path.join(testDir, 'no_sea_binary')
-        await fs.copyFile(BINJECT, binaryWithoutSea)
+      it(
+        'should fail gracefully when extracting non-existent SEA blob',
+        async () => {
+          // Binary without SEA blob
+          const binaryWithoutSea = path.join(testDir, 'no_sea_binary')
+          await fs.copyFile(BINJECT, binaryWithoutSea)
 
-        const extractedSea = path.join(testDir, 'should_not_exist.blob')
-        const extractResult = await execCommand(BINJECT, [
-          'extract',
-          '-e',
-          binaryWithoutSea,
-          '-o',
-          extractedSea,
-          '--sea',
-        ])
+          const extractedSea = path.join(testDir, 'should_not_exist.blob')
+          const extractResult = await execCommand(BINJECT, [
+            'extract',
+            '-e',
+            binaryWithoutSea,
+            '-o',
+            extractedSea,
+            '--sea',
+          ])
 
-        // Should fail with non-zero exit code
-        expect(extractResult.code).not.toBe(0)
-        expect(extractResult.stderr).toBeTruthy()
-        expect(extractResult.stderr.toLowerCase()).toMatch(
-          /not found|missing|no sea|cannot/,
-        )
+          // Should fail with non-zero exit code
+          expect(extractResult.code).not.toBe(0)
+          expect(extractResult.stderr).toBeTruthy()
+          expect(extractResult.stderr.toLowerCase()).toMatch(
+            /not found|missing|no sea|cannot/,
+          )
 
-        // Output file should not be created
-        expect(existsSync(extractedSea)).toBeFalsy()
-      }, 30_000)
+          // Output file should not be created
+          expect(existsSync(extractedSea)).toBeFalsy()
+        },
+        tolerantTimeout(30_000),
+      )
 
-      it('should fail gracefully when extracting non-existent VFS', async () => {
-        const binaryWithoutVfs = path.join(testDir, 'no_vfs_binary')
-        await fs.copyFile(BINJECT, binaryWithoutVfs)
+      it(
+        'should fail gracefully when extracting non-existent VFS',
+        async () => {
+          const binaryWithoutVfs = path.join(testDir, 'no_vfs_binary')
+          await fs.copyFile(BINJECT, binaryWithoutVfs)
 
-        const extractedVfs = path.join(testDir, 'should_not_exist.vfs')
-        const extractResult = await execCommand(BINJECT, [
-          'extract',
-          '-e',
-          binaryWithoutVfs,
-          '-o',
-          extractedVfs,
-          '--vfs',
-        ])
+          const extractedVfs = path.join(testDir, 'should_not_exist.vfs')
+          const extractResult = await execCommand(BINJECT, [
+            'extract',
+            '-e',
+            binaryWithoutVfs,
+            '-o',
+            extractedVfs,
+            '--vfs',
+          ])
 
-        expect(extractResult.code).not.toBe(0)
-        expect(extractResult.stderr).toBeTruthy()
-        expect(extractResult.stderr.toLowerCase()).toMatch(
-          /not found|missing|no vfs|cannot/,
-        )
-        expect(existsSync(extractedVfs)).toBeFalsy()
-      }, 30_000)
+          expect(extractResult.code).not.toBe(0)
+          expect(extractResult.stderr).toBeTruthy()
+          expect(extractResult.stderr.toLowerCase()).toMatch(
+            /not found|missing|no vfs|cannot/,
+          )
+          expect(existsSync(extractedVfs)).toBeFalsy()
+        },
+        tolerantTimeout(30_000),
+      )
     })
   },
 )

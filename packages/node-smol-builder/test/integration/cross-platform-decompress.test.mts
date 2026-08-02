@@ -59,7 +59,7 @@ describe.skipIf(skipTests)('cross-Platform Decompression', () => {
       // This means binaries are platform-independent (only the stub differs)
 
       // We can verify this by checking that there's no compression_algorithm byte
-      // in the metadata (it was removed when we standardized on zstd)
+      // in the metadata. It was removed when we standardized on zstd.
       // Not 5 (which included compression_algorithm)
       expect(HEADER_SIZES.PLATFORM_METADATA).toBe(3)
     })
@@ -223,7 +223,7 @@ describe.skipIf(skipTests)('cross-Platform Decompression', () => {
       expect(cacheKey).toMatch(/^[\da-f]{16}$/)
 
       // The cache key should be the same regardless of which platform
-      // compressed the data (it's based on the compressed data hash)
+      // compressed the data. It is based on the compressed-data hash.
     })
   })
 

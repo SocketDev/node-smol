@@ -30,6 +30,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../../../scripts/fleet/paths.mts'
 import { execCommand } from './helpers/compression-roundtrip.mts'
+import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const logger = getDefaultLogger()
 
@@ -139,199 +140,231 @@ describe.skipIf(!existsSync(BINPRESS))(
         60_000,
       )
 
-      it('should produce smaller output than input', async () => {
-        const inputBinary = path.join(testDir, 'size_test_input')
-        await fs.copyFile(testBinary, inputBinary)
+      it(
+        'should produce smaller output than input',
+        async () => {
+          const inputBinary = path.join(testDir, 'size_test_input')
+          await fs.copyFile(testBinary, inputBinary)
 
-        const compressedBinary = path.join(testDir, 'size_test_compressed')
+          const compressedBinary = path.join(testDir, 'size_test_compressed')
 
-        // Compress
-        await execCommand(BINPRESS, [inputBinary, '--output', compressedBinary])
+          // Compress
+          await execCommand(BINPRESS, [
+            inputBinary,
+            '--output',
+            compressedBinary,
+          ])
 
-        // On Windows, binpress adds .exe extension automatically
-        const finalPath =
-          process.platform === 'win32'
-            ? `${compressedBinary}.exe`
-            : compressedBinary
+          // On Windows, binpress adds .exe extension automatically
+          const finalPath =
+            process.platform === 'win32'
+              ? `${compressedBinary}.exe`
+              : compressedBinary
 
-        // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
-        const inputStats = await fs.stat(inputBinary)
-        // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
-        const compressedStats = await fs.stat(finalPath)
+          // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
+          const inputStats = await fs.stat(inputBinary)
+          // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
+          const compressedStats = await fs.stat(finalPath)
 
-        // Compressed should be smaller (or at worst slightly larger due to stub overhead)
-        // For a typical binary, compressed should be significantly smaller
-        // Should have some compression (even if small due to already-optimized binary)
-        // Allow up to 10% increase for small binaries due to stub overhead
-        expect(compressedStats.size).toBeLessThan(inputStats.size * 1.1)
-      }, 60_000)
+          // Compressed should be smaller (or at worst slightly larger due to stub overhead)
+          // For a typical binary, compressed should be significantly smaller
+          // Should have some compression (even if small due to already-optimized binary)
+          // Allow up to 10% increase for small binaries due to stub overhead
+          expect(compressedStats.size).toBeLessThan(inputStats.size * 1.1)
+        },
+        tolerantTimeout(60_000),
+      )
 
-      it('should maintain executable permissions after compression', async () => {
-        const inputBinary = path.join(testDir, 'perm_test_input')
-        await fs.copyFile(testBinary, inputBinary)
-        await makeExecutable(inputBinary)
+      it(
+        'should maintain executable permissions after compression',
+        async () => {
+          const inputBinary = path.join(testDir, 'perm_test_input')
+          await fs.copyFile(testBinary, inputBinary)
+          await makeExecutable(inputBinary)
 
-        const compressedBinary = path.join(testDir, 'perm_test_compressed')
+          const compressedBinary = path.join(testDir, 'perm_test_compressed')
 
-        // Compress
-        await execCommand(BINPRESS, [inputBinary, '--output', compressedBinary])
+          // Compress
+          await execCommand(BINPRESS, [
+            inputBinary,
+            '--output',
+            compressedBinary,
+          ])
 
-        // On Windows, binpress adds .exe extension automatically
-        const finalPath =
-          process.platform === 'win32'
-            ? `${compressedBinary}.exe`
-            : compressedBinary
+          // On Windows, binpress adds .exe extension automatically
+          const finalPath =
+            process.platform === 'win32'
+              ? `${compressedBinary}.exe`
+              : compressedBinary
 
-        // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
-        const stats = await fs.stat(finalPath)
+          // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size / stats.mode for round-trip size and executable-permission assertions.
+          const stats = await fs.stat(finalPath)
 
-        // Windows doesn't use Unix-style executable bits, so skip this check on Windows
-        if (process.platform !== 'win32') {
-          const isExecutable = (stats.mode & 0o111) !== 0
-          expect(isExecutable).toBeTruthy()
-        }
-      }, 60_000)
+          // Windows doesn't use Unix-style executable bits, so skip this check on Windows
+          if (process.platform !== 'win32') {
+            const isExecutable = (stats.mode & 0o111) !== 0
+            expect(isExecutable).toBeTruthy()
+          }
+        },
+        tolerantTimeout(60_000),
+      )
     })
 
     describe('compression algorithm validation', () => {
-      it('should use zstd compression on all platforms', async () => {
-        const inputBinary = path.join(testDir, 'algo_test_input')
-        await fs.copyFile(testBinary, inputBinary)
+      it(
+        'should use zstd compression on all platforms',
+        async () => {
+          const inputBinary = path.join(testDir, 'algo_test_input')
+          await fs.copyFile(testBinary, inputBinary)
 
-        const compressedBinary = path.join(testDir, 'algo_test_compressed')
+          const compressedBinary = path.join(testDir, 'algo_test_compressed')
 
-        // Compress
-        const compressResult = await execCommand(BINPRESS, [
-          inputBinary,
-          '--output',
-          compressedBinary,
-        ])
+          // Compress
+          const compressResult = await execCommand(BINPRESS, [
+            inputBinary,
+            '--output',
+            compressedBinary,
+          ])
 
-        expect(compressResult.code).toBe(0)
+          expect(compressResult.code).toBe(0)
 
-        // On Windows, binpress adds .exe extension automatically
-        const finalPath =
-          process.platform === 'win32'
-            ? `${compressedBinary}.exe`
-            : compressedBinary
+          // On Windows, binpress adds .exe extension automatically
+          const finalPath =
+            process.platform === 'win32'
+              ? `${compressedBinary}.exe`
+              : compressedBinary
 
-        // Read compressed binary to check for SMOL marker
-        const data = await fs.readFile(finalPath)
+          // Read compressed binary to check for SMOL marker
+          const data = await fs.readFile(finalPath)
 
-        // Should contain magic marker
-        const marker = Buffer.from('__SMOL_PRESSED_DATA_MAGIC_MARKER', 'utf8')
-        const markerIndex = data.indexOf(marker)
+          // Should contain magic marker
+          const marker = Buffer.from('__SMOL_PRESSED_DATA_MAGIC_MARKER', 'utf8')
+          const markerIndex = data.indexOf(marker)
 
-        expect(markerIndex).toBeGreaterThan(-1)
+          expect(markerIndex).toBeGreaterThan(-1)
 
-        // Check metadata after marker
-        // Format: marker(32) + compressed_size(8) + uncompressed_size(8) + cache_key(16) + platform_metadata(3)
-        const metadataOffset = markerIndex + 32 + 8 + 8 + 16
+          // Check metadata after marker
+          // Format: marker(32) + compressed_size(8) + uncompressed_size(8) + cache_key(16) + platform_metadata(3)
+          const metadataOffset = markerIndex + 32 + 8 + 8 + 16
 
-        // Read platform metadata (3 bytes: platform, arch, libc)
-        const platformByte = data[metadataOffset]
-        const archByte = data[metadataOffset + 1]
-        const libcByte = data[metadataOffset + 2]
+          // Read platform metadata (3 bytes: platform, arch, libc)
+          const platformByte = data[metadataOffset]
+          const archByte = data[metadataOffset + 1]
+          const libcByte = data[metadataOffset + 2]
 
-        // Validate metadata bytes exist and are valid
-        expect(platformByte).toBeDefined()
-        expect(archByte).toBeDefined()
-        expect(libcByte).toBeDefined()
+          // Validate metadata bytes exist and are valid
+          expect(platformByte).toBeDefined()
+          expect(archByte).toBeDefined()
+          expect(libcByte).toBeDefined()
 
-        // Platform: 0=linux, 1=darwin, 2=win32
-        expect([0, 1, 2]).toContain(platformByte)
+          // Platform: 0=linux, 1=darwin, 2=win32
+          expect([0, 1, 2]).toContain(platformByte)
 
-        // Arch: 0=x64, 1=arm64, 2=ia32, 3=arm
-        expect([0, 1, 2, 3]).toContain(archByte)
+          // Arch: 0=x64, 1=arm64, 2=ia32, 3=arm
+          expect([0, 1, 2, 3]).toContain(archByte)
 
-        // Libc: 0=glibc, 1=musl, 255=n/a
-        expect([0, 1, 255]).toContain(libcByte)
+          // Libc: 0=glibc, 1=musl, 255=n/a
+          expect([0, 1, 255]).toContain(libcByte)
 
-        // No compression_algorithm byte (zstd is universal)
-        // Data starts immediately after 3-byte metadata
-        const dataOffset = metadataOffset + 3
-        expect(data.length).toBeGreaterThan(dataOffset)
-      }, 60_000)
+          // No compression_algorithm byte (zstd is universal)
+          // Data starts immediately after 3-byte metadata
+          const dataOffset = metadataOffset + 3
+          expect(data.length).toBeGreaterThan(dataOffset)
+        },
+        tolerantTimeout(60_000),
+      )
 
-      it('should write a 64-byte (SHA-512) integrity hash in the footer', async () => {
-        // Locks the footer integrity-hash width: SHA-512 is 64 bytes. A
-        // regression to SHA-256 (32 bytes) would shift every subsequent field
-        // and break the embedded stub's verify-on-launch. Behavioral check —
-        // parses a freshly-packed binary rather than reading source.
-        const inputBinary = path.join(testDir, 'integrity_width_input')
-        await fs.copyFile(process.execPath, inputBinary)
-        await makeExecutable(inputBinary)
+      it(
+        'should write a 64-byte (SHA-512) integrity hash in the footer',
+        async () => {
+          // Locks the footer integrity-hash width: SHA-512 is 64 bytes. A
+          // regression to SHA-256 (32 bytes) would shift every subsequent field
+          // and break the embedded stub's verify-on-launch. Behavioral check —
+          // parses a freshly-packed binary rather than reading source.
+          const inputBinary = path.join(testDir, 'integrity_width_input')
+          await fs.copyFile(process.execPath, inputBinary)
+          await makeExecutable(inputBinary)
 
-        const compressedBinary = path.join(testDir, 'integrity_width_output')
-        const compressResult = await execCommand(BINPRESS, [
-          inputBinary,
-          '--output',
-          compressedBinary,
-        ])
-        expect(compressResult.code).toBe(0)
+          const compressedBinary = path.join(testDir, 'integrity_width_output')
+          const compressResult = await execCommand(BINPRESS, [
+            inputBinary,
+            '--output',
+            compressedBinary,
+          ])
+          expect(compressResult.code).toBe(0)
 
-        const finalPath =
-          process.platform === 'win32'
-            ? `${compressedBinary}.exe`
-            : compressedBinary
-        const data = await fs.readFile(finalPath)
+          const finalPath =
+            process.platform === 'win32'
+              ? `${compressedBinary}.exe`
+              : compressedBinary
+          const data = await fs.readFile(finalPath)
 
-        const marker = Buffer.from('__SMOL_PRESSED_DATA_MAGIC_MARKER', 'utf8')
-        const markerIndex = data.indexOf(marker)
-        expect(markerIndex).toBeGreaterThan(-1)
+          const marker = Buffer.from('__SMOL_PRESSED_DATA_MAGIC_MARKER', 'utf8')
+          const markerIndex = data.indexOf(marker)
+          expect(markerIndex).toBeGreaterThan(-1)
 
-        // Footer layout: marker(32) + sizes(16) + cache_key(16) +
-        // platform_metadata(3) + integrity_hash(INTEGRITY_HASH_LEN) +
-        // has_config(1) + [config]. The integrity hash must be 64 bytes
-        // (SHA-512); the has_config flag immediately after it must be 0 or 1,
-        // which only holds when the hash is exactly 64 bytes wide.
-        const INTEGRITY_HASH_LEN = 64
-        const integrityOffset = markerIndex + 32 + 8 + 8 + 16 + 3
-        const hasConfigOffset = integrityOffset + INTEGRITY_HASH_LEN
+          // Footer layout: marker(32) + sizes(16) + cache_key(16) +
+          // platform_metadata(3) + integrity_hash(INTEGRITY_HASH_LEN) +
+          // has_config(1) + [config]. The integrity hash must be 64 bytes
+          // (SHA-512); the has_config flag immediately after it must be 0 or 1,
+          // which only holds when the hash is exactly 64 bytes wide.
+          const INTEGRITY_HASH_LEN = 64
+          const integrityOffset = markerIndex + 32 + 8 + 8 + 16 + 3
+          const hasConfigOffset = integrityOffset + INTEGRITY_HASH_LEN
 
-        expect(data.length).toBeGreaterThan(hasConfigOffset)
-        // The has_config flag right after a 64-byte hash must be a valid 0/1.
-        expect([0, 1]).toContain(data[hasConfigOffset])
-      }, 60_000)
+          expect(data.length).toBeGreaterThan(hasConfigOffset)
+          // The has_config flag right after a 64-byte hash must be a valid 0/1.
+          expect([0, 1]).toContain(data[hasConfigOffset])
+        },
+        tolerantTimeout(60_000),
+      )
 
-      it('should embed decompressor stub in compressed binary', async () => {
-        const inputBinary = path.join(testDir, 'stub_test_input')
-        await fs.copyFile(testBinary, inputBinary)
+      it(
+        'should embed decompressor stub in compressed binary',
+        async () => {
+          const inputBinary = path.join(testDir, 'stub_test_input')
+          await fs.copyFile(testBinary, inputBinary)
 
-        const compressedBinary = path.join(testDir, 'stub_test_compressed')
+          const compressedBinary = path.join(testDir, 'stub_test_compressed')
 
-        // Compress
-        await execCommand(BINPRESS, [inputBinary, '--output', compressedBinary])
+          // Compress
+          await execCommand(BINPRESS, [
+            inputBinary,
+            '--output',
+            compressedBinary,
+          ])
 
-        // On Windows, binpress adds .exe extension automatically
-        const finalPath =
-          process.platform === 'win32'
-            ? `${compressedBinary}.exe`
-            : compressedBinary
+          // On Windows, binpress adds .exe extension automatically
+          const finalPath =
+            process.platform === 'win32'
+              ? `${compressedBinary}.exe`
+              : compressedBinary
 
-        const data = await fs.readFile(finalPath)
+          const data = await fs.readFile(finalPath)
 
-        // Check for platform-specific stub binary format
-        if (process.platform === 'darwin') {
-          // Mach-O magic
-          const magic = data.readUInt32LE(0)
-          expect([0xfe_ed_fa_cf, 0xcf_fa_ed_fe]).toContain(magic)
-        } else if (process.platform === 'linux') {
-          // ELF magic: 0x7F 'E' 'L' 'F'
-          expect(data[0]).toBe(0x7f)
-          // 'E'
-          expect(data[1]).toBe(0x45)
-          // 'L'
-          expect(data[2]).toBe(0x4c)
-          // 'F'
-          expect(data[3]).toBe(0x46)
-        } else if (process.platform === 'win32') {
-          // DOS/PE magic
-          const dosMagic = data.readUInt16LE(0)
-          // 'MZ'
-          expect(dosMagic).toBe(0x5a_4d)
-        }
-      }, 60_000)
+          // Check for platform-specific stub binary format
+          if (process.platform === 'darwin') {
+            // Mach-O magic
+            const magic = data.readUInt32LE(0)
+            expect([0xfe_ed_fa_cf, 0xcf_fa_ed_fe]).toContain(magic)
+          } else if (process.platform === 'linux') {
+            // ELF magic: 0x7F 'E' 'L' 'F'
+            expect(data[0]).toBe(0x7f)
+            // 'E'
+            expect(data[1]).toBe(0x45)
+            // 'L'
+            expect(data[2]).toBe(0x4c)
+            // 'F'
+            expect(data[3]).toBe(0x46)
+          } else if (process.platform === 'win32') {
+            // DOS/PE magic
+            const dosMagic = data.readUInt16LE(0)
+            // 'MZ'
+            expect(dosMagic).toBe(0x5a_4d)
+          }
+        },
+        tolerantTimeout(60_000),
+      )
     })
 
     describe('multiple compression cycles', () => {
@@ -370,58 +403,62 @@ describe.skipIf(!existsSync(BINPRESS))(
         300_000,
       )
 
-      it('should maintain functionality through multiple compressions', async () => {
-        // On Windows, ensure input has .exe extension
-        const inputBinary =
-          process.platform === 'win32'
-            ? path.join(testDir, 'multi_input.exe')
-            : path.join(testDir, 'multi_input')
-        await fs.copyFile(testBinary, inputBinary)
+      it(
+        'should maintain functionality through multiple compressions',
+        async () => {
+          // On Windows, ensure input has .exe extension
+          const inputBinary =
+            process.platform === 'win32'
+              ? path.join(testDir, 'multi_input.exe')
+              : path.join(testDir, 'multi_input')
+          await fs.copyFile(testBinary, inputBinary)
 
-        // Get original --version output
-        const originalResult = await execCommand(inputBinary, ['--version'])
+          // Get original --version output
+          const originalResult = await execCommand(inputBinary, ['--version'])
 
-        // Compress 2 times (testing re-compression of already-compressed binary)
-        // Note: Compressing more than twice causes zstd to fail
-        // because already-compressed data doesn't compress well
+          // Compress 2 times (testing re-compression of already-compressed binary)
+          // Note: Compressing more than twice causes zstd to fail
+          // because already-compressed data doesn't compress well
 
-        let currentBinary = inputBinary
-        for (let i = 1; i <= 2; i++) {
-          const compressed = path.join(testDir, `multi_compressed_${i}`)
-          // eslint-disable-next-line no-await-in-loop
-          const compressResult = await execCommand(BINPRESS, [
-            currentBinary,
-            '--output',
-            compressed,
-          ])
+          let currentBinary = inputBinary
+          for (let i = 1; i <= 2; i++) {
+            const compressed = path.join(testDir, `multi_compressed_${i}`)
+            // eslint-disable-next-line no-await-in-loop
+            const compressResult = await execCommand(BINPRESS, [
+              currentBinary,
+              '--output',
+              compressed,
+            ])
 
-          // Verify compression succeeded
-          if (compressResult.code !== 0) {
-            logger.fail(`Compression ${i} failed:`)
-            logger.fail('stdout:', compressResult.stdout)
-            logger.fail('stderr:', compressResult.stderr)
+            // Verify compression succeeded
+            if (compressResult.code !== 0) {
+              logger.fail(`Compression ${i} failed:`)
+              logger.fail('stdout:', compressResult.stdout)
+              logger.fail('stderr:', compressResult.stderr)
+            }
+            expect(compressResult.code).toBe(0)
+
+            // On Windows, binpress adds .exe extension automatically
+            const finalPath =
+              process.platform === 'win32' ? `${compressed}.exe` : compressed
+
+            // Verify file was created
+            expect(existsSync(finalPath)).toBeTruthy()
+
+            // eslint-disable-next-line no-await-in-loop
+            await makeExecutable(finalPath)
+
+            // Execute and verify
+            // eslint-disable-next-line no-await-in-loop
+            const execResult = await execCommand(finalPath, ['--version'])
+            expect(execResult.code).toBe(0)
+            expect(execResult.stdout.trim()).toBe(originalResult.stdout.trim())
+
+            currentBinary = finalPath
           }
-          expect(compressResult.code).toBe(0)
-
-          // On Windows, binpress adds .exe extension automatically
-          const finalPath =
-            process.platform === 'win32' ? `${compressed}.exe` : compressed
-
-          // Verify file was created
-          expect(existsSync(finalPath)).toBeTruthy()
-
-          // eslint-disable-next-line no-await-in-loop
-          await makeExecutable(finalPath)
-
-          // Execute and verify
-          // eslint-disable-next-line no-await-in-loop
-          const execResult = await execCommand(finalPath, ['--version'])
-          expect(execResult.code).toBe(0)
-          expect(execResult.stdout.trim()).toBe(originalResult.stdout.trim())
-
-          currentBinary = finalPath
-        }
-      }, 360_000)
+        },
+        tolerantTimeout(360_000),
+      )
     })
   },
 )

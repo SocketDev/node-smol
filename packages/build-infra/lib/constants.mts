@@ -187,7 +187,9 @@ export const NODE_VERSION = `v${nodeVersionRaw}`
  * @returns {string} The build mode ('dev' or 'prod')
  */
 // oxlint-disable-next-line socket/sort-source-methods -- file is grouped by section header banners ("Path Constants" / "Build Constants" / ...) with helpers co-located with their constants; autofix bails on the const-interleaved layout and reordering would scatter related declarations across sections.
-export function getBuildMode(args?: string[] | Set<string>): string {
+export function getBuildMode(
+  args?: string[] | Set<string> | undefined,
+): string {
   // Explicit --prod / --dev CLI flags win over env.
   if (args) {
     const has = Array.isArray(args)

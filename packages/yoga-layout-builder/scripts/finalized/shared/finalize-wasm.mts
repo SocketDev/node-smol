@@ -30,7 +30,7 @@ const logger = getDefaultLogger()
  * @param {string} options.outputSyncMjsFile
  * @param {string} options.outputWasmFile
  */
-export async function finalizeWasm(options) {
+export async function finalizeWasm(config) {
   const {
     buildDir,
     outputFinalDir,
@@ -39,7 +39,7 @@ export async function finalizeWasm(options) {
     outputSyncDir,
     outputSyncMjsFile,
     outputWasmFile,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   logger.log('Copying final artifacts to out/Final…')
   logger.logNewline()

@@ -48,7 +48,7 @@ function getSpinner() {
  * @param {string} options.emscriptenVersion - Emscripten version to use (from
  *   build-infra package.json)
  */
-export async function compileWasm(options) {
+export async function compileWasm(config) {
   const {
     buildDir,
     buildMode,
@@ -57,7 +57,7 @@ export async function compileWasm(options) {
     emscriptenVersion = 'latest',
     isCI,
     modeSourceDir,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   logger.step('Building ONNX Runtime with Emscripten')
 
@@ -159,8 +159,7 @@ export async function compileWasm(options) {
       stdio: 'pipe',
     }).catch(() => undefined)
     const helpText =
-      String(buildPyArgsResult?.stdout || '') +
-      String(buildPyArgsResult?.stderr || '')
+      (buildPyArgsResult?.stdout || '') + (buildPyArgsResult?.stderr || '')
     if (helpText.includes('--allow_running_as_root')) {
       buildArgs.push('--allow_running_as_root')
     }

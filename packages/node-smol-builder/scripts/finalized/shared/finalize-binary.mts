@@ -38,7 +38,7 @@ const logger = getDefaultLogger()
  * @param {string} options.arch - Target architecture (x64, arm64)
  * @param {string} [options.libc] - C library (glibc, musl) for Linux.
  */
-export async function finalizeBinary(options) {
+export async function finalizeBinary(config) {
   const {
     arch,
     buildDir,
@@ -50,7 +50,7 @@ export async function finalizeBinary(options) {
     outputFinalBinary,
     outputStrippedBinary,
     platform,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   // Determine which source binary we'll use for finalization
   const shouldUseCompression = compressed && existsSync(outputCompressedBinary)
@@ -59,11 +59,11 @@ export async function finalizeBinary(options) {
     : outputStrippedBinary
 
   // shouldRun signature is (buildDir, packageName, checkpointName,
-  // force, sourcePaths, options) — packageName omitted here (matches
+  // force, sourcePaths, config) — packageName omitted here (matches
   // the createCheckpoint() call below which also omits it, so they
   // agree on the checkpoint path <buildDir>/checkpoints/FINALIZED.json).
   // Source-path validation feeds the final binary so checkpoint
-  // invalidates when the stripped/compressed input changes; options
+  // invalidates when the stripped/compressed input changes; config
   // tags the cache key with platform/arch/libc/nodeVersion so cross-
   // compile builds don't restore a host-tagged binary.
   if (
