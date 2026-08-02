@@ -87,7 +87,7 @@ const PHASE_DEPS: Partial<Record<string, string[]>> = {
 export function getBuildPaths(
   mode: string,
   platform: string = process.platform,
-  platformArch?: string,
+  platformArch?: string | undefined,
 ) {
   if (!platformArch) {
     throw new Error('platformArch is required for getBuildPaths()')
@@ -189,7 +189,7 @@ export function getBuildSourcePaths(
     // Phase-specific scripts (only current phase, not cumulative)
     scripts: getHierarchicalPaths('scripts', phase, platform, arch),
 
-    // Patches and additions are cumulative (include all previous phases)
+    // Patches and additions are cumulative. Each phase includes all previous phases.
     patches: getCumulativeHierarchicalPaths('patches', phases, platform, arch),
     additions: getCumulativeHierarchicalPaths(
       'additions',
@@ -332,7 +332,7 @@ export function getDefaultPlatformArch(
  * Essential for local build operations that use readdirSync/statSync
  * (these throw errors on non-existent directories).
  *
- * CI workflows don't need this (find handles missing dirs gracefully),
+ * CI workflows do not need this, since find handles missing dirs gracefully,
  * but local builds do.
  *
  * @example
@@ -365,7 +365,7 @@ export function getExistingPaths(paths: string[]): string[] {
  *
  * For a given phase and platform/arch, returns paths in priority order:
  * 1. shared/ (all platforms)
- * 2. {platform}/shared/ (all archs of that platform)
+ * 2. {platform}/shared/ — all archs of that platform
  * 3. {platform}/{arch}/ (specific platform+arch)
  *
  * @example

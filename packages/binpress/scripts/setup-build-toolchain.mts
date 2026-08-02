@@ -3,7 +3,7 @@
  * @file Setup build toolchain for binpress
  *   Installs required system dependencies:
  *
- *   - Linux: gcc, make (zstd compiled from submodule)
+ *   - Linux: gcc and make, with zstd compiled from the submodule.
  *   - macOS: clang (Xcode), make (system Compression framework)
  *   - Windows: mingw-w64, make (Cabinet API)
  */

@@ -191,7 +191,7 @@ export function parseChecksumFile(content) {
 }
 
 /**
- * Get Python embeddable package info (downloads and computes hashes).
+ * Get Python embeddable package info. This downloads and computes hashes.
  */
 // oxlint-disable-next-line socket/sort-source-methods -- script is ordered as a top-down build pipeline (load manifest → fetch each tool → verify → write); alphabetizing would scatter the pipeline.
 export async function getPythonRelease() {

@@ -1,6 +1,6 @@
 /**
  * @file Unit tests for the SEA-bundle feature detector. Synthetic in-memory
- *   bundles (written to a temp file because the detector reads from a path)
+ *   bundles, written to a temp file because the detector reads from a path
  *   exercise the decision matrix: drop-when-absent, keep-when-used, sqlite both
  *   ways, soft-use isBuiltin guards, computed-require ambiguity, package.json
  *   overrides, and the V8-lite density heuristic. No dependency on a real built

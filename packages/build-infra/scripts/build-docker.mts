@@ -166,7 +166,7 @@ async function main() {
     options.outputDir ||
     path.join(WORKSPACE_ROOT, 'build', 'docker', options.target)
 
-  printInfo(`Building ${options.packageName} for ${options.target}`)
+  printInfo(`Building ${String(options.packageName)} for ${options.target}`)
   printInfo(`Output: ${outputDir}`)
   printInfo(`Mode: ${options.buildMode}`)
   logger.log('')

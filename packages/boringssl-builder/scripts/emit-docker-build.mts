@@ -141,7 +141,7 @@ function emitPublishHeaders(): string {
 
 /**
  * Produce the complete bash script as a single string. Returning a
- * string (rather than writing to disk) makes the drift-check test
+ * string rather than writing to disk makes the drift-check test
  * trivial: compare the in-memory output to the on-disk file.
  */
 export function emitDockerBuildScript(): string {

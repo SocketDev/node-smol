@@ -235,7 +235,7 @@ export async function downloadVfsTool(
         throw new Error(
           `SHA256 mismatch for ${toolName}!\n` +
             `  Expected: ${expectedSha256}\n` +
-            `  Actual:   ${actualHash}\n` +
+            `  Actual:   ${String(actualHash)}\n` +
             '  This could indicate a corrupted download or supply chain attack.',
         )
       }

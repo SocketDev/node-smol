@@ -54,7 +54,7 @@ export const MACHO_HEADER_SIZE = {
 }
 
 /**
- * Mach-O load command header offsets (common to all commands)
+ * Mach-O load command header offsets, common to all commands.
  */
 export const MACHO_LOAD_COMMAND_OFFSET = {
   CMD: 0,

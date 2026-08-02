@@ -260,10 +260,11 @@ export function escapeRegExp(s: string): string {
  * wall-clock is dominated by syscalls/RTT, not JS compute.
  *
  * Why DENSITY, not presence: any nontrivial bundle contains createHash (a TLS
- * cache key), a stray TypedArray (a decoder in undici), or "WebAssembly" (a
- * feature-detect) somewhere in its deps. Binary presence therefore always says
- * "no" and is useless. We instead normalize compute signals per-MB and only
- * back off when density crosses a threshold that suggests a genuine hot path.
+ * cache key, a stray TypedArray from a decoder in undici, or "WebAssembly" from
+ * a feature-detect) somewhere in its deps. Binary presence therefore always
+ * says "no" and is useless. We instead normalize compute signals per-MB and
+ * only back off when density crosses a threshold that suggests a genuine hot
+ * path.
  *
  * This is ADVISORY — surfaced with its evidence so the operator decides; never
  * auto-applied. The recommendation defaults to lite for server/proxy-shaped
@@ -334,7 +335,7 @@ export function hashSource(source: string): string {
   return `sha256:${crypto.createHash('sha256').update(source).digest('hex')}`
 }
 
-export async function detectBundleFeatures(options: {
+export async function detectBundleFeatures(config: {
   bundlePath: string
   vfsPath?: string | undefined
   overrides?:
@@ -343,8 +344,8 @@ export async function detectBundleFeatures(options: {
 }): Promise<FeatureManifest> {
   const { bundlePath, vfsPath, overrides } = {
     __proto__: null,
-    ...options,
-  } as typeof options
+    ...config,
+  } as typeof config
   const mainSource = await fs.readFile(bundlePath, 'utf8')
 
   const acc: ScanResult = {

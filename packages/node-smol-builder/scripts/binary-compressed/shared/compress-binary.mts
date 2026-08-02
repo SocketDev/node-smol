@@ -22,7 +22,7 @@
  * Our approach uses zstd compression:
  *
  * - ~75% compression ratio across all platforms
- * - Works with macOS code signing (preserves both inner and outer signatures)
+ * - Works with macOS code signing, preserving both inner and outer signatures.
  * - Zero AV false positives (trusted compression library)
  * - No self-modifying code (W^X compliant)
  * - External decompressor (~90 KB) instead of packed executable
@@ -119,7 +119,7 @@ export async function compressBinary(
   // The stub is embedded during compression automatically
   const binpressArgs = [inputPath, '-o', outputPath]
 
-  // Pass target platform (host platform for native builds)
+  // Pass the target platform. Native builds use the host platform.
   binpressArgs.push('--target-platform', process.platform)
   logger.log(`  Target platform: ${process.platform}`)
 
@@ -268,7 +268,7 @@ export async function isCompressedBinary(filePath) {
         tail = window.slice(-overlap)
 
         totalRead += bytesRead
-        // Only check first few MB (marker should be near beginning after stub)
+        // Only check the first few MB. The marker sits near the beginning, after the stub.
         if (totalRead > 5 * 1024 * 1024) {
           break
         }

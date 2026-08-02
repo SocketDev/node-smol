@@ -48,7 +48,7 @@ export function createWasmTestHelpers(config) {
   const syncJsPath = path.join(wasmDir, `${wasmName}-sync.js`)
 
   /**
-   * Check if build outputs exist (skip tests if not built).
+   * Check whether build outputs exist so the tests can skip when not built.
    */
   // eslint-disable-next-line unicorn/consistent-function-scoping
   function skipIfNotBuilt(filePath) {
@@ -62,7 +62,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Get the expected file paths.
      */
-    getPaths() {
+    getPaths: () => {
       return { mjsPath, syncJsPath, wasmPath }
     },
 
@@ -74,7 +74,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: WASM directory should exist.
      */
-    testWasmDirectoryExists(expect) {
+    testWasmDirectoryExists: expect => {
       if (!existsSync(wasmDir)) {
         return
       }
@@ -84,7 +84,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: WASM binary file should exist.
      */
-    testWasmFileExists(expect) {
+    testWasmFileExists: expect => {
       if (skipIfNotBuilt(wasmPath)) {
         return
       }
@@ -94,7 +94,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: WASM binary should have valid magic number (0061736d = \0asm).
      */
-    async testWasmMagicNumber(expect) {
+    testWasmMagicNumber: async expect => {
       if (skipIfNotBuilt(wasmPath)) {
         return
       }
@@ -107,7 +107,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: WASM binary should be reasonably sized.
      */
-    async testWasmSize(expect) {
+    testWasmSize: async expect => {
       if (skipIfNotBuilt(wasmPath)) {
         return
       }
@@ -125,7 +125,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: MJS file should exist.
      */
-    testMjsFileExists(expect) {
+    testMjsFileExists: expect => {
       if (skipIfNotBuilt(mjsPath)) {
         return
       }
@@ -135,7 +135,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: MJS file should be valid JavaScript with substantial content.
      */
-    async testMjsContent(expect) {
+    testMjsContent: async expect => {
       if (skipIfNotBuilt(mjsPath)) {
         return
       }
@@ -148,7 +148,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: MJS file should contain Emscripten loader code.
      */
-    async testMjsEmscriptenLoader(expect) {
+    testMjsEmscriptenLoader: async expect => {
       if (skipIfNotBuilt(mjsPath)) {
         return
       }
@@ -163,7 +163,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: Sync.js file should exist.
      */
-    testSyncJsFileExists(expect) {
+    testSyncJsFileExists: expect => {
       if (skipIfNotBuilt(syncJsPath)) {
         return
       }
@@ -173,7 +173,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: Sync.js should start with 'use strict'.
      */
-    async testSyncJsUseStrict(expect) {
+    testSyncJsUseStrict: async expect => {
       if (skipIfNotBuilt(syncJsPath)) {
         return
       }
@@ -185,7 +185,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: Sync.js should contain base64-encoded WASM.
      */
-    async testSyncJsBase64Wasm(expect) {
+    testSyncJsBase64Wasm: async expect => {
       if (skipIfNotBuilt(syncJsPath)) {
         return
       }
@@ -209,7 +209,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: Sync.js should decode base64 to Uint8Array.
      */
-    async testSyncJsBase64Decode(expect) {
+    testSyncJsBase64Decode: async expect => {
       if (skipIfNotBuilt(syncJsPath)) {
         return
       }
@@ -221,7 +221,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: Sync.js should contain inlined Emscripten loader.
      */
-    async testSyncJsEmscriptenLoader(expect) {
+    testSyncJsEmscriptenLoader: async expect => {
       if (skipIfNotBuilt(syncJsPath)) {
         return
       }
@@ -236,7 +236,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: Sync.js should use synchronous instantiateWasm.
      */
-    async testSyncJsInstantiateWasm(expect) {
+    testSyncJsInstantiateWasm: async expect => {
       if (skipIfNotBuilt(syncJsPath)) {
         return
       }
@@ -250,7 +250,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: Sync.js should have CommonJS exports only (no ES modules).
      */
-    async testSyncJsCommonJSExports(expect) {
+    testSyncJsCommonJSExports: async expect => {
       if (skipIfNotBuilt(syncJsPath)) {
         return
       }
@@ -267,7 +267,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: Sync.js should NOT have top-level await (synchronous loading only).
      */
-    async testSyncJsNoTopLevelAwait(expect) {
+    testSyncJsNoTopLevelAwait: async expect => {
       if (skipIfNotBuilt(syncJsPath)) {
         return
       }
@@ -297,7 +297,7 @@ export function createWasmTestHelpers(config) {
     /**
      * Test: Sync.js can be required as a CommonJS module.
      */
-    async testSyncJsRequirable(expect, createRequire) {
+    testSyncJsRequirable: async (expect, createRequire) => {
       if (skipIfNotBuilt(syncJsPath)) {
         return
       }

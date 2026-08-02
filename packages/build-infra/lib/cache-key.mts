@@ -78,7 +78,7 @@ export function generateCacheKey({
       const content = readFileSync(file, 'utf8')
       // Hash based on content only - mtime changes with git operations (squash, rebase)
       // and causes cache mismatches even when file content is identical
-      hash.update(`${file}:${content}`)
+      hash.update(`${String(file)}:${content}`)
     } catch (e) {
       // Only handle ENOENT silently - file deletion is intentional
       if (e.code === 'ENOENT') {
@@ -88,7 +88,7 @@ export function generateCacheKey({
       }
       // All other errors indicate a problem that should fail the build
       throw new Error(
-        `Failed to read cache key source file '${file}': ${errorMessage(e)} (${e.code})`,
+        `Failed to read cache key source file '${String(file)}': ${errorMessage(e)} (${e.code})`,
         { cause: e },
       )
     }

@@ -125,7 +125,7 @@ export async function verifyArchiveChecksum(archivePath, assetName) {
  * Get required LIEF files for validation.
  *
  * @returns {(string | string[])[]} Array of required files. Arrays indicate
- *   alternatives (any one must exist).
+ *   alternatives, of which any one must exist.
  */
 // oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
 export function getLiefRequiredFiles() {
@@ -1082,7 +1082,7 @@ async function main() {
     const muslLibc = await isMusl()
     if (muslLibc) {
       // Use multiple approaches to ensure _FORTIFY_SOURCE is disabled:
-      // 1. -Wp,-U passes to preprocessor directly (bypasses compiler default flags)
+      // 1. -Wp,-U passes to the preprocessor directly, bypassing compiler default flags.
       // 2. -U_FORTIFY_SOURCE undefines at compiler level
       // 3. -D_FORTIFY_SOURCE=0 explicitly sets to 0
       const fortifyDisableFlags =

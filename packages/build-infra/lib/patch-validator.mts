@@ -330,10 +330,10 @@ export async function validatePatch(
     if (exitCode !== 0) {
       printError(`Patch validation failed: ${patchFile}`)
       if (result.stderr) {
-        printError(`stderr: ${result.stderr}`)
+        printError(`stderr: ${String(result.stderr)}`)
       }
       if (result.stdout) {
-        printError(`stdout: ${result.stdout}`)
+        printError(`stdout: ${String(result.stdout)}`)
       }
       return false
     }

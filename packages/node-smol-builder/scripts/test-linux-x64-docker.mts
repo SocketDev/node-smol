@@ -13,7 +13,7 @@
  *     [options] Options: --glibc Use glibc Dockerfile (default) --musl Use musl
  *     Dockerfile --dev Build in dev mode (default) --prod Build in prod mode
  *     --depot Use depot for faster builds (default if available) --docker Use
- *     docker buildx (slower but always available)
+ *     docker buildx, which is slower but always available
  */
 
 import { errorMessage } from 'build-infra/lib/error-utils'

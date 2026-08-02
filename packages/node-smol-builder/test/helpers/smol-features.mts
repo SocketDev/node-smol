@@ -37,7 +37,7 @@ const availabilityCache = new Map<string, boolean>()
 /**
  * True when the built smol binary includes `feature` (by registry name).
  *
- * - Unknown feature name → throws (catches typos in test code).
+ * - Unknown feature name throws, which catches typos in test code.
  * - No binary built → false (pair with `!smolBinary` in skipIf).
  * - Feature with a `node:` specifier → delegates to `smolBuiltinIsAvailable` (the
  *   canonical isBuiltin probe), cached per feature.

@@ -89,13 +89,13 @@ export function isCI() {
  *
  * Sets process.exitCode = 1 on failure. Never throws for the CI-skip path.
  */
-export async function runSetupToolchain(options) {
+export async function runSetupToolchain(config) {
   const {
     packageName,
     packageRoot,
     submodules = [],
     tools,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
   const logger = getDefaultLogger()
 
   if (isCI()) {
@@ -170,7 +170,7 @@ export async function setupLinux(config, packageRoot, logger) {
   const tools = config.linux || ['gcc', 'make']
 
   logger.log('Installing Linux build dependencies…')
-  updatePackageCache()
+  void updatePackageCache()
 
   const { failed, installed } = await installTools(tools, {
     packageRoot,

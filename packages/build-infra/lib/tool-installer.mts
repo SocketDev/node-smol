@@ -196,7 +196,7 @@ export async function ensurePinnedTool(tool, config, autoInstall) {
       const result = await spawn(binPath, versionArgs, { stdio: 'pipe' })
       const version = (result.stdout?.toString() || '').trim()
       if (version === requiredVersion) {
-        logger.substep(`${tool} ${version} found at ${binPath}`)
+        logger.substep(`${tool} ${version} found at ${String(binPath)}`)
         return { available: true, installed: false, path: binPath }
       }
       if (version) {

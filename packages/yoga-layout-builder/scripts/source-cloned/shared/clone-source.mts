@@ -30,11 +30,11 @@ const logger = getDefaultLogger()
  * @param {string} options.sharedBuildDir - Shared build directory.
  * @param {string} options.sharedSourceDir - Target source directory.
  */
-export async function cloneYogaSource(options) {
+export async function cloneYogaSource(config) {
   const { sharedBuildDir, sharedSourceDir, yogaRepo, yogaSha, yogaVersion } = {
     __proto__: null,
-    ...options,
-  } as typeof options
+    ...config,
+  } as typeof config
 
   // Check if source already exists.
   if (existsSync(sharedSourceDir)) {
@@ -94,7 +94,7 @@ export async function cloneYogaSource(options) {
     throw new Error('Failed to verify cloned commit SHA')
   }
 
-  const clonedSha = verifyResult.stdout.toString().trim()
+  const clonedSha = verifyResult.stdout.trim()
   if (clonedSha !== yogaSha) {
     throw new Error(
       `SHA mismatch: expected ${yogaSha}, got ${clonedSha}. ` +
@@ -122,7 +122,7 @@ export async function cloneYogaSource(options) {
  * Regenerate src/wrapper/YGEnums.mts from the cloned yoga header AND re-stamp
  * the yoga version in wrapAssembly.mts's Lock-step marker, both from the
  * build-verified `yogaVersion`. The enum mirror can never drift from the
- * binary's ABI (both come from this same checkout), and the wrapper's
+ * binary's ABI, since both come from this same checkout, and the wrapper's
  * provenance comment can never silently lie about which yoga it tracks. Runs
  * on every clone-source invocation, including the already-cloned fast path.
  */

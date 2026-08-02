@@ -3,7 +3,7 @@
  * @file Setup build toolchain for binflate
  *   Installs required system dependencies:
  *
- *   - Linux: gcc, make (zstd compiled from bundled sources)
+ *   - Linux: gcc and make, with zstd compiled from bundled sources.
  *   - macOS: clang (Xcode), make (system Compression framework)
  *   - Windows: mingw-w64, make (Cabinet API)
  */

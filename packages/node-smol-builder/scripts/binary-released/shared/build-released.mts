@@ -399,7 +399,7 @@ export async function buildRelease(config, buildOptions = {}) {
   for (let i = 0, { length } = checkpointChain; i < length; i += 1) {
     const checkpoint = checkpointChain[i]
     // Check if this checkpoint exists
-    const exists = await hasCheckpoint(buildDir, packageName, checkpoint)
+    const exists = hasCheckpoint(buildDir, packageName, checkpoint)
 
     if (exists) {
       logger.log('')

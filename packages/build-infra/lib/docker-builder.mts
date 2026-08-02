@@ -39,7 +39,7 @@ const logger = getDefaultLogger()
  *
  * @returns {Promise<{ ok: boolean; strategy: string; artifactPath?: string }>}
  */
-export async function buildForTarget(options) {
+export async function buildForTarget(config) {
   const {
     buildMode = 'prod',
     download,
@@ -48,7 +48,7 @@ export async function buildForTarget(options) {
     outputDir,
     packageName,
     target,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   const strategy = getBuildStrategy(target)
 
@@ -91,7 +91,7 @@ export async function buildForTarget(options) {
     }
 
     default: {
-      printError(`Unknown build strategy: ${strategy}`)
+      printError(`Unknown build strategy: ${String(strategy)}`)
       return { ok: false, strategy }
     }
   }
@@ -109,14 +109,14 @@ export async function buildForTarget(options) {
  *
  * @returns {Promise<{ ok: boolean; artifactPath?: string }>}
  */
-export async function buildWithDocker(options) {
+export async function buildWithDocker(config) {
   const {
     buildMode = 'prod',
     force = false,
     outputDir,
     packageName,
     target,
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   // Validate target is Docker-buildable
   if (!LINUX_TARGETS.includes(target)) {
@@ -245,7 +245,7 @@ export async function cleanAppleDoubleFiles(dir) {
         stdio: 'pipe',
       },
     )
-    const files = (result.stdout?.toString() || '').split('\n').filter(Boolean)
+    const files = (result.stdout || '').split('\n').filter(Boolean)
     return files.length
   } catch {
     return 0
@@ -310,7 +310,7 @@ export function getDockerPlatform(target) {
  *
  * @returns {Promise<{ code: number; stdout: string; stderr: string }>}
  */
-export async function runInDocker(options) {
+export async function runInDocker(config) {
   const {
     command,
     env = {},
@@ -319,7 +319,7 @@ export async function runInDocker(options) {
     platform,
     volumes = [],
     workdir = '/workspace',
-  } = { __proto__: null, ...options } as typeof options
+  } = { __proto__: null, ...config } as typeof config
 
   const args = ['run', '--rm']
 
@@ -334,7 +334,7 @@ export async function runInDocker(options) {
   // Add environment variables
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
   for (const [key, value] of Object.entries(env)) {
-    args.push('-e', `${key}=${value}`)
+    args.push('-e', `${key}=${String(value)}`)
   }
 
   // Add volume mounts
@@ -392,8 +392,8 @@ export async function runInDocker(options) {
     const { code, stderr, stdout } = await result
     return {
       code: code ?? 0,
-      stderr: stderr?.toString() ?? '',
-      stdout: stdout?.toString() ?? '',
+      stderr: stderr ?? '',
+      stdout: stdout ?? '',
     }
   } catch (e) {
     return {

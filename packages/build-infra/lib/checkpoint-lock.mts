@@ -29,7 +29,7 @@ export type LockableHandle = Awaited<ReturnType<typeof fs.open>> & {
  * (`'ex'`) lock on `lockPath`. On Windows the lock-acquisition step
  * is a no-op (FileHandle.lock undefined). The lock is always
  * released and the handle always closed; unlock/close errors are
- * swallowed (same posture as before the extraction).
+ * swallowed, the same posture as before the extraction.
  */
 export async function withLock<T>(
   lockPath: string,

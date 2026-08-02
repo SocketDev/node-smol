@@ -351,9 +351,9 @@ async function main() {
   const TAG = `${PACKAGE_NAME}-${VERSION}`
 
   logger.log('')
-  logger.log(`${colors.cyan('━'.repeat(60))}`)
-  logger.log(`${colors.cyan('Node.js Smol Binary Release')}`)
-  logger.log(`${colors.cyan('━'.repeat(60))}`)
+  logger.log(colors.cyan('━'.repeat(60)))
+  logger.log(colors.cyan('Node.js Smol Binary Release'))
+  logger.log(colors.cyan('━'.repeat(60)))
   logger.log('')
   logger.log(`Package: ${colors.green(PACKAGE_NAME)}`)
   logger.log(`Version: ${colors.green(VERSION)}`)
@@ -362,7 +362,7 @@ async function main() {
     `Mode: ${PUBLISH ? colors.yellow('PUBLISH') : colors.blue('DRAFT')}`,
   )
   if (DRY_RUN) {
-    logger.log(`${colors.yellow('DRY RUN - No changes will be made')}`)
+    logger.log(colors.yellow('DRY RUN - No changes will be made'))
   }
   logger.log('')
 

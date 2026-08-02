@@ -37,7 +37,7 @@
  * - NODE_OPTIONS tests (disabled with --without-node-options)
  * - Inspector/debugger tests (disabled in prod with --without-inspector)
  * - REPL tests (may rely on disabled features)
- * - Snapshot tests (snapshot builds not covered)
+ * - Snapshot tests, since snapshot builds are not covered.
  */
 export const TEST_PATTERNS = [
   // Core functionality tests.
@@ -89,7 +89,7 @@ export const TEST_PATTERNS = [
   // Message tests (stderr/stdout output validation).
   'message/test-*.js',
 
-  // Async hooks directory tests (comprehensive async hooks testing).
+  // Async hooks directory tests. These cover async hooks comprehensively.
   'async-hooks/test-*.js',
 
   // Module hooks tests.
@@ -162,7 +162,7 @@ export const TEST_PATTERNS = [
   // Signal tests.
   'parallel/test-signal-*.js',
 
-  // V8 integration tests (that don't require inspector).
+  // V8 integration tests that do not require the inspector.
   'parallel/test-v8-*.js',
 
   // File API tests.

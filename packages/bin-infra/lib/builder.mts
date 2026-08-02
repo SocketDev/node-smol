@@ -32,7 +32,7 @@ import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 const logger = getDefaultLogger()
 
-// Re-export runCommand for convenience (single import point for binsuite scripts)
+// Re-export runCommand so binsuite scripts have a single import point.
 export { runCommand }
 
 export interface BuildBinSuitePackageConfig {
@@ -283,8 +283,8 @@ export async function defaultSmokeTest(
 }
 
 /**
- * Check if we're cross-compiling (target arch differs from host arch).
- * When cross-compiling, we can't run the binary for smoke tests.
+ * Check whether we are cross-compiling, i.e. the target arch differs from the
+ * host arch. When cross-compiling, we can't run the binary for smoke tests.
  *
  * @returns {boolean} True if cross-compiling
  */

@@ -7,7 +7,7 @@
  * the `build-infra` symlink is missing.
  *
  * Each entry is either a single required path or an array of
- * alternatives (any one must exist). The alternative exists for the
+ * alternatives, of which any one must exist. The alternative exists for the
  * library naming convention:
  * MSVC on Windows: LIEF.lib
  * MinGW/llvm-mingw on Windows and Unix: libLIEF.a.

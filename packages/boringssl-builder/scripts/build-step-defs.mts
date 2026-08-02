@@ -145,7 +145,7 @@ export const PUBLISH_HEADERS = {
 
 /**
  * Path-join helper that respects the bash emit (it stays as literal
- * "$VAR/sub/path") AND the native build (resolves to a host path).
+ * "$VAR/sub/path" — and the native build, where it resolves to a host path.
  */
 export function joinUpstream(...parts: string[]): string {
   return path.posix.join('$UPSTREAM_DIR', ...parts)

@@ -140,12 +140,12 @@ async function main() {
   logger.info(`Passed: ${results.passed.length}/${packagesToRun.length}`)
   if (results.passed.length > 0) {
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- callback uses expression body
-    results.passed.forEach(pkg => logger.success(`  ${pkg}`))
+    results.passed.forEach(pkg => logger.success(`  ${String(pkg)}`))
   }
   if (results.failed.length > 0) {
     logger.error(`Failed: ${results.failed.length}`)
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- callback uses expression body
-    results.failed.forEach(pkg => logger.error(`  ${pkg}`))
+    results.failed.forEach(pkg => logger.error(`  ${String(pkg)}`))
     throw new Error(`Coverage failed for ${results.failed.length} package(s)`)
   }
 
