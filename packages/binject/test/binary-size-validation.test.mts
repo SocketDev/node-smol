@@ -91,8 +91,12 @@ describe.skipIf(!binjectExists)(
           const expectedMinSize = inputStats.size + blobContent.length
           expect(outputStats.size).toBeGreaterThanOrEqual(expectedMinSize)
 
-          // But not excessively larger (< 10% overhead)
-          const maxExpectedSize = inputStats.size + blobContent.length * 1.1
+          // But not excessively larger. The overhead is fixed, not
+          // proportional to the blob: segment page alignment (16KB pages on
+          // darwin-arm64) plus the regenerated ad-hoc code signature come to
+          // ~20KB, which dwarfs a 10% margin on a small blob.
+          const maxExpectedSize =
+            inputStats.size + blobContent.length + 64 * 1024
           expect(outputStats.size).toBeLessThan(maxExpectedSize)
         },
         TIMEOUT_30S,

@@ -408,6 +408,10 @@ describe.skipIf(!binjectExists)(
           const vfsArchive = path.join(testDir, 'vfs_section_test.vfs')
           await fs.writeFile(vfsArchive, Buffer.from('vfs content'))
 
+          // Create test SEA blob (required for VFS injection)
+          const seaBlob = path.join(testDir, 'vfs_section_sea.blob')
+          await fs.writeFile(seaBlob, Buffer.from('test'))
+
           const outputBinary = path.join(testDir, 'vfs_section_output')
 
           // Inject
@@ -417,6 +421,8 @@ describe.skipIf(!binjectExists)(
             inputBinary,
             '-o',
             outputBinary,
+            '--sea',
+            seaBlob,
             '--vfs',
             vfsArchive,
           ])

@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { gzipSync } from 'node:zlib'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -66,7 +67,9 @@ describe.skipIf(!binjectExists)('round-trip injection and extraction', () => {
         await fs.writeFile(seaBlob, seaContent)
 
         const vfsArchive = path.join(testDir, 'batch.vfs')
-        const vfsContent = Buffer.from('BATCH_VFS_CONTENT')
+        // Gzip input so the stored VFS section roundtrips byte-identically
+        // (raw input is auto-compressed on inject).
+        const vfsContent = gzipSync(Buffer.from('BATCH_VFS_CONTENT'))
         await fs.writeFile(vfsArchive, vfsContent)
 
         const inputBinary = path.join(testDir, 'batch_input')
