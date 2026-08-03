@@ -1,3 +1,4 @@
+// doctrine: allow max-file-lines -- V8 binding glue that compiles only inside the full Node build; a blind split cannot be compile-verified in isolation.
 // node:smol-tui V8 binding glue.
 //
 // Five surfaces exposed to JS, all routed through `internalBinding('smol_tui')`:

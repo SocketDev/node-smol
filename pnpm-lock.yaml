@@ -1100,7 +1100,11 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
 
-  .claude/hooks/fleet/honesty-framing-guard:
+  .claude/hooks/fleet/honeypot-echo-guard:
+    dependencies:
+      '@socketsecurity/lib-stable':
+        specifier: 'catalog:'
+        version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -2429,6 +2433,16 @@ importers:
         specifier: 'catalog:'
         version: 26.1.1
 
+  .claude/hooks/fleet/untrusted-content-directive-nudge:
+    dependencies:
+      '@socketsecurity/lib-stable':
+        specifier: 'catalog:'
+        version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.1.1
+
   .claude/hooks/fleet/use-repo-test-script-guard:
     devDependencies:
       '@types/node':
@@ -2764,20 +2778,20 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
       curl-builder:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../curl-builder
     devDependencies:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)
       bin-stub-builder:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../bin-stub-builder
       lief-builder:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../lief-builder
       octokit:
         specifier: 'catalog:'
@@ -2792,23 +2806,23 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       bin-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../bin-infra
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
       curl-builder:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../curl-builder
       glibc-shims-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../glibc-shims-infra
     devDependencies:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)
       lief-builder:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../lief-builder
       vitest:
         specifier: 'catalog:'
@@ -2820,13 +2834,13 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       bin-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../bin-infra
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
       glibc-shims-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../glibc-shims-infra
     devDependencies:
       '@dotenvx/dotenvx':
@@ -2842,16 +2856,16 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       bin-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../bin-infra
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
       glibc-shims-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../glibc-shims-infra
       lief-builder:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../lief-builder
     devDependencies:
       '@dotenvx/dotenvx':
@@ -2864,7 +2878,7 @@ importers:
         specifier: 'catalog:'
         version: 0.5.18
       node-smol-builder:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../node-smol-builder
       tar:
         specifier: 'catalog:'
@@ -2879,16 +2893,16 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       bin-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../bin-infra
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
       glibc-shims-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../glibc-shims-infra
       lief-builder:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../lief-builder
     devDependencies:
       '@dotenvx/dotenvx':
@@ -2904,7 +2918,7 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@vitest/coverage-v8':
@@ -2954,7 +2968,7 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@vitest/coverage-v8':
@@ -2973,7 +2987,7 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@vitest/coverage-v8':
@@ -2989,7 +3003,7 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@types/node':
@@ -3015,7 +3029,7 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@vitest/coverage-v8':
@@ -3031,7 +3045,7 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@vitest/coverage-v8':
@@ -3047,7 +3061,7 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@types/node':
@@ -3060,7 +3074,7 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@vitest/coverage-v8':
@@ -3076,7 +3090,7 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@vitest/coverage-v8':
@@ -3092,19 +3106,19 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       bin-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../bin-infra
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
       dawn-builder:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../dawn-builder
       yoctocolors-cjs:
         specifier: 'catalog:'
         version: 2.1.3
       yoga-layout-builder:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../yoga-layout-builder
     devDependencies:
       '@vitest/coverage-v8':
@@ -3136,28 +3150,28 @@ importers:
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(vite@8.1.5(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0))
     optionalDependencies:
       '@node-smol/ai.node-darwin-arm64':
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../ai.node-darwin-arm64
       '@node-smol/ai.node-darwin-x64':
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../ai.node-darwin-x64
       '@node-smol/ai.node-linux-arm64-gnu':
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../ai.node-linux-arm64-gnu
       '@node-smol/ai.node-linux-arm64-musl':
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../ai.node-linux-arm64-musl
       '@node-smol/ai.node-linux-x64-gnu':
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../ai.node-linux-x64-gnu
       '@node-smol/ai.node-linux-x64-musl':
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../ai.node-linux-x64-musl
       '@node-smol/ai.node-win32-arm64-msvc':
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../ai.node-win32-arm64-msvc
       '@node-smol/ai.node-win32-x64-msvc':
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../ai.node-win32-x64-msvc
 
   packages/npm/@node-smol/ai.node-darwin-arm64: {}
@@ -3188,7 +3202,7 @@ importers:
         specifier: 'catalog:'
         version: 8.3.5
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
       magic-string:
         specifier: 1.1.0
@@ -3207,10 +3221,10 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       ai-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../ai-infra
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@types/node':
@@ -3226,7 +3240,7 @@ importers:
         specifier: 'catalog:'
         version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
     devDependencies:
       '@types/node':
@@ -3261,7 +3275,7 @@ importers:
         specifier: 'catalog:'
         version: 8.3.5
       build-infra:
-        specifier: workspace:*
+        specifier: workspace:0.0.0
         version: link:../build-infra
       magic-string:
         specifier: 1.1.0

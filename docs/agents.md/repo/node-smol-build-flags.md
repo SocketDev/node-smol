@@ -107,3 +107,72 @@ Target: ~21 MB (small-icu + full V8 JIT for performance).
 - Startup overhead: ~50-100 ms (one-time decompression).
 - Runtime performance: ~5-10x slower JS (V8 Lite mode).
 - WASM performance: unaffected (Liftoff baseline compiler).
+
+## Hierarchical source layout and cache-key paths
+
+Detail for `packages/node-smol-builder/scripts/paths.mts`, which resolves
+where the builder's scripts, patches, and additions live and which of those
+directories feed each build phase's cache key.
+
+### Priority order
+
+Scripts, patches, and additions are organized by phase and then by
+specificity. For a category and phase, `getHierarchicalPaths` returns three
+candidate directories in priority order, from general to specific:
+
+1. `shared` applies to all platforms.
+2. `<platform>/shared` applies to every arch of one platform.
+3. `<platform>/<arch>` applies to one specific platform and arch.
+
+For example, `getHierarchicalPaths('scripts', 'stripped', 'darwin', 'arm64')`
+returns:
+
+```text
+packages/node-smol-builder/scripts/stripped/shared
+packages/node-smol-builder/scripts/stripped/darwin/shared
+packages/node-smol-builder/scripts/stripped/darwin/arm64
+```
+
+All candidate paths are returned whether or not the directory exists on disk.
+Non-existent paths are safe to pass to find and glob operations, which simply
+skip them.
+
+### Per-phase versus cumulative collection
+
+`getBuildSourcePaths(phase, platform, arch)` returns the paths that affect
+one build phase, for cache-key generation. Scripts are collected for the
+current phase only. Patches and additions are cumulative: each phase includes
+its own files plus the files of every phase before it, because a change to an
+earlier phase's patches changes what every later phase builds on.
+
+For example, `getBuildSourcePaths('stripped', 'darwin', 'arm64')` returns an
+object where `common` holds the shared script paths, `scripts` holds only the
+stripped-phase script paths, and `patches` and `additions` hold the
+cumulative paths for release plus stripped.
+
+`getCumulativeBuildSourcePaths` is the stricter variant used for cache
+validation. It collects scripts cumulatively too, so the resulting hash
+covers every file from the current phase and all previous phases.
+
+`getCumulativeHierarchicalPaths(category, phases, platform, arch)` is the
+underlying helper for the cumulative cases. For example, calling it with
+`'patches'` and phases `['release', 'stripped']` on linux-x64 returns:
+
+```text
+patches/release/shared
+patches/release/linux/shared
+patches/release/linux/x64
+patches/stripped/shared
+patches/stripped/linux/shared
+patches/stripped/linux/x64
+```
+
+### Filtering to existing paths
+
+`getExistingPaths(paths)` filters a candidate list down to the directories
+that actually exist. Local build operations need this because they walk paths
+with `readdirSync` and `statSync`, which throw on non-existent directories.
+CI workflows do not need it, because `find` handles missing directories
+gracefully. For example, filtering the stripped-phase script candidates on a
+macOS checkout typically leaves only
+`packages/node-smol-builder/scripts/stripped/darwin/shared`.

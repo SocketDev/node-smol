@@ -83,35 +83,16 @@ const logger = getDefaultLogger()
 /**
  * Build Release binary phase.
  *
- * @param {object} options - Build options.
- * @param {string} options.nodeVersion - Node.js version to build.
- * @param {string} options.nodeSha - Node.js commit SHA.
- * @param {string} options.nodeRepo - Node.js repository URL.
- * @param {string} options.buildDir - Build directory.
- * @param {string} options.packageName - Package name.
- * @param {string} options.sharedBuildDir - Shared build directory.
- * @param {string} options.sharedSourceDir - Shared source directory.
- * @param {string} options.modeSourceDir - Mode-specific source directory.
- * @param {string} options.buildPatchesDir - Build patches directory.
- * @param {string} options.outDir - Build out directory.
- * @param {string} options.nodeBinary - Node binary path.
- * @param {string} options.outputReleaseDir - Release output directory.
- * @param {string} options.outputReleaseBinary - Release binary path.
- * @param {string} options.cacheDir - Cache directory.
- * @param {string} options.testFile - Test file path.
- * @param {string} options.bootstrapFile - Bootstrap file path.
- * @param {string} options.patchedFile - Patched file path.
- * @param {string} options.platform - Target platform.
- * @param {string} options.arch - Target architecture.
- * @param {string} options.buildMode - Build mode (dev/prod)
- * @param {boolean} options.cleanBuild - Whether this is a clean build.
- * @param {boolean} options.autoYes - Auto-yes to prompts.
- * @param {boolean} options.isCI - Whether running in CI.
- * @param {boolean} options.isProdBuild - Whether this is a production build.
- * @param {boolean} options.allowCross - Allow cross-compilation (experimental)
- * @param {function} options.collectBuildSourceFiles - Function to collect build
- *   source files.
- * @param {string} options.packageRoot - Package root directory.
+ * Takes one config object carrying the whole build context. Required
+ * properties are validated at runtime by the requiredProps check below, so
+ * a missing one fails fast with a named error.
+ *
+ * @param {object} config - Build options; the field-by-field reference lives
+ *   in the docs page.
+ * @param {object} [buildOptions] - Phase options; skipCheckpoint skips the
+ *   checkpoint write.
+ *
+ *   Full discussion: docs/agents.md/repo/release-build-pipeline.md.
  */
 export async function buildRelease(config, buildOptions = {}) {
   const { skipCheckpoint = false } = buildOptions

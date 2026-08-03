@@ -115,7 +115,7 @@ async function main(): Promise<void> {
 
   if (!existsSync(UPSTREAM_DAWN_DIR)) {
     throw new Error(
-      `Dawn submodule not found at ${UPSTREAM_DAWN_DIR}. Run \`git submodule update --init packages/dawn-builder/upstream/dawn\` first.`,
+      `Dawn submodule not found at ${UPSTREAM_DAWN_DIR}. Run \`node scripts/fleet/git-partial-submodule.mts clone packages/dawn-builder/upstream/dawn\` first.`,
     )
   }
 

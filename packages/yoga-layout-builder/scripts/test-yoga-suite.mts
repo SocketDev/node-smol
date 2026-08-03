@@ -56,7 +56,9 @@ async function main() {
     logger.fail('Yoga Layout source upstream not found')
     logger.log('')
     logger.log('Initialize upstream:')
-    logger.log('  git submodule update --init --recursive')
+    logger.log(
+      '  node scripts/fleet/git-partial-submodule.mts clone packages/yoga-layout-builder/upstream/yoga',
+    )
     logger.log('')
     process.exitCode = 1
     return

@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { gzipSync } from 'node:zlib'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

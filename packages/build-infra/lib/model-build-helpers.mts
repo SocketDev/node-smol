@@ -21,25 +21,19 @@ import { getMinPythonVersion } from './version-helpers.mts'
 const logger = getDefaultLogger()
 
 /**
- * Run preflight checks for model builds.
- *
- * Centralizes the common prerequisite checks:
- * - Free disk space (CI cleanup)
- * - Check disk space availability
- * - Install/verify Python
- * - Check Python version
- * - Install/verify Python packages from external-tools.json.
+ * Run preflight checks for model builds: free and check disk space, install
+ * and verify Python at the minimum version, and install the Python packages
+ * required by external-tools.json. Throws when a prerequisite cannot be met.
  *
  * @param {object} options - Check options.
- * @param {string} options.packageRoot - Package root directory (for loading
- *   external-tools.json)
- * @param {string} options.packageJsonPath - Path to package.json (for pip
- *   install context)
- * @param {string} [options.buildDir] - Build directory (for disk space check)
+ * @param {string} options.packageRoot - Root for loading external-tools.json.
+ * @param {string} options.packageJsonPath - Package.json for pip context.
+ * @param {string} [options.buildDir] - Build directory for disk space check.
  * @param {number} [options.requiredDiskGB=1] - Required disk space in GB.
  * @param {boolean} [options.quiet=false] - Suppress output.
  *
- * @returns {Promise<{ pythonPackages: Array; externalTools: object }>}
+ * @returns {Promise<{ pythonPackages: Array; externalTools: object }>} Full
+ *   discussion: docs/agents.md/repo/build-toolchain.md.
  */
 export async function checkModelBuildPrerequisites(config) {
   const {

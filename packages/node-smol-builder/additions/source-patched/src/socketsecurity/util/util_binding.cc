@@ -1,3 +1,4 @@
+// doctrine: allow max-file-lines -- V8 binding glue that compiles only inside the full Node build; a blind split cannot be compile-verified in isolation.
 // node:smol-util V8 binding — fast equivalents of common primordial
 // helpers. All entries share the same shape: capture some target
 // at module load, then invoke it via a C++ call handler that skips

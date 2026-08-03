@@ -75,7 +75,7 @@ describe('@node-smol/ai package family', () => {
       expect(manifest.libc).toEqual(
         platform === 'linux' ? [abi === 'musl' ? 'musl' : 'glibc'] : undefined,
       )
-      expect(wrapper.optionalDependencies[packageName]).toBe('workspace:*')
+      expect(wrapper.optionalDependencies[packageName]).toBe('workspace:0.0.0')
     }
 
     expect(

@@ -56,7 +56,9 @@ async function main() {
     logger.fail('ONNX Runtime source upstream not found')
     logger.log('')
     logger.log('Initialize upstream:')
-    logger.log('  git submodule update --init --recursive')
+    logger.log(
+      '  node scripts/fleet/git-partial-submodule.mts clone packages/onnxruntime-builder/upstream/onnxruntime',
+    )
     logger.log('')
     process.exitCode = 1
     return

@@ -75,25 +75,12 @@ const logger = getDefaultLogger()
 /**
  * Monorepo-package source mappings.
  *
- * INVARIANT: `from` is the cache-key authority. apply-patches.mts
- * imports this list and feeds each `from` directory to computeSourceHash
- * for the SOURCE_PATCHED cache key. `relativeTo` is purely a copy-routing
- * detail — it tells copyBuildAdditions where to land the tree under
- * modeSourceDir, and has no role in cache invalidation. Editing the
- * upstream package contents invalidates SOURCE_PATCHED automatically;
- * changing `relativeTo` does not (and shouldn't — it's a path rewrite,
- * not a content change).
+ * INVARIANT: `from` is the cache-key authority. apply-patches.mts imports
+ * this list and feeds each `from` directory to computeSourceHash for the
+ * SOURCE_PATCHED cache key. `relativeTo` is purely a copy-routing detail
+ * for copyBuildAdditions and has no role in cache invalidation.
  *
- * Flow: from (in this manifest) → modeSourceDir/<relativeTo> (direct copy
- * by copyBuildAdditions, no intermediate stop in additions/).
- *
- * Adding a new package here is the only edit needed to wire it into both
- * the cache and the source tree.
- *
- * Hand-maintained sources under additions/source-patched/src/
- * socketsecurity/ (sea-smol, vfs, ffi, http, etc.) are NOT in this list
- * — they live only in additions/ as authoritative sources and are picked
- * up by copyBuildAdditions' directory walk over ADDITIONS_SOURCE_PATCHED_DIR.
+ * Full discussion: docs/agents.md/repo/release-build-pipeline.md.
  */
 export const MONOREPO_PACKAGE_SOURCES = [
   {

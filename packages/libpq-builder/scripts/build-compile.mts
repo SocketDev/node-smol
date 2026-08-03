@@ -163,7 +163,7 @@ export async function buildLibpq(libpqBuildDir) {
   // Check if PostgreSQL upstream exists.
   if (!existsSync(postgresUpstream)) {
     throw new Error(
-      `PostgreSQL upstream not found at ${postgresUpstream}. Run 'git submodule update --init --recursive' first.`,
+      `PostgreSQL upstream not found at ${postgresUpstream}. Run 'node scripts/fleet/git-partial-submodule.mts clone packages/libpq-builder/upstream/postgres' first.`,
     )
   }
 

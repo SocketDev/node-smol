@@ -96,70 +96,22 @@ export async function cleanCheckpoint(buildDir: string, packageName: string) {
 }
 
 /**
- * Create a workflow checkpoint with artifacts and metadata.
- * Checkpoints are tracked by GitHub Actions workflows to enable
- * phase-specific caching and build resumption.
+ * Create a workflow checkpoint with artifacts and metadata. GitHub Actions
+ * workflows track checkpoints to cache and resume each build phase.
  *
- * IMPORTANT: This function requires a smokeTest callback to ensure
- * all checkpoints are created AFTER validating the build artifacts.
- * This enforces the pattern: build → smoke test → checkpoint.
+ * The smokeTest callback is REQUIRED so a checkpoint is only written after
+ * the build artifacts are validated: build → smoke test → checkpoint.
  *
- * Cache Invalidation: - If sourcePaths provided, computes SHA256 hash and
- * stores in checkpoint - Next build compares current vs stored hash to
- * determine if stage needs rebuild - Each checkpoint tracks its own source
- * dependencies independently.
+ * Binary-stage checkpoints must pass explicit target platform and arch —
+ * host defaults silently mis-tag cache entries under cross-compilation.
+ * Source-stage checkpoints in PLATFORM_AGNOSTIC_CHECKPOINTS skip both.
  *
- * Artifact Storage: - If artifactPath provided, creates checkpoint.tar.gz
- * (works for files OR directories) - Metadata stores artifactPath for
- * restoration - Use restoreCheckpoint() to extract tarball back to original
- * location.
+ * When sourcePaths is set, the stored source hash decides whether a later
+ * build can reuse this stage. When artifactPath is set, that file or
+ * directory is archived as a tarball next to the metadata JSON under
+ * build/{mode}/checkpoints/{package}/{phase}.
  *
- * Stores: - Metadata JSON: build/{mode}/checkpoints/{package}/{phase}.json -
- * Tarball: build/{mode}/checkpoints/{package}/{phase}.tar.gz (if artifactPath
- * provided)
- *
- * @example
- *   // Minimal usage
- *   await createCheckpoint(BUILD_DIR, CHECKPOINTS.FINALIZED, async () => {
- *     await spawn(binaryPath, ['--version'])
- *   })
- *
- *   // With options
- *   await createCheckpoint(
- *     BUILD_DIR,
- *     CHECKPOINTS.BINARY_RELEASED,
- *     async () => {
- *       await spawn(binaryPath, ['--version'])
- *     },
- *     {
- *       artifactPath: './out/Release/node',
- *       sourcePaths: ['build.mts', 'patches/*.patch'],
- *       packageRoot: PACKAGE_ROOT,
- *     },
- *   )
- *
- * @param {string} buildDir - Build directory path.
- * @param {string} checkpointName - Checkpoint name (e.g.,
- *   CHECKPOINTS.FINALIZED, CHECKPOINTS.BINARY_RELEASED)
- * @param {Function} smokeTest - Async function that validates build artifacts
- *   (REQUIRED)
- * @param {object} [options] - Optional checkpoint metadata.
- * @param {string | undefined} [options.packageName=''] - Package name (defaults
- *   to '' for flat structure)
- * @param {string | undefined} [options.artifactPath] - Path to file or
- *   directory to archive in checkpoint.
- * @param {string[] | undefined} [options.sourcePaths] - Source file paths to
- *   hash for cache validation.
- * @param {string | undefined} [options.packageRoot] - Package root for relative
- *   path display.
- * @param {string | undefined} [options.platform=process.platform] - Platform
- *   (darwin, linux, win32)
- * @param {string | undefined} [options.arch=process.arch] - Architecture (x64,
- *   arm64)
- * @param {string | undefined} [options.binaryPath] - Binary path for macOS code
- *   signing.
- *
- * @returns {Promise<void>}
+ * Full discussion: docs/agents.md/repo/build-caching.md.
  */
 export async function createCheckpoint(
   buildDir: string,
@@ -992,29 +944,18 @@ export async function removeCheckpoint(
 }
 
 /**
- * Restore checkpoint artifacts from tarball to original location or custom
- * destination. Uses artifactPath from checkpoint metadata to determine
- * extraction location.
+ * Restore checkpoint artifacts from the tarball to the artifactPath recorded
+ * in checkpoint metadata, or to options.destDir when set.
  *
- * IMPORTANT: Deletes existing target file/directory before extraction to ensure
- * clean state and prevent corruption from previous failed builds.
+ * Deletes the existing target before extraction so a previous failed build
+ * cannot leave a corrupt mix of old and new files.
  *
- * @param {string} buildDir - Build directory path.
- * @param {string} packageName - Package name.
- * @param {string} checkpointName - Checkpoint name.
- * @param {object} [options] - Restoration options.
- * @param {string} [options.destDir] - Override extraction directory (extracts
- *   to this dir instead of artifactPath's location)
- * @param {string} [options.platform] - Expected platform (darwin, linux, win32)
+ * Expected platform, arch, and libc from options are checked against the
+ * checkpoint metadata; a mismatch throws to prevent cross-target checkpoint
+ * pollution. Resolves false when the checkpoint does not exist or fails an
+ * integrity check.
  *
- *   - skips restoration if mismatch.
- * @param {string} [options.arch] - Expected architecture (x64, arm64) - skips
- *   restoration if mismatch.
- * @param {string} [options.libc] - Expected libc (musl, glibc) - skips
- *   restoration if mismatch.
- *
- * @returns {Promise<boolean>} True if restored, false if checkpoint doesn't
- *   exist or validation failed.
+ * Full discussion: docs/agents.md/repo/build-caching.md.
  */
 export interface RestoreCheckpointOptions {
   arch?: string | undefined

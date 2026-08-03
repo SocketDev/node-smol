@@ -1,3 +1,4 @@
+// doctrine: allow max-file-lines -- V8 binding glue that compiles only inside the full Node build; a blind split cannot be compile-verified in isolation.
 // ============================================================================
 // binding.cc -- The main implementation of node:smol-ffi
 // ============================================================================

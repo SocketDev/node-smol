@@ -12,6 +12,14 @@ import { errorMessage } from './error-utils.mts'
 import { getSubmoduleChecksum } from './submodule-version.mts'
 import { getNodeVersion } from './tool-version-reader.mts'
 
+/**
+ * Fetch the SHA-256 checksum for the `node-vX.Y.Z.tar.gz` source tarball
+ * from the official SHASUMS256.txt on nodejs.org. Returns lowercase hex —
+ * the update-node skill writes it into .gitmodules as `sha256:<hex>`.
+ * Failures come back as an object with an error string, not a throw.
+ *
+ * Full discussion: docs/agents.md/repo/build-toolchain.md.
+ */
 export async function fetchNodeChecksum(
   version: string,
   options?: { timeout?: number | undefined } | undefined,
@@ -72,27 +80,6 @@ export async function fetchNodeChecksum(
 }
 
 /**
- * Fetch the SHA-256 checksum for a Node.js source tarball from nodejs.org.
- *
- * Downloads SHASUMS256.txt from the official Node.js distribution and extracts
- * the checksum for `node-vX.Y.Z.tar.gz`. Used by the update-node skill to
- * store the checksum in .gitmodules during version updates.
- *
- * @example
- *   const result = await fetchNodeChecksum('1.2.3')
- *   if ('hash' in result) {
- *     // Write to .gitmodules: # node-1.2.3 sha256:<result.hash>
- *   }
- *
- * @param {string} version - Node.js version without 'v' prefix (e.g., '1.2.3')
- * @param {object} [options]
- * @param {number} [options.timeout=10_000] - Fetch timeout in milliseconds.
- *
- * @returns {Promise<
- *   { hash: string; version: string } | { error: string; version: string }
- * >}
- */
-/**
  * Parse a GNU-style `SHASUMS256.txt` into `{ filename: hexDigest }`.
  *
  * `@socketsecurity/lib`'s `fetchChecksumFile` would do this, but it is a
@@ -120,31 +107,17 @@ export function parseShasums(text: string): Record<string, string> {
 }
 
 /**
- * Verify Node.js submodule checksum against nodejs.org SHASUMS256.txt.
- *
- * Fetches the official checksum for the Node.js source tarball and compares
- * it against the checksum stored in .gitmodules. This ensures the submodule
- * points to an authentic Node.js release.
- *
- * @example
- *   const result = await verifyNodeChecksum()
- *   if (!result.valid)
- *     throw new Error(
- *       `Checksum mismatch: ${result.expected} !== ${result.actual}`,
- *     )
+ * Verify the Node.js submodule checksum stored in .gitmodules against the
+ * official SHASUMS256.txt from nodejs.org, so a build only proceeds on an
+ * authentic Node.js release. Reports failure as valid: false plus an error
+ * message instead of throwing, so callers decide how hard to fail.
  *
  * @param {object} [options]
- * @param {string} [options.version] - Node.js version to verify (default: from
- *   .node-version)
+ * @param {string} [options.version] - Version to verify, default from
+ *   .node-version.
  * @param {number} [options.timeout=10_000] - Fetch timeout in milliseconds.
  *
- * @returns {Promise<{
- *   valid: boolean
- *   expected?: string
- *   actual?: string
- *   version: string
- *   error?: string
- * }>}
+ *   Full discussion: docs/agents.md/repo/build-toolchain.md.
  */
 export async function verifyNodeChecksum(
   options?:

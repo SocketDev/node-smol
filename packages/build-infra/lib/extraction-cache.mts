@@ -80,35 +80,24 @@ export function collectFiles(dirPath: string): string[] {
 }
 
 /**
- * Compute SHA256 hash of source file(s).
+ * Compute a SHA256 hash of source files, matching the GitHub Actions cache
+ * key algorithm: hash each file, join the hex digests with newlines, hash
+ * the joined string. Paths are sorted so input order never changes the key,
+ * directories are expanded recursively, and symlinks are skipped.
  *
- * Matches GitHub Actions cache key algorithm:
- * 1. Hash each file individually (SHA256)
- * 2. Join hashes with newlines
- * 3. Hash the combined result (SHA256)
- *
- * Files are sorted to ensure stable hash values regardless of input order.
- * Supports both individual files and directories (recursively hashes all files
- * within).
- *
- * Two usage modes via `options.relativeTo`:
- * - Omitted: path is hashed as-is (absolute). Use for source-cache hashes
- * where rename detection across source roots matters — moving foo.ts
- * between two source roots with unchanged content must change the hash.
- * - Provided: path is hashed relative to `relativeTo`. Use for artifact-
- * integrity hashes where the tarball gets extracted to different absolute
- * paths at creation time (temp dir) vs restore time (final dir). The hash
- * must stay stable across absolute-path changes, so only content and
- * intra-artifact layout contribute.
+ * The relativeTo option picks the path form that goes into the hash. Omitted:
+ * absolute paths, for source caches where a file moving between source roots
+ * must change the hash. Provided: paths relative to that root, for artifact
+ * integrity hashes that must stay stable when the tarball is extracted at a
+ * different absolute location than it was created from.
  *
  * @param {string[]} sourcePaths - Source file or directory paths to hash.
- * @param {string} [platformMetadata] - Optional platform metadata (e.g.,
- *   "linux-x64-glibc")
+ * @param {string} [platformMetadata] - Optional platform metadata string.
  * @param {object} [options]
- * @param {string} [options.relativeTo] - If set, hash each path relative to
- *   this root.
+ * @param {string} [options.relativeTo] - Hash paths relative to this root.
  *
- * @returns {string} SHA256 hash (hex)
+ * @returns {string} SHA256 hash hex.
+ *   Full discussion: docs/agents.md/repo/build-caching.md.
  */
 export function computeSourceHash(
   sourcePaths: readonly string[],

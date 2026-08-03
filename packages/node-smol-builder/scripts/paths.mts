@@ -156,24 +156,16 @@ export function getBuildPaths(
  * Get all source file paths that affect a build phase.
  *
  * Returns paths for scripts, patches, and additions that should be hashed
- * for cache key generation.
- *
- * @example
- *   getBuildSourcePaths('stripped', 'darwin', 'arm64')
- *   // Returns:
- *   // {
- *   //   common: [...common script paths],
- *   //   scripts: [...stripped script paths],
- *   //   patches: [...cumulative patch paths (release + stripped)],
- *   //   additions: [...cumulative addition paths (release + stripped)]
- *   // }
+ * for cache key generation. Scripts are per-phase; patches and additions
+ * are cumulative across all upstream phases.
  *
  * @param {string} phase - 'binary-released' | 'binary-stripped' |
  *   'binary-compressed' | 'finalized'
  * @param {string} platform - 'darwin' | 'linux' | 'win32'
  * @param {string} arch - 'arm64' | 'x64'
  *
- * @returns {object} Object with scripts, patches, and additions paths
+ * @returns {object} Object with scripts, patches, and additions paths.
+ *   Full discussion: docs/agents.md/repo/node-smol-build-flags.md.
  */
 export function getBuildSourcePaths(
   phase: string,
@@ -255,35 +247,19 @@ export function getCumulativeBuildSourcePaths(
 }
 
 /**
- * Get all hierarchical paths for multiple phases (cumulative).
+ * Get all hierarchical paths for multiple phases, cumulative.
  *
- * Each phase includes its own files plus all previous phases.
- * Returns all potential paths regardless of existence.
- *
- * @example
- *   getCumulativeHierarchicalPaths(
- *     'patches',
- *     ['release', 'stripped'],
- *     'linux',
- *     'x64',
- *   )
- *   // Returns:
- *   // [
- *   //   'patches/release/shared',
- *   //   'patches/release/linux/shared',
- *   //   'patches/release/linux/x64',
- *   //   'patches/stripped/shared',
- *   //   'patches/stripped/linux/shared',
- *   //   'patches/stripped/linux/x64'
- *   // ]
+ * Each phase includes its own files plus all previous phases. Returns all
+ * potential paths regardless of existence.
  *
  * @param {string} category - 'scripts' | 'patches' | 'additions'
- * @param {string[]} phases - Array of phases to include (e.g., ['release',
- *   'stripped'])
+ * @param {string[]} phases - Phases to include, such as ['release',
+ *   'stripped'].
  * @param {string} platform - 'darwin' | 'linux' | 'win32'
  * @param {string} arch - 'arm64' | 'x64'
  *
- * @returns {string[]} Array of all paths for all phases
+ * @returns {string[]} Array of all paths for all phases.
+ *   Full discussion: docs/agents.md/repo/node-smol-build-flags.md.
  */
 export function getCumulativeHierarchicalPaths(
   category: string,
@@ -332,28 +308,14 @@ export function getDefaultPlatformArch(
 /**
  * Filter paths to only those that exist.
  *
- * Essential for local build operations that use readdirSync/statSync
- * (these throw errors on non-existent directories).
- *
- * CI workflows do not need this, since find handles missing dirs gracefully,
- * but local builds do.
- *
- * @example
- *   const allPaths = getHierarchicalPaths(
- *     'scripts',
- *     'stripped',
- *     'darwin',
- *     'arm64',
- *   )
- *   const existingPaths = getExistingPaths(allPaths)
- *   // Returns only paths that actually exist:
- *   // [
- *   //   'packages/node-smol-builder/scripts/stripped/darwin/shared'
- *   // ]
+ * Essential for local build operations that use readdirSync/statSync,
+ * which throw on non-existent directories. CI workflows do not need this,
+ * since find handles missing dirs gracefully, but local builds do.
  *
  * @param {string[]} paths - Array of paths to filter.
  *
- * @returns {string[]} Array of paths that exist on the filesystem
+ * @returns {string[]} Array of paths that exist on the filesystem.
+ *   Full discussion: docs/agents.md/repo/node-smol-build-flags.md.
  */
 export function getExistingPaths(paths: string[]): string[] {
   return paths.filter(p => existsSync(p))
@@ -362,24 +324,9 @@ export function getExistingPaths(paths: string[]): string[] {
 /**
  * Get hierarchical paths for scripts/patches/additions.
  *
- * Returns all potential paths in priority order, regardless of whether they
- * exist. Non-existent paths are safe to use with find/glob operations (they're
- * simply skipped).
- *
- * For a given phase and platform/arch, returns paths in priority order:
- * 1. shared/ (all platforms)
- * 2. {platform}/shared/ — all archs of that platform
- * 3. {platform}/{arch}/ (specific platform+arch)
- *
- * @example
- *   getHierarchicalPaths('scripts', 'stripped', 'darwin', 'arm64')
- *   // Returns:
- *   // [
- *   //   'packages/node-smol-builder/scripts/stripped/shared',
- *   //   'packages/node-smol-builder/scripts/stripped/darwin/shared',
- *   //   'packages/node-smol-builder/scripts/stripped/darwin/arm64'
- *   // ]
- *   // Note: Paths are returned even if directories don't exist
+ * Returns all potential paths regardless of whether they exist; missing
+ * paths are safe with find/glob operations. Priority order: shared/, then
+ * {platform}/shared/, then {platform}/{arch}/.
  *
  * @param {string} category - 'scripts' | 'patches' | 'additions'
  * @param {string} phase - 'common' | 'release' | 'stripped' | 'compressed' |
@@ -387,7 +334,8 @@ export function getExistingPaths(paths: string[]): string[] {
  * @param {string} platform - 'darwin' | 'linux' | 'win32'
  * @param {string} arch - 'arm64' | 'x64'
  *
- * @returns {string[]} Array of paths in priority order (general to specific)
+ * @returns {string[]} Array of paths in priority order, general to specific.
+ *   Full discussion: docs/agents.md/repo/node-smol-build-flags.md.
  */
 export function getHierarchicalPaths(
   category: string,

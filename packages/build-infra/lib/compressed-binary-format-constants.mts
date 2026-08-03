@@ -19,27 +19,14 @@
 export const SMOL_PRESSED_DATA_MAGIC_MARKER = '__SMOL_PRESSED_DATA_MAGIC_MARKER'
 
 /**
- * Binary format structure:
+ * Header field sizes in bytes, in on-disk order: magic marker, compressed
+ * size, uncompressed size, cache key, platform metadata, integrity hash,
+ * smol config flag, optional smol config binary, then the zstd-compressed
+ * payload. The C++ stub decompressor reads these fields positionally, so
+ * every size must stay in lock-step with compression_constants.h in
+ * packages/bin-infra.
  *
- * - Magic marker (32 bytes)
- * - Compressed size (8 bytes, uint64_t little-endian)
- * - Uncompressed size (8 bytes, uint64_t little-endian)
- * - Cache key (16 bytes, hex string)
- * - Platform metadata (3 bytes):
- *
- *   - Platform (1 byte): 0=linux, 1=darwin, 2=win32
- *   - Arch (1 byte): 0=x64, 1=arm64, 2=ia32, 3=arm
- *   - Libc (1 byte): 0=glibc, 1=musl, 255=n/a (for non-Linux)
- * - Smol config present flag (1 byte): 0=no config, 1=has config
- * - Smol config binary (1192 bytes, if flag=1):
- *
- *   - Magic (4 bytes): 0x534D4647 ("SMFG")
- *   - Version (2 bytes): 2
- *   - Config data (1186 bytes): update config + fakeArgvEnv + nodeVersion
- *     (validated at build time)
- * - Compressed data (variable length)
- *
- * Note: All platforms now use zstd compression exclusively.
+ * Full layout: docs/agents.md/repo/compressed-binary-format.md.
  */
 export const HEADER_SIZES = {
   CACHE_KEY: 16,

@@ -70,8 +70,8 @@ int is_absolute_path(const char *path);
  *
  * @example
  *   char full_path[PATH_MAX];
- *   path_join(full_path, "/home/user", "file.txt");
- *   // full_path = "/home/user/file.txt"
+ *   path_join(full_path, "/path/to", "file.txt");
+ *   // full_path = "/path/to/file.txt"
  */
 int path_join(char *result, const char *base_path, const char *component);
 

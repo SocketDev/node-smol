@@ -30,27 +30,22 @@ export {
 }
 
 /**
- * Runs binject with proper context.
+ * Runs binject from the binject package with proper context. Binary path is
+ * made absolute, resource path stays relative.
  *
- * Uses the binject binary from the binject package.
- * Binary path is made absolute, resource path stays relative.
- *
- * Note: binject automatically handles compressed self-extracting stubs by
- * detecting the cache key and using the extracted binary from a test-specific
- * cache directory to ensure test isolation.
- *
- * @param {string} binaryPath - Path to the binary to inject into (can be
- *   compressed stub)
- * @param {string} resourceName - Resource name (e.g., 'NODE_SEA_BLOB',
- *   RESOURCE_SMOL_VFS_BLOB, 'BOTH')
+ * @param {string} binaryPath - Path to the binary to inject into; may be a
+ *   compressed stub.
+ * @param {string} resourceName - Resource name: 'NODE_SEA_BLOB',
+ *   RESOURCE_SMOL_VFS_BLOB, or 'BOTH'.
  * @param {string | object} resourcePath - Path to the resource file, or { sea:
  *   string, vfs: string } for dual injection.
  * @param {object} options - Additional options.
- * @param {string} options.testDir - Test directory (for file resolution)
- * @param {string} [options.vfsMode] - VFS mode: 'on-disk' (default),
- *   'in-memory', or 'compat'
+ * @param {string} options.testDir - Test directory for file resolution.
+ * @param {string} [options.vfsMode] - VFS mode: 'on-disk', 'in-memory', or
+ *   'compat'. Defaults to 'on-disk'.
  *
- * @returns {Promise<object>} Spawn result
+ * @returns {Promise<object>} Spawn result.
+ *   Full discussion: docs/agents.md/repo/release-build-pipeline.md.
  */
 export async function runBinject(
   binaryPath,

@@ -38,25 +38,24 @@ const CACHE_BUSTING_DEPS = {
 }
 
 /**
- * Generate a cache key for a package build.
+ * Generate a cache key for a package build. Pass platform and arch explicitly
+ * for cross-compilation builds; they default to the current system, which
+ * mis-tags caches built for another target.
  *
  * @param {object} options
- * @param {string} options.nodeVersion - Node.js version (e.g., '24.12.0')
- * @param {string} [options.platform] - Platform (e.g., 'darwin', 'linux',
- *   'win32') - defaults to current.
- * @param {string} [options.arch] - Architecture (e.g., 'arm64', 'x64') -
- *   defaults to current.
+ * @param {string} options.nodeVersion - Node.js version.
+ * @param {string} [options.platform] - Target platform, defaults to current.
+ * @param {string} [options.arch] - Target architecture, defaults to current.
  * @param {string} options.packageVersion - Package version from package.json.
- * @param {string} [options.packageName] - Package name for dependency tracking
- *   (e.g., 'bootstrap', 'cli')
- * @param {string} [options.packageJsonPath] - Path to package.json for
- *   dependency resolution.
- * @param {string[]} [options.contentFiles] - Files to hash for content-based
+ * @param {string} [options.packageName] - Package name for dependency tracking.
+ * @param {string} [options.packageJsonPath] - Package.json path for dependency
+ *   resolution.
+ * @param {string[]} [options.contentFiles] - Files hashed for content-based
  *   invalidation.
- * @param {string[]} [options.cacheBustingDeps] - Override cache-busting
- *   dependencies.
+ * @param {string[]} [options.cacheBustingDeps] - Override cache-busting deps.
  *
- * @returns {string} Cache key
+ * @returns {string} Cache key.
+ *   Full discussion: docs/agents.md/repo/build-caching.md.
  */
 export function generateCacheKey({
   arch: targetArch = process.arch,

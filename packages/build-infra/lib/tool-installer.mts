@@ -257,26 +257,22 @@ export async function ensurePinnedTool(tool, config, autoInstall) {
 }
 
 /**
- * Ensure a tool is installed, attempting auto-installation if needed. Pinned
- * tools (category: "pinned") are auto-downloaded with checksum verification.
- * All other tools use package manager installation (existing behavior).
+ * Ensure a tool is installed, attempting auto-installation if needed. Tools
+ * in the "pinned" category are downloaded at their exact version with
+ * checksum verification; every other tool installs through the platform
+ * package manager.
  *
- * @param {string} tool - Tool name to check/install.
+ * @param {string} tool - Tool name to check or install.
  * @param {object} options - Options.
- * @param {boolean} options.autoInstall - Attempt auto-installation if missing
- *   (default: true).
- * @param {boolean} options.autoYes - Automatically answer yes to prompts
- *   (default: false).
- * @param {object} options.toolOptions - Hierarchical loading options for
+ * @param {boolean} options.autoInstall - Attempt auto-install, default true.
+ * @param {boolean} options.autoYes - Auto-answer yes to prompts, default
+ *   false.
+ * @param {object} options.toolOptions - Loading options for
  *   external-tools.json.
  *
- * @returns {Promise<{
- *   available: boolean
- *   installed: boolean
- *   path: string | undefined
- *   packageManager: string | undefined
- *   error: string | undefined
- * }>}
+ * @returns {Promise<object>} Result with available and installed booleans
+ *   plus optional path, packageManager, and error fields.
+ *   Full discussion: docs/agents.md/repo/build-toolchain.md.
  */
 export async function ensureToolInstalled(
   tool,

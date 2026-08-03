@@ -104,7 +104,7 @@ export async function cloneNodeSource(config) {
         'Node.js source upstream is not initialized.',
         [
           'Run the following command to initialize the upstream:',
-          '  git submodule update --init --recursive',
+          '  node scripts/fleet/git-partial-submodule.mts clone packages/node-smol-builder/upstream/node',
           '',
           'Or if you just cloned the repository:',
           '  pnpm install',

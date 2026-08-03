@@ -22,6 +22,7 @@ import { pathToFileURL } from 'node:url'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { REPO_ROOT } from '../fleet/paths.mts'
+import { uploadNpmPackage } from '../fleet/publish-infra/npm/publish-command.mts'
 import { isAlreadyPublished } from '../fleet/publish-infra/npm/registry.mts'
 import { listStagedPackages } from '../fleet/publish-infra/npm/shared.mts'
 import { verifyStagedEntry } from '../fleet/publish-infra/npm/staged.mts'

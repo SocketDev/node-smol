@@ -20,25 +20,19 @@ import { whichRequired } from './which-required.mts'
 import { normalizePath } from '@socketsecurity/lib-stable/paths/normalize'
 
 /**
- * Securely extract a tarball to a directory. Validates paths before extraction
- * and uses --no-absolute-names when supported.
+ * Securely extract a tarball to a directory. Archive paths are validated
+ * against traversal before extraction, and --no-absolute-names is added on
+ * platforms whose tar supports it as defense in depth.
  *
  * @param {string} tarballPath - Path to the tarball file.
  * @param {string} extractDir - Directory to extract to.
- * @param {object} options - Extraction options.
- * @param {boolean} [options.validate=true] - Validate paths before extraction.
- * @param {boolean} [options.createDir=true] - Create extraction directory if
- *   missing.
- * @param {'pipe' | 'inherit' | 'ignore'} [options.stdio='ignore'] - Stdio
- *   option for tar.
- * @param {number} [options.stripComponents=0] - Number of leading path
- *   components to strip.
- * @param {boolean} [options.overwrite=true] - Overwrite existing
- *   files/directories.
+ * @param {object} options - See ExtractTarballOptions.
  *
- * @returns {Promise<string[]>} Array of extracted file paths.
+ * @returns {Promise<string[]>} File paths from the validation pass; empty
+ *   when validation is disabled.
  *
  * @throws {Error} If extraction fails or paths are unsafe.
+ *   Full discussion: docs/agents.md/repo/build-toolchain.md.
  */
 export interface ExtractTarballOptions {
   createDir?: boolean | undefined

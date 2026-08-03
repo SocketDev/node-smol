@@ -106,7 +106,7 @@ export async function runSteps(
 async function main(): Promise<void> {
   if (!existsSync(UPSTREAM_DIR)) {
     throw new Error(
-      `boringssl upstream not found at ${UPSTREAM_DIR}; run \`git submodule update --init --depth=1 packages/boringssl-builder/upstream/boringssl\``,
+      `boringssl upstream not found at ${UPSTREAM_DIR}; run \`node scripts/fleet/git-partial-submodule.mts clone packages/boringssl-builder/upstream/boringssl\``,
     )
   }
   const { buildDir, cmakeBuildDir, outLibDir, outIncludeDir } = getPaths()

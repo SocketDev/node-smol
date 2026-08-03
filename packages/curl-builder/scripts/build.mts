@@ -437,7 +437,7 @@ export async function buildMbedTLS(mbedtlsBuildDir) {
   // Check if mbedTLS upstream exists.
   if (!existsSync(mbedtlsUpstream)) {
     throw new Error(
-      `mbedTLS upstream not found at ${mbedtlsUpstream}. Run 'git submodule update --init --recursive' first.`,
+      `mbedTLS upstream not found at ${mbedtlsUpstream}. Run 'node scripts/fleet/git-partial-submodule.mts clone packages/curl-builder/upstream/mbedtls' first.`,
     )
   }
 
@@ -565,7 +565,7 @@ export async function buildCurl(mbedtlsDir, curlBuildDir) {
   // Check if curl upstream exists.
   if (!existsSync(curlUpstream)) {
     throw new Error(
-      `curl upstream not found at ${curlUpstream}. Run 'git submodule update --init --recursive' first.`,
+      `curl upstream not found at ${curlUpstream}. Run 'node scripts/fleet/git-partial-submodule.mts clone packages/curl-builder/upstream/curl' first.`,
     )
   }
 
@@ -866,7 +866,7 @@ async function main() {
     const mbedtlsCMakeLists = path.join(mbedtlsUpstream, 'CMakeLists.txt')
     if (!existsSync(mbedtlsCMakeLists)) {
       throw new Error(
-        `mbedTLS submodule not initialized at ${mbedtlsUpstream}. Run: git submodule update --init --recursive packages/curl-builder/upstream/mbedtls`,
+        `mbedTLS submodule not initialized at ${mbedtlsUpstream}. Run: node scripts/fleet/git-partial-submodule.mts clone packages/curl-builder/upstream/mbedtls`,
       )
     }
 

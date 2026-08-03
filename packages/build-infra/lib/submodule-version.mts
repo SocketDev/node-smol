@@ -85,26 +85,18 @@ export function getSubmoduleChecksum(
 }
 
 /**
- * Extract submodule version from .gitmodules version comment.
+ * Extract a submodule version from its .gitmodules version comment, written
+ * as `# <package>-<version>` in the comment block directly above the
+ * `[submodule "<path>"]` section. Other annotation comment lines may sit
+ * between the version comment and the section header.
  *
- * Parses version comments in the format `# package-X.Y.Z` above submodule
- * entries. Expects consistent format: `# <package>-<version>` (version may be
- * semver or other formats)
+ * @param {string} submodulePath - Submodule path as written in .gitmodules.
+ * @param {string} packageName - Package name used in the version comment.
  *
- * @example
- *   const version = getSubmoduleVersion(
- *     'packages/lief-builder/upstream/lief',
- *     'lief',
- *   )
- *   // Returns: '0.17.0'
+ * @returns {string} Version string.
  *
- * @param {string} submodulePath - Submodule path (e.g.,
- *   "packages/lief-builder/upstream/lief")
- * @param {string} packageName - Package name (e.g., "lief")
- *
- * @returns {string} Version string (e.g., "0.17.0")
- *
- * @throws {Error} If version comment not found or malformed
+ * @throws {Error} If the version comment is missing or malformed.
+ *   Full discussion: docs/agents.md/repo/build-toolchain.md.
  */
 export function getSubmoduleVersion(
   submodulePath: string,

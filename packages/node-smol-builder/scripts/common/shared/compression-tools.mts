@@ -32,23 +32,16 @@ const logger = getDefaultLogger()
 /**
  * Download a compression tool if it doesn't exist.
  *
- * Environment variables:
+ * BUILD_TOOLS_FROM_SOURCE, BUILD_DEPS_FROM_SOURCE, and BUILD_ALL_FROM_SOURCE
+ * switch sourcing from release downloads to local source builds.
  *
- * - BUILD_TOOLS_FROM_SOURCE=true: Build binsuite tools
- *   (binpress/binflate/binject) from source instead of downloading from
- *   releases. Used in Docker builds to test local changes.
- * - BUILD_DEPS_FROM_SOURCE=true: Build LIEF from source during binsuite builds.
- *   Requires it to be pre-installed on the system. (Implemented in CMake build
- *   scripts)
- * - BUILD_ALL_FROM_SOURCE=true: Shortcut for both BUILD_TOOLS_FROM_SOURCE and
- *   BUILD_DEPS_FROM_SOURCE.
- *
- * @param {string} tool - Tool name (binpress)
+ * @param {string} tool - Tool name, currently binpress.
  * @param {string} platform - Target platform.
  * @param {string} arch - Target architecture.
- * @param {string | undefined} libc - Target libc (musl, glibc, or undefined)
+ * @param {string | undefined} libc - Target libc: musl, glibc, or undefined.
  *
- * @returns {Promise<string>} Path to downloaded tool
+ * @returns {Promise<string>} Path to downloaded tool.
+ *   Full discussion: docs/agents.md/repo/release-build-pipeline.md.
  */
 export async function downloadToolIfMissing(tool, platform, arch, libc) {
   const binaryName = platform === 'win32' ? `${tool}.exe` : tool

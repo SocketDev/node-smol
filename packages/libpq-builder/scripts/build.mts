@@ -143,7 +143,7 @@ async function main() {
       ) {
         throw new Error(
           'Failed to initialize PostgreSQL submodule. Run manually:\n' +
-            '  git submodule update --init packages/libpq-builder/upstream/postgres',
+            '  node scripts/fleet/git-partial-submodule.mts clone packages/libpq-builder/upstream/postgres',
         )
       }
       logger.success('PostgreSQL submodule initialized')

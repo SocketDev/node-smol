@@ -366,7 +366,7 @@ export async function verifyMuslCompatibility(libPath) {
 export async function copyLiefSource(sourceDir) {
   if (!existsSync(liefUpstream)) {
     throw new Error(
-      `LIEF upstream not found at ${liefUpstream}. Run 'git submodule update --init --recursive' first.`,
+      `LIEF upstream not found at ${liefUpstream}. Run 'node scripts/fleet/git-partial-submodule.mts clone packages/lief-builder/upstream/lief' first.`,
     )
   }
 
@@ -835,7 +835,7 @@ export async function ensureLiefImpl(options = {}) {
   }
 
   throw new Error(
-    'Failed to ensure LIEF. Run: git submodule update --init --recursive packages/lief-builder/upstream/lief',
+    'Failed to ensure LIEF. Run: node scripts/fleet/git-partial-submodule.mts clone packages/lief-builder/upstream/lief',
   )
 }
 
@@ -961,7 +961,7 @@ async function main() {
 
       // Prebuilt download failed - cannot continue.
       throw new Error(
-        'Failed to download prebuilt LIEF. Run: git submodule update --init --recursive packages/lief-builder/upstream/lief',
+        'Failed to download prebuilt LIEF. Run: node scripts/fleet/git-partial-submodule.mts clone packages/lief-builder/upstream/lief',
       )
     }
 

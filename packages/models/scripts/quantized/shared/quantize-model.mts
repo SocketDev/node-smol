@@ -31,23 +31,17 @@ const QUANTIZE_PYTHON_DIR = path.resolve(
 /**
  * Apply quantization for compression.
  *
- * Supports two quantization levels: - INT4: MatMul4BitsQuantizer with RTN
- * weight-only quantization (maximum compression). - INT8: Dynamic quantization
- * (better compatibility, moderate compression).
- *
- * Results in significant size reduction with minimal accuracy loss.
- *
  * @param {Object} options - The options object.
- * @param {string} options.modelKey - The model key (e.g., 'minilm-l6',
- *   'codet5')
- * @param {string} options.quantLevel - The quantization level ('int4' or
- *   'int8')
+ * @param {string} options.modelKey - The model key, such as 'minilm-l6'.
+ * @param {string} options.quantLevel - The quantization level, 'int4' or
+ *   'int8'.
  * @param {string} options.buildDir - The build directory path.
  * @param {string} options.packageName - The package name.
  * @param {string} options.modelsDir - The models directory path.
  * @param {boolean} options.forceRebuild - Whether to force rebuild.
  *
- * @returns {Promise<string[]>} Array of quantized model paths
+ * @returns {Promise<string[]>} Array of quantized model paths.
+ *   Full discussion: docs/agents.md/repo/model-quantization.md.
  */
 export async function quantizeModel(config) {
   const {

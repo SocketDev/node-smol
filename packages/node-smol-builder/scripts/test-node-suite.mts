@@ -249,7 +249,9 @@ async function main() {
     logger.fail('Node.js source upstream not found')
     logger.log('')
     logger.log('Initialize upstream:')
-    logger.log('  git submodule update --init --recursive')
+    logger.log(
+      '  node scripts/fleet/git-partial-submodule.mts clone packages/node-smol-builder/upstream/node',
+    )
     logger.log('')
     process.exitCode = 1
     return
