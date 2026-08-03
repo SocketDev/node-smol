@@ -224,3 +224,19 @@
 	ref = 259f2e2a531af9ed3efa7f66adaa5eb5b53da95f
 	ignore = dirty
 	shallow = true
+# opentui-0.4.1 sha256:ba4b76e80e0488e1c069841084e700645d86929d58d8d67f821eadc60526654b
+# full-checkout: full source build — the builder compiles/vendors the whole tree
+[submodule "packages/opentui-builder/upstream/opentui"]
+	path = packages/opentui-builder/upstream/opentui
+	url = https://github.com/anomalyco/opentui.git
+	ref = b7e0bb9c3d2a75c2bc267d2af27b7237f734d13b
+	ignore = dirty
+	shallow = true
+# uucode-0.1.0
+# uucode-84ceda8 sha256:4a7f194ad1f583ffae00bf625986527df89ddd55309ff30314d2d17539a7b011
+[submodule "packages/opentui-builder/upstream/uucode"]
+	ref = 84ceda8561a17ba4a9b96ac5c583f779660bbd4e
+	path = packages/opentui-builder/upstream/uucode
+	url = https://github.com/jacobsandlund/uucode.git
+	ignore = dirty
+	shallow = true
