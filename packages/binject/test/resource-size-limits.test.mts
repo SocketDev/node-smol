@@ -43,6 +43,9 @@ const binjectExists = existsSync(BINJECT)
 
 import { createTestFile, execCommand } from './helpers/size-fixtures.mts'
 
+// Companion SEA blob shared by the VFS tests (--vfs requires --sea).
+let vfsSeaBlob: string
+
 beforeAll(async () => {
   if (!binjectExists) {
     logger.warn(`binject not found at ${BINJECT}`)
@@ -51,6 +54,8 @@ beforeAll(async () => {
 
   testDir = path.join(os.tmpdir(), `binject-limits-${Date.now()}`)
   await safeMkdir(testDir)
+  vfsSeaBlob = path.join(testDir, 'vfs_companion_sea.blob')
+  await fs.writeFile(vfsSeaBlob, Buffer.from('test'))
 })
 
 afterAll(async () => {
@@ -161,10 +166,6 @@ describe.skipIf(!binjectExists)('resource size limit enforcement', () => {
         const vfsArchive = path.join(testDir, 'max_size.vfs')
         await createTestFile(vfsArchive, MAX_VFS_SIZE)
 
-        // Create test SEA blob (required for VFS injection)
-        const seaBlob = path.join(testDir, 'max_vfs_sea.blob')
-        await fs.writeFile(seaBlob, Buffer.from('test'))
-
         const outputBinary = path.join(testDir, 'max_vfs_output')
 
         // Should succeed at max size
@@ -175,7 +176,7 @@ describe.skipIf(!binjectExists)('resource size limit enforcement', () => {
           '-o',
           outputBinary,
           '--sea',
-          seaBlob,
+          vfsSeaBlob,
           '--vfs',
           vfsArchive,
         ])
@@ -195,10 +196,6 @@ describe.skipIf(!binjectExists)('resource size limit enforcement', () => {
         const vfsArchive = path.join(testDir, 'oversized.vfs')
         await createTestFile(vfsArchive, MAX_VFS_SIZE + 1024)
 
-        // Create test SEA blob (required for VFS injection)
-        const seaBlob = path.join(testDir, 'oversized_vfs_sea.blob')
-        await fs.writeFile(seaBlob, Buffer.from('test'))
-
         const outputBinary = path.join(testDir, 'oversized_vfs_output')
 
         // Should fail with oversized VFS
@@ -209,7 +206,7 @@ describe.skipIf(!binjectExists)('resource size limit enforcement', () => {
           '-o',
           outputBinary,
           '--sea',
-          seaBlob,
+          vfsSeaBlob,
           '--vfs',
           vfsArchive,
         ])
@@ -232,10 +229,6 @@ describe.skipIf(!binjectExists)('resource size limit enforcement', () => {
         const vfsArchive = path.join(testDir, 'boundary.vfs')
         await createTestFile(vfsArchive, MAX_VFS_SIZE - 1)
 
-        // Create test SEA blob (required for VFS injection)
-        const seaBlob = path.join(testDir, 'boundary_vfs_sea.blob')
-        await fs.writeFile(seaBlob, Buffer.from('test'))
-
         const outputBinary = path.join(testDir, 'boundary_vfs_output')
 
         // Should succeed just below max size
@@ -246,7 +239,7 @@ describe.skipIf(!binjectExists)('resource size limit enforcement', () => {
           '-o',
           outputBinary,
           '--sea',
-          seaBlob,
+          vfsSeaBlob,
           '--vfs',
           vfsArchive,
         ])
@@ -448,10 +441,6 @@ describe.skipIf(!binjectExists)('resource size limit enforcement', () => {
         const vfsArchive = path.join(testDir, 'vfs_error_oversized.vfs')
         await createTestFile(vfsArchive, MAX_VFS_SIZE + 1024 * 1024)
 
-        // Create test SEA blob (required for VFS injection)
-        const seaBlob = path.join(testDir, 'vfs_error_sea.blob')
-        await fs.writeFile(seaBlob, Buffer.from('test'))
-
         const outputBinary = path.join(testDir, 'vfs_error_output')
 
         const injectResult = await execCommand(BINJECT, [
@@ -461,7 +450,7 @@ describe.skipIf(!binjectExists)('resource size limit enforcement', () => {
           '-o',
           outputBinary,
           '--sea',
-          seaBlob,
+          vfsSeaBlob,
           '--vfs',
           vfsArchive,
         ])
