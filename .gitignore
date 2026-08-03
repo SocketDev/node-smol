@@ -131,6 +131,3 @@ pnpm-debug.log
 # <repo>
 # </repo>
 
-# opentui-builder emits its native library into lib/<triple>/; the builder
-# produces it, so it is build output rather than source.
-packages/opentui-builder/lib/*/libopentui.*
