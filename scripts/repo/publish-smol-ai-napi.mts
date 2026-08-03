@@ -262,6 +262,15 @@ async function main(): Promise<void> {
     // cwd is the package directory, and no manifest here redirects the publish
     // with publishConfig.directory, so the primitive's default manifestPath of
     // <cwd>/package.json already names the manifest being published.
+    //
+    // The manifests' `publishConfig.provenance: true` is not a competing
+    // provenance decision: it is the fleet's source-side floor, required by
+    // scripts/fleet/check/publish-config-is-hardened.mts (release tier)
+    // because an attestation can never be attached retroactively (see
+    // docs/agents.md/fleet/release-tag-escape-hatch.md). It agrees with
+    // resolveUploadProvenance() everywhere this family can publish — a real
+    // stage runs only in GitHub Actions on this PUBLIC repo — so do not
+    // "reconcile" the keys away: that turns the hardening gate red.
     const upload = await uploadNpmPackage({
       cwd: directory,
       dryRun,
