@@ -251,24 +251,34 @@ async function main(): Promise<void> {
     logger.log(
       `${dryRun ? 'Dry-running' : 'Staging'} ${name}@${release.version}`,
     )
-    const args = [
-      'stage',
-      'publish',
-      '--access',
-      'public',
-      '--tag',
+    // The upload itself is the fleet's, not ours. uploadNpmPackage owns the
+    // argv, decides provenance from the runner AND the repository visibility,
+    // and asserts the trusted-publishing auth posture on both sides of the
+    // spawn. Everything around it stays local orchestration: which packages go
+    // in what order, the shared-version guard, the already-published check, and
+    // the staged-tarball verification below.
+    //
+    // cwd is the package directory, and no manifest here redirects the publish
+    // with publishConfig.directory, so the primitive's default manifestPath of
+    // <cwd>/package.json already names the manifest being published.
+    const upload = await uploadNpmPackage({
+      cwd: directory,
+      dryRun,
+      mode: 'staged',
       tag,
-      '--no-git-checks',
-      '--ignore-scripts',
-    ]
-    if (dryRun) {
-      args.push('--dry-run')
-    } else {
-      args.push('--provenance')
+    })
+    if (upload.code !== 0) {
+      throw new Error(`${name} stage publish exited ${upload.code}`)
     }
-    const code = await runInherit('pnpm', args, directory)
-    if (code !== 0) {
-      throw new Error(`${name} stage publish exited ${code}`)
+    // A zero exit is not proof the OIDC exchange worked — pnpm reports the
+    // failure and carries on under whatever other credential the environment
+    // holds. uploadNpmPackage has already logged which posture refused and why;
+    // this is where the run stops instead of staging the rest of the family
+    // under the same wrong identity.
+    if (!upload.postureOk) {
+      throw new Error(
+        `${name}@${release.version} failed the publish auth posture check`,
+      )
     }
     if (shouldStage) {
       const entries = await listStagedPackages()

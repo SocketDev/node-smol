@@ -1,5 +1,5 @@
 {
-  "$comment": "xport — tracks feature-parity C++ ports of upstream projects into socket-btm packages. A port is a SEMANTIC re-implementation of the upstream's externally observable behavior, NOT a source fork; upstream bumps are tracked by manual parity audits (see each row's tracker), never auto-cascaded. The pin here is the source of truth for citations; comments referencing a port's upstream defer to this file.",
+  "$comment": "xport — tracks feature-parity C++ ports of upstream projects into node-smol packages. A port is a SEMANTIC re-implementation of the upstream's externally observable behavior, NOT a source fork; upstream bumps are tracked by manual parity audits (see each row's tracker), never auto-cascaded. The pin here is the source of truth for citations; comments referencing a port's upstream defer to this file.",
   "ports": [
     {
       "package": "temporal-infra",

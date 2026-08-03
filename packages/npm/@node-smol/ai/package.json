@@ -36,13 +36,13 @@
     "vitest": "catalog:"
   },
   "optionalDependencies": {
-    "@node-smol/ai.node-darwin-arm64": "workspace:*",
-    "@node-smol/ai.node-darwin-x64": "workspace:*",
-    "@node-smol/ai.node-linux-arm64-gnu": "workspace:*",
-    "@node-smol/ai.node-linux-arm64-musl": "workspace:*",
-    "@node-smol/ai.node-linux-x64-gnu": "workspace:*",
-    "@node-smol/ai.node-linux-x64-musl": "workspace:*",
-    "@node-smol/ai.node-win32-arm64-msvc": "workspace:*",
-    "@node-smol/ai.node-win32-x64-msvc": "workspace:*"
+    "@node-smol/ai.node-darwin-arm64": "workspace:0.0.0",
+    "@node-smol/ai.node-darwin-x64": "workspace:0.0.0",
+    "@node-smol/ai.node-linux-arm64-gnu": "workspace:0.0.0",
+    "@node-smol/ai.node-linux-arm64-musl": "workspace:0.0.0",
+    "@node-smol/ai.node-linux-x64-gnu": "workspace:0.0.0",
+    "@node-smol/ai.node-linux-x64-musl": "workspace:0.0.0",
+    "@node-smol/ai.node-win32-arm64-msvc": "workspace:0.0.0",
+    "@node-smol/ai.node-win32-x64-msvc": "workspace:0.0.0"
   }
 }

@@ -108,7 +108,7 @@ Always-keep core (never gated): vfs, primordial, util, webstreams, simd, borings
    record it as `softUse` (works with or without). Soft-use features are _droppable_
    but flagged so the gate verifies the fallback path actually works without them.
 
-### The dynamic-require escape hatch (the one real risk of static analysis)
+### The dynamic-require escape hatch — the one real risk of static analysis —
 
 Static analysis can't see `require(someVariable)`. Mitigations, in order:
 
@@ -122,7 +122,7 @@ Static analysis can't see `require(someVariable)`. Mitigations, in order:
 
 ### Output
 
-A JSON manifest, content-hashed (the hash becomes the build cache key, see C3):
+A JSON manifest, content-hashed — the hash becomes the build cache key, see C3 —:
 
 ```json
 {

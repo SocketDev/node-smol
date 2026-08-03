@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "build-infra": "workspace:*"
+    "build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@types/node": "catalog:"

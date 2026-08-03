@@ -23,7 +23,7 @@ Lowering to **glibc 2.17** directly unblocks these deployment targets:
 | **Debian 11**                  | 2.31  | EOL 2026-08-31 (freexian extended)                                    | ✗ fails to load | ✓ works          |
 | **Debian 12**                  | 2.36  | EOL mid-2028                                                          | ✓ works         | ✓ works          |
 
-**The wins that matter most to our users**: RHEL 7 (Extended Lifecycle customers still running it in production), Amazon Linux 1 (pre-2023 Lambda deployments and long-lived EC2 AMIs), Amazon Linux 2 (the Lambda `nodejs18.x` default runtime through at least mid-2026), and Ubuntu 20.04 LTS (still the default in many enterprise CI systems).
+**The wins that matter most to our users**: RHEL 7 (Extended Lifecycle customers still running it in production), Amazon Linux 1 (pre-2023 Lambda deployments and long-lived EC2 AMIs), Amazon Linux 2 — the Lambda `nodejs18.x` default runtime through at least mid-2026 —, and Ubuntu 20.04 LTS (still the default in many enterprise CI systems).
 
 This mirrors exactly the motivation [Bun's PR 29461](https://github.com/oven-sh/bun/pull/29461) used when they made the same move — "unblocks companies running Red Hat Enterprise Linux 7 & Amazon Linux 1 from using Bun." For us it's node-smol SEA binaries instead of Bun, but the deployment constraint is identical.
 

@@ -20,13 +20,13 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "build-infra": "workspace:*",
-    "curl-builder": "workspace:*"
+    "build-infra": "workspace:0.0.0",
+    "curl-builder": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
-    "bin-stub-builder": "workspace:*",
-    "lief-builder": "workspace:*",
+    "bin-stub-builder": "workspace:0.0.0",
+    "lief-builder": "workspace:0.0.0",
     "octokit": "catalog:",
     "vitest": "catalog:"
   }

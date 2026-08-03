@@ -131,3 +131,29 @@ pnpm-debug.log
 # <repo>
 # </repo>
 
+# ── Hoisted from nested .gitignore files (single-gitignore law) ──
+# bin-stub-builder C build residue.
+packages/bin-stub-builder/**/*.o
+packages/bin-stub-builder/**/*.d
+packages/bin-stub-builder/**/*.log
+# binject test fixtures + integration build outputs.
+packages/binject/test/fixtures/binaries/
+packages/binject/test/integration/test_program_signed
+packages/binject/test/integration/test_program_unsigned
+# Staged BoringSSL artifacts: produced by boringssl-builder, copied into the
+# patched tree at prepare-time, never committed.
+packages/node-smol-builder/additions/source-patched/deps/boringssl/include/openssl/
+packages/node-smol-builder/additions/source-patched/deps/boringssl/lib/*.a
+packages/node-smol-builder/additions/source-patched/deps/boringssl/lib/*.lib
+# Staged glibc-shims-infra copies: produced by prepare-external-sources.mts.
+packages/node-smol-builder/additions/source-patched/deps/glibc-shims-infra/glibc-shims-infra.gypi
+packages/node-smol-builder/additions/source-patched/deps/glibc-shims-infra/src/
+# binjected compression build outputs.
+packages/node-smol-builder/scripts/binary-compressed/shared/binjected/out/
+packages/node-smol-builder/scripts/binary-compressed/shared/binjected/**/*.o
+packages/node-smol-builder/scripts/binary-compressed/shared/binjected/**/*.obj
+packages/node-smol-builder/scripts/binary-compressed/shared/binjected/**/*.dSYM/
+packages/node-smol-builder/scripts/binary-compressed/shared/binjected/**/*.pdb
+packages/node-smol-builder/scripts/binary-compressed/shared/binjected/**/*.ilk
+packages/node-smol-builder/scripts/binary-compressed/shared/binjected/**/*.exp
+packages/node-smol-builder/scripts/binary-compressed/shared/binjected/**/*.lib

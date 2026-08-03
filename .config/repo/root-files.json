@@ -1,0 +1,7 @@
+{
+  "allow": {
+    "Dockerfile.local-dev": "Local-dev container build for binject/binpress with LIEF from source, matching the Depot AlmaLinux 8 configuration; its docker build context is the repo root, so the file is root-anchored.",
+    "vendor": "Vendored third-party trees (acorn-wasm). 'vendor' is the conventional root name the native-source doctrine skips by name, so relocating it would re-expose vendored code to fleet doctrine.",
+    "xport.json": "The feature-parity ports manifest \u2014 the source of truth for upstream pins that package docs cite as ../../xport.json, so the path is part of its contract."
+  }
+}
