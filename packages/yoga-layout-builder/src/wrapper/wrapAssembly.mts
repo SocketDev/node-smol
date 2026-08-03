@@ -179,6 +179,8 @@ export function wrapAssembly(lib) {
   patch(
     lib.Node.prototype,
     'calculateLayout',
+    // This patch must mirror yoga's own calculateLayout positional signature —
+    // it wraps the upstream method in place. socket-lint: allow optional-positional-trap
     function (original, width = NaN, height = NaN, direction = Direction.LTR) {
       // Just a small patch to add support for the function default parameters
       return original.call(this, width, height, direction)

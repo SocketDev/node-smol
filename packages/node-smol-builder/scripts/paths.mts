@@ -318,6 +318,9 @@ export function getCumulativeHierarchicalPaths(
  * @returns {string} Platform-arch string (e.g., 'darwin-arm64',
  *   'linux-x64-musl')
  */
+// The (platform, arch, libc) triple is this repo's stable target signature and
+// every param defaults to the running process, so callers pass zero args in
+// the common case. socket-lint: allow optional-positional-trap
 export function getDefaultPlatformArch(
   platform: string = process.platform,
   arch: string = process.arch,

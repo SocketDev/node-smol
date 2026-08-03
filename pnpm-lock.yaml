@@ -2541,6 +2541,8 @@ importers:
 
   .config/fleet/oxlint-plugin/fleet/inclusive-language: {}
 
+  .config/fleet/oxlint-plugin/fleet/max-comment-block-lines: {}
+
   .config/fleet/oxlint-plugin/fleet/max-file-lines: {}
 
   .config/fleet/oxlint-plugin/fleet/no-agent-brand-assumption: {}
@@ -2588,6 +2590,8 @@ importers:
   .config/fleet/oxlint-plugin/fleet/no-namespace-import: {}
 
   .config/fleet/oxlint-plugin/fleet/no-npx-dlx: {}
+
+  .config/fleet/oxlint-plugin/fleet/no-optional-positional-trap: {}
 
   .config/fleet/oxlint-plugin/fleet/no-options-param-mutation: {}
 
@@ -3231,6 +3235,19 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(vite@8.1.5(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0))
+
+  packages/tui-infra:
+    dependencies:
+      '@socketsecurity/lib-stable':
+        specifier: 'catalog:'
+        version: '@socketsecurity/lib@6.5.2(typescript@7.0.2)'
+      build-infra:
+        specifier: workspace:0.0.0
+        version: link:../build-infra
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.1.1
 
   packages/yoga-layout-builder:
     dependencies:
