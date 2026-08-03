@@ -1,0 +1,85 @@
+# Stub environ regression
+
+The binary stubs must hand the child process the **live** `environ`, never the
+`envp` captured at `main()`. The C fix for that is in place; nothing pins it.
+This page specifies the missing regression test. Tracked by node-smol#2.
+
+## The bug this guards against
+
+A packed binary `setenv()`s `SMOL_STUB_PATH` and `SMOL_CACHE_KEY`, then
+`execve()`s the extracted inner node. `setenv()` makes glibc and musl
+reallocate `environ`, so a pointer captured as `main`'s `envp` goes stale. A
+child exec'd with that stale pointer receives the original environment without
+the SMOL variables.
+
+The consequence is severe and quiet. Without `SMOL_STUB_PATH`, the inner node's
+bootstrap falls back to its own path, which carries no VFS payload, because the
+payload lives in the outer stub. `hasVFS()` returns false, argv is never
+rewritten, and node parses application flags as its own, emitting
+`bad option: --service`. The binary degrades to bare node while still exiting
+like a working build on any path that takes no flags.
+
+## Current state of the fix
+
+All three stubs under
+`packages/bin-stub-builder/src/socketsecurity/bin-stub-builder/` are correct:
+
+| Stub | How it is correct |
+| --- | --- |
+| `elf_stub.c` | declares `extern char **environ;`, execs with `environ` at both sites, `main` no longer takes `envp` |
+| `macho_stub.c` | same shape, both exec sites |
+| `pe_stub.c` | `CreateProcessA(..., NULL, ...)` passes NULL for `lpEnvironment`, which inherits the current environment; `envp` is explicitly unused |
+
+A search for `SMOL_STUB_PATH` across the repo returns only those three sources,
+a node patch, and `bootstrap.js`. No test refers to it, so a refactor can
+reintroduce the stale pointer with every suite still green.
+
+## Test design
+
+Extend the existing C harness rather than adding a new framework:
+
+- `packages/bin-stub-builder/test/Makefile` compiles each entry of `TESTS` into
+  `build/$(BUILD_MODE)/$(PLATFORM_ARCH)/out/`.
+- `packages/bin-stub-builder/test/update_config_test.c` is the model, using the
+  minunit-style framework from `bin-infra/test.h`.
+- `packages/bin-stub-builder/test/c-unit-tests.test.mts` builds and runs the
+  binaries through vitest and greps stdout for `Passed: N` and `Failed: N`, so
+  any new test must emit that same summary format.
+
+### Behavioural half
+
+Add `stub_environ_test.c` as a self-re-exec test, which exercises a real
+`execve` without needing Docker:
+
+1. Invoked with a child flag, the program prints `getenv("SMOL_STUB_PATH")` or
+   a sentinel, then exits 0.
+2. As parent, it captures `environ`, sets a marker via `setenv()` along with
+   enough padding variables to force a reallocation, forks, and execs itself
+   with `environ`, reading the child's stdout through a pipe.
+3. It asserts the marker arrived.
+
+That single assertion holds on every platform and goes red on Linux the moment
+a stale pointer comes back.
+
+**Do not assert that the stale-`envp` path fails.** Apple's libc keeps the
+aliasing intact in practice, so the bug is latent on darwin and such an
+assertion would be red there for the wrong reason. Running the stale path and
+printing its outcome as informational output is fine; asserting on it is not.
+
+### Source-invariant half
+
+The behavioural test stays green on macOS even after a regression, so pair it
+with a portable assertion that reads the three stub sources and requires:
+
+- no `execve(` call passes `envp`
+- `elf_stub.c` and `macho_stub.c` each declare `extern char **environ;`
+
+Exempt comment lines, so the explanatory comment naming the old pattern does
+not trip the scan.
+
+## Acceptance
+
+The test is finished when it has been *seen to fail*. Deliberately point the
+source-invariant scan at a stale-`envp` variant, confirm the suite goes red,
+then revert. A regression test nobody has watched fail is not yet a regression
+test.

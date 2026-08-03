@@ -126,4 +126,5 @@
 
 - node-smol owns Socket's customized Node.js distribution: source patches, builtins, SEA packaging, platform artifacts, and release assembly; binaries ship as GitHub release assets, never npm.
 - Native capabilities stay Rust-canonical in their owner repos; the stuie pin is branch-only for now — see [`native-capability-pins`](docs/agents.md/repo/native-capability-pins.md).
+- 🚨 The binary stubs exec with the live `environ`, never a captured `envp`; the regression test that pins this is still unwritten (node-smol#2). [`stub-environ-regression`](docs/agents.md/repo/stub-environ-regression.md)
 - The Node runtime pin cascades from the wheelhouse (`.node-version` + the fleet setup-action defaults + the node-base builder image) — never hand-edit it here; bump via `cascade-fleet.mts --node`.
