@@ -14,7 +14,7 @@ import { makeExecutable } from 'build-infra/lib/build-helpers'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 
-import { execCommand } from './binject-node-path-env.test.mts'
+import { execCommand } from './helpers/exec-command-with-output.mts'
 import { getBinjectPath } from './helpers/paths.mts'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 

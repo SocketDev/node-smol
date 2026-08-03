@@ -17,8 +17,8 @@ import process from 'node:process'
 import { makeExecutable } from 'build-infra/lib/build-helpers'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
-import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
+import { execCommand } from './helpers/exec-command-with-output.mts'
 import { getBinjectPath } from './helpers/paths.mts'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
@@ -27,7 +27,7 @@ const BINJECT = getBinjectPath()
 let testDir: string
 let binjectExists = false
 
-export /**
+/**
  * Create a copy of BINJECT for a test to use as input (-e parameter)
  */
 async function createTestBinject(name = 'test-binject') {
@@ -35,53 +35,6 @@ async function createTestBinject(name = 'test-binject') {
   await fs.copyFile(BINJECT, testBinject)
   await makeExecutable(testBinject)
   return testBinject
-}
-
-export async function execCommand(
-  command: string,
-  args: string[] = [],
-  options: {
-    cwd?: string | undefined
-    env?: NodeJS.ProcessEnv | undefined
-  } = {},
-) {
-  return new Promise<{
-    code: number
-    stdout: string
-    stderr: string
-    output: string
-  }>(resolve => {
-    const spawnPromise = spawn(command, args, {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      ...options,
-    })
-
-    // Prevent unhandled rejection — we handle exit via proc.on('close')
-    spawnPromise.catch(() => {})
-
-    // @socketsecurity/lib-stable/process/spawn/child returns a Promise with .process property
-    const proc = spawnPromise.process
-
-    let stdout = ''
-    let stderr = ''
-
-    proc.stdout?.on('data', data => {
-      stdout += data.toString()
-    })
-
-    proc.stderr?.on('data', data => {
-      stderr += data.toString()
-    })
-
-    proc.on('close', code => {
-      resolve({
-        code: code ?? -1,
-        output: stdout + stderr,
-        stderr,
-        stdout,
-      })
-    })
-  })
 }
 
 describe('bINJECT_NODE_PATH environment variable', () => {
