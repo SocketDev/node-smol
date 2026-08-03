@@ -61,21 +61,36 @@ Add `stub_environ_test.c` as a self-re-exec test, which exercises a real
 That single assertion holds on every platform and goes red on Linux the moment
 a stale pointer comes back.
 
-**Do not assert that the stale-`envp` path fails.** Apple's libc keeps the
-aliasing intact in practice, so the bug is latent on darwin and such an
-assertion would be red there for the wrong reason. Running the stale path and
-printing its outcome as informational output is fine; asserting on it is not.
+**Do not assert that the stale-`envp` path fails.** Whether the startup block
+still aliases the live one is the libc's choice, and it is not stable even
+within one platform. Measured on a darwin arm64 machine while building this
+test, the startup pointer was a stack address and the live one was heap, so the
+child exec'd with the startup pointer saw `SMOL_STUB_PATH` unset, the same
+result glibc gives. An assertion either way is a coin flip. Run the stale path
+and print its outcome as informational output; never assert on it.
 
 ### Source-invariant half
 
-The behavioural test stays green on macOS even after a regression, so pair it
-with a portable assertion that reads the three stub sources and requires:
+The behavioural half depends on libc behaviour, so pair it with a portable
+assertion that reads the three stub sources and requires:
 
 - no `execve(` call passes `envp`
 - `elf_stub.c` and `macho_stub.c` each declare `extern char **environ;`
 
-Exempt comment lines, so the explanatory comment naming the old pattern does
-not trip the scan.
+Blank out comments **and string-literal contents** before scanning, keeping
+every other character in place so offsets stay usable.
+`DEBUG_LOG("Calling execve()...\n")` in `elf_stub.c` matches a naive `execve(`
+search and will make the scan red for the wrong reason otherwise. Give the
+scanner a positive control that asserts it still flags
+`execve(output_path, argv, envp)`, so it can never quietly degrade into a
+no-op.
+
+### Portability note
+
+Declare `_XOPEN_SOURCE 700` alongside `_POSIX_C_SOURCE 200809L`. glibc guards
+`realpath()` behind the X/Open extension, so a POSIX-only declaration compiles
+on Apple's libc and fails every Linux runner with an implicit-declaration
+warning.
 
 ## Acceptance
 
