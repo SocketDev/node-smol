@@ -206,9 +206,13 @@ describe.skipIf(!binjectExists)('round-trip injection and extraction', () => {
     it(
       'should inject and extract VFS archive with identical content',
       async () => {
-        // Create test VFS archive
+        // Create test VFS archive. The VFS section always holds gzip data:
+        // inject stores gzip input verbatim but auto-compresses raw input, so
+        // a byte-identical roundtrip requires gzip input.
         const vfsArchive = path.join(testDir, 'test.vfs')
-        const vfsContent = Buffer.from(`TEST_VFS_ARCHIVE_CONTENT_${Date.now()}`)
+        const vfsContent = gzipSync(
+          Buffer.from(`TEST_VFS_ARCHIVE_CONTENT_${Date.now()}`),
+        )
         await fs.writeFile(vfsArchive, vfsContent)
 
         // Create test SEA blob (required for VFS injection)
@@ -260,7 +264,9 @@ describe.skipIf(!binjectExists)('round-trip injection and extraction', () => {
       'should handle VFS with special characters in filename',
       async () => {
         const vfsArchive = path.join(testDir, 'test-vfs_v1.2.3.vfs')
-        const vfsContent = Buffer.from('VFS_CONTENT_WITH_SPECIAL_NAME')
+        // Gzip input so the stored VFS section roundtrips byte-identically
+        // (raw input is auto-compressed on inject).
+        const vfsContent = gzipSync(Buffer.from('VFS_CONTENT_WITH_SPECIAL_NAME'))
         await fs.writeFile(vfsArchive, vfsContent)
 
         // Create test SEA blob (required for VFS injection)
