@@ -169,24 +169,20 @@ export interface VerifyConfig {
 
 /**
  * Verify a downloaded file against the embedded SRI pin in
- * `release-assets.json`.
+ * `release-assets.json`. Embedded checksums are the source of truth. Five
+ * outcomes:
  *
- * Embedded checksums are the source of truth. Five outcomes:
- *
- * 1. Embedded match found and the digest agrees → `{ valid: true }`.
- * 2. Embedded match found but the digest disagrees → `{ valid: false }` with
- *    `actual` + `expected` populated. **Fail loudly.**
- * 3. Embedded match found but the pin isn't a recognized SRI/hex string → `{
- *    valid: false }`. The pin itself is malformed; fix it in
- *    `release-assets.json`.
- * 4. Tool is in `release-assets.json` but `assetName` isn't listed → return `{
- *    valid: false }`. The likely cause is a stale embedded manifest; bump `tag`
- *    + `checksums` in `release-assets.json` and re-run.
- * 5. Tool isn't in `release-assets.json` at all → fail CLOSED: return `{ valid:
- *    false }` with a warning. An untracked tool is an unverified download, so
- *    it must not pass the integrity gate by default. Add the tool to
- *    `release-assets.json`, or pass `allowUnlisted: true` to opt a
- *    deliberately-untracked tool back into `{ valid: true, skipped: true }`.
+ * 1. Match found, digest agrees → `{ valid: true }`.
+ * 2. Match found, digest disagrees → `{ valid: false, actual, expected }`. **Fail
+ *    loudly.**
+ * 3. Match found, pin isn't a recognized SRI/hex string → `{ valid: false }`. The
+ *    pin is malformed; fix it in `release-assets.json`.
+ * 4. Tool is listed but `assetName` isn't → `{ valid: false }`. Likely a stale
+ *    embedded manifest; bump `tag` + `checksums` and re-run.
+ * 5. Tool isn't listed at all → fail CLOSED: `{ valid: false }` with a warning —
+ *    an untracked tool is an unverified download and must not pass the
+ *    integrity gate by default. Add the tool to `release-assets.json`, or pass
+ *    `allowUnlisted: true` to opt back into `{ valid: true, skipped: true }`.
  */
 export async function verifyReleaseChecksum(
   config: VerifyConfig,
