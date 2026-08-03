@@ -24,11 +24,11 @@ like a working build on any path that takes no flags.
 All three stubs under
 `packages/bin-stub-builder/src/socketsecurity/bin-stub-builder/` are correct:
 
-| Stub | How it is correct |
-| --- | --- |
-| `elf_stub.c` | declares `extern char **environ;`, execs with `environ` at both sites, `main` no longer takes `envp` |
-| `macho_stub.c` | same shape, both exec sites |
-| `pe_stub.c` | `CreateProcessA(..., NULL, ...)` passes NULL for `lpEnvironment`, which inherits the current environment; `envp` is explicitly unused |
+| Stub           | How it is correct                                                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `elf_stub.c`   | declares `extern char **environ;`, execs with `environ` at both sites, `main` no longer takes `envp`                                  |
+| `macho_stub.c` | same shape, both exec sites                                                                                                           |
+| `pe_stub.c`    | `CreateProcessA(..., NULL, ...)` passes NULL for `lpEnvironment`, which inherits the current environment; `envp` is explicitly unused |
 
 A search for `SMOL_STUB_PATH` across the repo returns only those three sources,
 a node patch, and `bootstrap.js`. No test refers to it, so a refactor can
@@ -79,7 +79,7 @@ not trip the scan.
 
 ## Acceptance
 
-The test is finished when it has been *seen to fail*. Deliberately point the
+The test is finished when it has been _seen to fail_. Deliberately point the
 source-invariant scan at a stale-`envp` variant, confirm the suite goes red,
 then revert. A regression test nobody has watched fail is not yet a regression
 test.

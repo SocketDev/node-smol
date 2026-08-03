@@ -266,7 +266,9 @@ describe.skipIf(!binjectExists)('round-trip injection and extraction', () => {
         const vfsArchive = path.join(testDir, 'test-vfs_v1.2.3.vfs')
         // Gzip input so the stored VFS section roundtrips byte-identically
         // (raw input is auto-compressed on inject).
-        const vfsContent = gzipSync(Buffer.from('VFS_CONTENT_WITH_SPECIAL_NAME'))
+        const vfsContent = gzipSync(
+          Buffer.from('VFS_CONTENT_WITH_SPECIAL_NAME'),
+        )
         await fs.writeFile(vfsArchive, vfsContent)
 
         // Create test SEA blob (required for VFS injection)

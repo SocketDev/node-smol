@@ -45,7 +45,6 @@ import { createTestFile, execCommand } from './helpers/size-fixtures.mts'
 
 // Companion SEA blob shared by the VFS tests (--vfs requires --sea).
 let vfsSeaBlob: string
-
 beforeAll(async () => {
   if (!binjectExists) {
     logger.warn(`binject not found at ${BINJECT}`)
