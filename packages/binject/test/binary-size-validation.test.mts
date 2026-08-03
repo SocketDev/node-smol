@@ -43,7 +43,10 @@ beforeAll(async () => {
     return
   }
 
-  testDir = path.join(os.tmpdir(), `binject-format-${Date.now()}`)
+  // NOTE: prefix must differ from binary-format-validation.test.mts — the two
+  // files run in parallel workers, and a shared prefix + same-millisecond
+  // Date.now() made them share (and afterAll-delete) each other's dir.
+  testDir = path.join(os.tmpdir(), `binject-size-validation-${Date.now()}`)
   await safeMkdir(testDir)
 })
 

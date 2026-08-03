@@ -46,7 +46,10 @@ beforeAll(async () => {
   }
 
   // Create test directory
-  testDir = path.join(os.tmpdir(), `binject-roundtrip-${Date.now()}`)
+  // NOTE: prefix must differ from roundtrip-extraction.test.mts — the two
+  // files run in parallel workers, and a shared prefix + same-millisecond
+  // Date.now() made them share (and afterAll-delete) each other's dir.
+  testDir = path.join(os.tmpdir(), `binject-roundtrip-cycles-${Date.now()}`)
   await safeMkdir(testDir)
 })
 

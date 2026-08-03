@@ -20,6 +20,7 @@
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L  // For strdup
 #endif
+#define _DARWIN_C_SOURCE         // For F_GETPATH on macOS
 
 #include <stdint.h>
 #include <stdio.h>
@@ -30,12 +31,14 @@
 #ifdef _WIN32
 #include "socketsecurity/build-infra/posix_compat.h"
 #else
+#include <fcntl.h>
 #include <unistd.h>
 #endif
 /* Windows compat shims (PATH_MAX, S_ISREG/S_ISDIR, 64-bit fseek/ftell). */
 #include "socketsecurity/build-infra/file_io_common.h"
 #include "socketsecurity/binject/node_resolve.h"
 #include "socketsecurity/bin-infra/binary_format.h"
+#include "socketsecurity/build-infra/path_utils.h"
 #include "socketsecurity/build-infra/process_exec.h"
 
 /**
@@ -60,6 +63,21 @@ static int validate_node_binary(const char *path) {
     if (_fullpath(resolved_path, path, PATH_MAX) == NULL) {
         return 0;  // Path doesn't exist or can't be resolved
     }
+#elif defined(__APPLE__)
+    // realpath() on a relative path calls getcwd(), whose libc fallback
+    // readdir-scans every ancestor directory when the kernel name cache is
+    // cold — observed at ~40s per call with the cwd inside a /var/folders
+    // temp dir holding 700k+ entries. F_GETPATH asks the kernel for the
+    // canonical path of the opened file directly, with no directory walking.
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) {
+        return 0;  // Path doesn't exist or can't be opened
+    }
+    if (fcntl(fd, F_GETPATH, resolved_path) == -1) {
+        close(fd);
+        return 0;  // Can't resolve canonical path
+    }
+    close(fd);
 #else
     if (realpath(path, resolved_path) == NULL) {
         return 0;  // Path doesn't exist or can't be resolved
@@ -204,6 +222,16 @@ static char* resolve_node_in_path(void) {
     char *dir = strtok_r(path_copy, sep_str, &saveptr);
 
     while (dir != NULL) {
+        // Skip relative PATH entries (".", "./node_modules/.bin", ...):
+        // resolving the node interpreter from them is cwd-dependent — the
+        // traversal hazard this resolver otherwise canonicalizes away — and
+        // canonicalizing them costs a getcwd() walk that stalls for tens of
+        // seconds when the cwd sits inside a huge temp directory.
+        if (!is_absolute_path(dir)) {
+            dir = strtok_r(NULL, sep_str, &saveptr);
+            continue;
+        }
+
         // Build full path: dir/node (or dir\node.exe on Windows)
         size_t dir_len = strlen(dir);
         char *full_path = malloc(dir_len + node_len + 1);
