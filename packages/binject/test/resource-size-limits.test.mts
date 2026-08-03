@@ -161,6 +161,10 @@ describe.skipIf(!binjectExists)('resource size limit enforcement', () => {
         const vfsArchive = path.join(testDir, 'max_size.vfs')
         await createTestFile(vfsArchive, MAX_VFS_SIZE)
 
+        // Create test SEA blob (required for VFS injection)
+        const seaBlob = path.join(testDir, 'max_vfs_sea.blob')
+        await fs.writeFile(seaBlob, Buffer.from('test'))
+
         const outputBinary = path.join(testDir, 'max_vfs_output')
 
         // Should succeed at max size
@@ -170,6 +174,8 @@ describe.skipIf(!binjectExists)('resource size limit enforcement', () => {
           inputBinary,
           '-o',
           outputBinary,
+          '--sea',
+          seaBlob,
           '--vfs',
           vfsArchive,
         ])
