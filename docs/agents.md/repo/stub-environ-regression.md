@@ -1,8 +1,10 @@
 # Stub environ regression
 
 The binary stubs must hand the child process the **live** `environ`, never the
-`envp` captured at `main()`. The C fix for that is in place; nothing pins it.
-This page specifies the missing regression test. Tracked by node-smol#2.
+`envp` captured at `main()`. The C fix is in place and is pinned by two tests
+under `packages/bin-stub-builder/test/`: `stub_environ_test.c` (behavioural,
+run through `c-unit-tests.test.mts`) and `stub-environ-invariants.test.mts`
+(source scan). This page records their design. Tracked by node-smol#2.
 
 ## The bug this guards against
 
@@ -30,9 +32,11 @@ All three stubs under
 | `macho_stub.c` | same shape, both exec sites                                                                                                           |
 | `pe_stub.c`    | `CreateProcessA(..., NULL, ...)` passes NULL for `lpEnvironment`, which inherits the current environment; `envp` is explicitly unused |
 
-A search for `SMOL_STUB_PATH` across the repo returns only those three sources,
-a node patch, and `bootstrap.js`. No test refers to it, so a refactor can
-reintroduce the stale pointer with every suite still green.
+Before the tests below existed, a search for `SMOL_STUB_PATH` across the repo
+returned only those three sources, a node patch, and `bootstrap.js` — no test
+referred to it, so a refactor could reintroduce the stale pointer with every
+suite still green. The two tests in `packages/bin-stub-builder/test/` close
+that hole.
 
 ## Test design
 
@@ -48,8 +52,8 @@ Extend the existing C harness rather than adding a new framework:
 
 ### Behavioural half
 
-Add `stub_environ_test.c` as a self-re-exec test, which exercises a real
-`execve` without needing Docker:
+`stub_environ_test.c` is a self-re-exec test, which exercises a real `execve`
+without needing Docker:
 
 1. Invoked with a child flag, the program prints `getenv("SMOL_STUB_PATH")` or
    a sentinel, then exits 0.
@@ -94,7 +98,9 @@ warning.
 
 ## Acceptance
 
-The test is finished when it has been _seen to fail_. Deliberately point the
-source-invariant scan at a stale-`envp` variant, confirm the suite goes red,
-then revert. A regression test nobody has watched fail is not yet a regression
-test.
+A regression test nobody has watched fail is not yet a regression test, so
+both halves were deliberately broken and watched go red before this page
+stopped calling the test missing. Reverting one `elf_stub.c` exec site to
+`envp` turned two scan cases red by name; pointing the behavioural test's
+asserted exec at the startup pointer made the child report
+`SMOL_STUB_PATH=<unset>` on darwin arm64. Both edits were then restored.
