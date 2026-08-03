@@ -2,6 +2,7 @@
 #
 # Usage:
 #   make                       - Build and run tests (defaults to BUILD_MODE=dev)
+#   make build                 - Build the test binaries without running them
 #   make BUILD_MODE=prod test  - Run in prod mode
 #   make clean                 - Clean build artifacts
 
@@ -17,18 +18,25 @@ PLATFORM_ARCH ?= $(PLATFORM)-$(ARCH)
 OUT_DIR = build/$(BUILD_MODE)/$(PLATFORM_ARCH)/out
 
 # Test targets.
-TESTS = update_config_test
+TESTS = stub_environ_test update_config_test
 
-.PHONY: all test clean
+.PHONY: all build test clean
 
 all: test
 
-test: $(TESTS:%=$(OUT_DIR)/%)
+# Compile only. The vitest wrapper builds with this target and runs each
+# binary itself, so a failing case is reported per binary.
+build: $(TESTS:%=$(OUT_DIR)/%)
+
+test: build
 	@echo ""
 	@echo "Running tests..."
 	@for test in $(TESTS:%=$(OUT_DIR)/%); do \
 		./$$test || exit 1; \
 	done
+
+$(OUT_DIR)/stub_environ_test: stub_environ_test.c | $(OUT_DIR)
+	$(CC) $(CFLAGS) -o $@ $<
 
 $(OUT_DIR)/update_config_test: update_config_test.c | $(OUT_DIR)
 	$(CC) $(CFLAGS) -o $@ $<
