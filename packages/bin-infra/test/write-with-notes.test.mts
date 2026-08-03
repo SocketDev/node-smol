@@ -69,6 +69,12 @@ export async function execCommand(
     // @socketsecurity/lib-stable/process/spawn/child returns a Promise with .process property
     const proc = spawnPromise.process
 
+    // The enriched spawn Promise rejects on non-zero exit or a signal (e.g.
+    // the SIGTERM our own timeout sends). This helper reports exit state via
+    // the listener-based promise below, so swallow the rejection to keep it
+    // from surfacing as a vitest unhandled error.
+    void spawnPromise.catch(() => undefined)
+
     let stdout = ''
     let stderr = ''
 
