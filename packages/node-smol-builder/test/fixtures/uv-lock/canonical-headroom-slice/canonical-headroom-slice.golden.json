@@ -1,0 +1,115 @@
+{
+  "type": "lockfile",
+  "lockVersion": "1",
+  "ecosystem": "pypi",
+  "packages": [
+    {
+      "name": "aiohappyeyeballs",
+      "version": "2.6.2",
+      "resolved": "https://pypi.org/simple",
+      "integrity": "sha256:e202810ee718bd01fc6ef49e8ea53d023d5cb6b581076d7925aa499fa55dbe64",
+      "ecosystem": "pypi",
+      "depType": "prod",
+      "isDev": false,
+      "isOptional": false,
+      "isPeer": false,
+      "isBundled": false,
+      "dependencies": []
+    },
+    {
+      "name": "aiohttp",
+      "version": "3.14.1",
+      "resolved": "https://pypi.org/simple",
+      "integrity": "sha256:307f2cff90a764d329e77040603fa032db89c5c24fdad50c4c15334cba744035",
+      "ecosystem": "pypi",
+      "depType": "prod",
+      "isDev": false,
+      "isOptional": false,
+      "isPeer": false,
+      "isBundled": false,
+      "dependencies": [
+        "aiohappyeyeballs",
+        "aiosignal",
+        "async-timeout",
+        "attrs",
+        "frozenlist",
+        "multidict",
+        "propcache",
+        "typing-extensions",
+        "yarl"
+      ]
+    },
+    {
+      "name": "h2",
+      "version": "4.3.0",
+      "resolved": "https://pypi.org/simple",
+      "integrity": "sha256:6c59efe4323fa18b47a632221a1888bd7fde6249819beda254aeca909f221bf1",
+      "ecosystem": "pypi",
+      "depType": "optional",
+      "isDev": false,
+      "isOptional": true,
+      "isPeer": false,
+      "isBundled": false,
+      "dependencies": [
+        "hpack",
+        "hyperframe"
+      ]
+    },
+    {
+      "name": "headroom-ai",
+      "version": "0.30.0",
+      "resolved": "https://pypi.org/simple",
+      "integrity": "sha256:ede80f5a81f4d438301048a2123b266f1b2705d361018b172ad9f2487aca6c95",
+      "ecosystem": "pypi",
+      "depType": "prod",
+      "isDev": false,
+      "isOptional": false,
+      "isPeer": false,
+      "isBundled": false,
+      "dependencies": [
+        "click",
+        "rich",
+        "tomli"
+      ]
+    },
+    {
+      "name": "httpx",
+      "version": "0.28.1",
+      "resolved": "https://pypi.org/simple",
+      "integrity": "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc",
+      "ecosystem": "pypi",
+      "depType": "optional",
+      "isDev": false,
+      "isOptional": true,
+      "isPeer": false,
+      "isBundled": false,
+      "dependencies": [
+        "anyio",
+        "certifi",
+        "httpcore",
+        "idna"
+      ]
+    },
+    {
+      "name": "socket-headroom-pin",
+      "version": "0.0.0",
+      "ecosystem": "pypi",
+      "depType": "prod",
+      "isDev": false,
+      "isOptional": false,
+      "isPeer": false,
+      "isBundled": false,
+      "dependencies": [
+        "headroom-ai"
+      ]
+    }
+  ],
+  "_index": {
+    "aiohappyeyeballs": 0,
+    "aiohttp": 1,
+    "h2": 2,
+    "headroom-ai": 3,
+    "httpx": 4,
+    "socket-headroom-pin": 5
+  }
+}

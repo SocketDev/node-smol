@@ -30,6 +30,7 @@ import { describe, expect, it } from 'vitest'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const FIXTURES_DIR = join(__dirname, 'fixtures/sdxgen-bug-regressions')
+const UV_FIXTURES_DIR = join(__dirname, 'fixtures/uv-lock')
 const LIVE_VERIFIER = join(__dirname, 'smol-manifest-binding-live.mjs')
 const REAL_FIXTURE_VERIFIER = join(__dirname, 'smol-manifest-real-fixture.mjs')
 
@@ -92,6 +93,14 @@ const EXPECTED_FIXTURE_NAMES = [
   'cargo-patch-unused-no-leak',
 ]
 
+// uv-lock fixtures (fixtures/uv-lock/, tracked). Kept in lock-step
+// with UV_FIXTURES in smol-manifest-binding-live.mjs, where every
+// entry is `enabled: false` until the next smol binary build: a
+// binary built before parser_uv.cc landed throws ERR_OUT_OF_RANGE
+// for the pypi/uv enum pair, so the live lane reports them as SKIP.
+// Flip both sides together when a fresh binary exists.
+const EXPECTED_UV_FIXTURE_NAMES = ['canonical-headroom-slice']
+
 describe('smol_manifest_native binding — sdxgen-bug-regressions equivalence', () => {
   // The fixture register cross-check runs even without a smol
   // binary — catches "added a fixture dir but forgot to wire it
@@ -103,6 +112,14 @@ describe('smol_manifest_native binding — sdxgen-bug-regressions equivalence', 
       .map(e => e.name)
       .toSorted()
     expect(onDisk).toEqual([...EXPECTED_FIXTURE_NAMES].toSorted())
+  })
+
+  it('every uv-lock fixture directory is wired into EXPECTED_UV_FIXTURE_NAMES', () => {
+    const onDisk = readdirSync(UV_FIXTURES_DIR, { withFileTypes: true })
+      .filter(e => e.isDirectory())
+      .map(e => e.name)
+      .toSorted()
+    expect(onDisk).toEqual([...EXPECTED_UV_FIXTURE_NAMES].toSorted())
   })
 
   it.skipIf(!smolBinary)('live binding verifies all fixtures PASS', () => {
@@ -118,8 +135,19 @@ describe('smol_manifest_native binding — sdxgen-bug-regressions equivalence', 
     }
     // Confirm zero failures in the trailing summary.
     expect(output).toMatch(/\b0 fail\b/)
-    // Confirm zero skips (all parsers ported).
-    expect(output).toMatch(/\b0 skip\b/)
+    // uv fixtures are the only sanctioned skips — each is registered
+    // enabled:false pending the next smol binary build. Everything
+    // else must run.
+    for (
+      let i = 0, { length } = EXPECTED_UV_FIXTURE_NAMES;
+      i < length;
+      i += 1
+    ) {
+      expect(output).toContain(`SKIP  ${EXPECTED_UV_FIXTURE_NAMES[i]}`)
+    }
+    expect(output).toMatch(
+      new RegExp(String.raw`\b${EXPECTED_UV_FIXTURE_NAMES.length} skip\b`),
+    )
   })
 
   it.skipIf(!smolBinary)(

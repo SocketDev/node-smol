@@ -23,6 +23,7 @@ import {
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const FIXTURES_DIR = path.join(__dirname, 'fixtures/sdxgen-bug-regressions')
+const UV_FIXTURES_DIR = path.join(__dirname, 'fixtures/uv-lock')
 
 describe('smol-manifest query and analysis', () => {
   describe('getPackage() - O(1) lookup', () => {
@@ -386,6 +387,49 @@ importers:
     for (let i = 0, { length } = FIXTURES; i < length; i += 1) {
       const fixture = FIXTURES[i]
       it.todo(`${fixture.dir}: smol parseLockfile output matches expected.json`)
+    }
+  })
+
+  describe('uv-lock fixtures', () => {
+    // Kept in lock-step with UV_FIXTURES in
+    // smol-manifest-binding-live.mjs and EXPECTED_UV_FIXTURE_NAMES in
+    // smol-manifest-native.test.mts.
+    const UV_FIXTURES = [{ dir: 'canonical-headroom-slice' }]
+
+    it('every uv-lock fixture directory is wired into the table', () => {
+      const onDisk = readdirSync(UV_FIXTURES_DIR, { withFileTypes: true })
+        .filter(e => e.isDirectory())
+        .map(e => e.name)
+        .toSorted()
+      const inTable = UV_FIXTURES.map(f => f.dir).toSorted()
+      expect(onDisk).toEqual(inTable)
+    })
+
+    it('every uv-lock fixture contains input.uv.lock + <case>.golden.json + README.md', () => {
+      for (let i = 0, { length } = UV_FIXTURES; i < length; i += 1) {
+        const f = UV_FIXTURES[i]
+        const dirEntries = readdirSync(path.join(UV_FIXTURES_DIR, f.dir))
+        expect(dirEntries).toContain('input.uv.lock')
+        expect(dirEntries).toContain(`${f.dir}.golden.json`)
+        expect(dirEntries).toContain('README.md')
+        const golden = JSON.parse(
+          readFileSync(
+            path.join(UV_FIXTURES_DIR, f.dir, `${f.dir}.golden.json`),
+            'utf8',
+          ),
+        )
+        expect(golden).toHaveProperty('type', 'lockfile')
+        expect(golden).toHaveProperty('ecosystem', 'pypi')
+        expect(golden).toHaveProperty('packages')
+        expect(Array.isArray(golden.packages)).toBe(true)
+      }
+    })
+
+    for (let i = 0, { length } = UV_FIXTURES; i < length; i += 1) {
+      const fixture = UV_FIXTURES[i]
+      it.todo(
+        `${fixture.dir}: smol parseLockfile output matches ${fixture.dir}.golden.json (rides the next smol binary build)`,
+      )
     }
   })
 })

@@ -1,8 +1,8 @@
 /**
  * Live smol_manifest_native binding verification.
  *
- * Runs the sdxgen-bug-regressions fixtures through the actual C++
- * binding inside the built smol Node binary. Unlike
+ * Runs the sdxgen-bug-regressions + uv-lock fixtures through the
+ * actual C++ binding inside the built smol Node binary. Unlike
  * test/smol-manifest-native.test.mts (which is vitest-driven and
  * skipped on stock Node where internalBinding is unavailable), this
  * script invokes node:smol-manifest directly and exits non-zero on
@@ -31,10 +31,11 @@ const logger = getDefaultLogger()
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURES_DIR = path.join(__dirname, 'fixtures/sdxgen-bug-regressions')
+const UV_FIXTURES_DIR = path.join(__dirname, 'fixtures/uv-lock')
 
-// Fixture register — keep in sync with smol-manifest-native.test.mts.
-// `enabled: false` fixtures are pending later parser-implementation
-// commits (steps 5-7 for yarn / npm / cargo).
+// Fixture registers — keep in sync with smol-manifest-native.test.mts.
+// `enabled: false` fixtures are registered but not exercised yet —
+// each names the reason in its row.
 const FIXTURES = [
   {
     dir: 'fix1-npm-v1-alias',
@@ -94,39 +95,74 @@ const FIXTURES = [
   },
 ]
 
-// Cross-check on-disk dirs match the table.
-{
-  const onDisk = readdirSync(FIXTURES_DIR, { withFileTypes: true })
+// uv.lock fixtures live in their own tracked dir (fixtures/uv-lock/,
+// re-included in the root .gitignore) with *.golden.json reference
+// outputs. enabled flips to true on the next smol binary build — a
+// binary built before parser_uv.cc landed throws ERR_OUT_OF_RANGE
+// for the pypi/uv enum pair.
+const UV_FIXTURES = [
+  {
+    dir: 'canonical-headroom-slice',
+    input: 'input.uv.lock',
+    golden: 'canonical-headroom-slice.golden.json',
+    eco: 'pypi',
+    fmt: 'uv',
+    enabled: false,
+  },
+]
+
+// Cross-check on-disk dirs match each table.
+function assertRegisterMatchesDisk(dir, table, label) {
+  const onDisk = readdirSync(dir, { withFileTypes: true })
     .filter(e => e.isDirectory())
     .map(e => e.name)
     .toSorted()
-  const inTable = FIXTURES.map(f => f.dir).toSorted()
+  const inTable = table.map(f => f.dir).toSorted()
   if (JSON.stringify(onDisk) !== JSON.stringify(inTable)) {
-    logger.fail('FIXTURE-TABLE-MISMATCH')
+    logger.fail(`FIXTURE-TABLE-MISMATCH (${label})`)
     logger.fail('  on disk:', onDisk)
     logger.fail('  in table:', inTable)
     process.exit(1)
   }
 }
+assertRegisterMatchesDisk(FIXTURES_DIR, FIXTURES, 'sdxgen-bug-regressions')
+assertRegisterMatchesDisk(UV_FIXTURES_DIR, UV_FIXTURES, 'uv-lock')
+
+// Flatten both registers into one run list. sdxgen fixtures predate
+// the *.golden.json naming guard and keep their expected.json files;
+// new fixture sets carry an explicit `golden` filename.
+const RUN_LIST = [
+  ...FIXTURES.map(f => ({
+    ...f,
+    baseDir: FIXTURES_DIR,
+    golden: 'expected.json',
+  })),
+  ...UV_FIXTURES.map(f => ({ ...f, baseDir: UV_FIXTURES_DIR })),
+]
 
 let pass = 0
 let fail = 0
 let skip = 0
 const failures = []
 
-for (let i = 0, { length } = FIXTURES; i < length; i += 1) {
-  const fixture = FIXTURES[i]
+for (let i = 0, { length } = RUN_LIST; i < length; i += 1) {
+  const fixture = RUN_LIST[i]
   if (!fixture.enabled) {
-    logger.log(`SKIP  ${fixture.dir} (parser not yet ported)`)
+    logger.log(
+      `SKIP  ${fixture.dir} (disabled until the next smol binary build)`,
+    )
     skip += 1
     continue
   }
   const content = readFileSync(
-    path.join(FIXTURES_DIR, fixture.dir, fixture.input),
+    path.join(fixture.baseDir, fixture.dir, fixture.input),
     'utf8',
   )
   const expected = JSON.parse(
-    readFileSync(path.join(FIXTURES_DIR, fixture.dir, 'expected.json'), 'utf8'),
+    readFileSync(
+      path.join(fixture.baseDir, fixture.dir, fixture.golden),
+      'utf8',
+    ),
   )
   const actual = parseLockfile(content, fixture.eco, fixture.fmt)
   const ja = JSON.parse(JSON.stringify(actual))
