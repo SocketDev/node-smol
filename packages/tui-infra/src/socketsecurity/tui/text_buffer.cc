@@ -871,4 +871,21 @@ std::vector<std::vector<SpanRun>> TextBuffer::BuildLineSpans() const {
   return out;
 }
 
+std::vector<std::string> TextBuffer::ContentLines() const {
+  // text_buffer.rs:388 content_lines: from_utf8_lossy(content).split('\n').
+  // split('\n') always yields at least one element, so empty content -> [""].
+  // Each segment keeps its raw bytes (the measurement kernel decodes scalars
+  // lossily downstream, matching from_utf8_lossy for well-formed input).
+  std::vector<std::string> lines;
+  size_t start = 0;
+  for (size_t i = 0; i <= content_.size(); ++i) {
+    if (i == content_.size() || content_[i] == static_cast<uint8_t>('\n')) {
+      lines.emplace_back(reinterpret_cast<const char*>(content_.data()) + start,
+                         i - start);
+      start = i + 1;
+    }
+  }
+  return lines;
+}
+
 }  // namespace tui

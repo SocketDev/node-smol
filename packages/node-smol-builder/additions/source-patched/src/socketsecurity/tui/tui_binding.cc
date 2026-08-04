@@ -113,6 +113,8 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace node {
 namespace socketsecurity {
@@ -2642,6 +2644,110 @@ static void TextBufferViewSetTabIndicatorColor(
   ti::TbvSetTabIndicatorColor(handle, ReadOptionalRgba(args[1]));
 }
 
+// The BufferResolver the S6 measurement kernel reads (text_view.hpp): resolve
+// a buffer handle in THIS binding's TextBuffer registry to its content lines,
+// per-line widths, and tab width — the C++ seam for stuie's cross-module
+// text_buffer::content_lines / line_widths / tab_width_cols calls. A
+// stale/missing buffer yields the documented per-helper fallbacks
+// (content_lines empty, line_widths == {0}, tab_width_cols == kDefaultTabWidth),
+// so a view over a destroyed buffer measures as (1 line, 0 cols) / 0 vlines
+// exactly like stuie.
+static ti::BufferData ResolveBufferData(uint32_t tb) {
+  ti::TextBuffer* buffer = LookupTextBuffer(tb);
+  if (buffer == nullptr) {
+    return ti::BufferData{{}, {0}, ti::kDefaultTabWidth};
+  }
+  std::vector<std::string> lines = buffer->ContentLines();
+  const uint32_t tab = buffer->TabWidth();
+  std::vector<uint32_t> widths = ti::LineWidths(lines, tab);
+  return ti::BufferData{std::move(lines), std::move(widths), tab};
+}
+
+// Resolve args[1] as a Uint32Array to a writable u32* + a capacity-clamped
+// max-entry count (2 header + 4 per entry must fit), so a mis-sized array can
+// never drive an out-of-bounds write into the backing store. Returns false and
+// leaves `*out`/`*max_entries` untouched when args[1] is not a Uint32Array.
+static bool ResolveU32OutBuffer(const FunctionCallbackInfo<Value>& args,
+                                Local<Context> context, uint32_t** out,
+                                uint32_t* max_entries) {
+  if (!args[1]->IsUint32Array()) {
+    return false;
+  }
+  Local<Uint32Array> arr = args[1].As<Uint32Array>();
+  auto store = arr->Buffer()->GetBackingStore();
+  *out = reinterpret_cast<uint32_t*>(
+      static_cast<uint8_t*>(store->Data()) + arr->ByteOffset());
+  uint32_t requested = args[2]->Uint32Value(context).FromMaybe(0);
+  const uint32_t cap = arr->Length();
+  const uint32_t cap_entries = cap >= 2 ? (cap - 2) / 4 : 0;
+  *max_entries = requested < cap_entries ? requested : cap_entries;
+  return true;
+}
+
+// textBufferViewGetVirtualLineCount(handle) -> u32
+// stuie cabi.rs:1474 -> text_view.rs:1046 tbv_virtual_line_count; stale -> 0.
+static void TextBufferViewGetVirtualLineCount(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, ti::TbvVirtualLineCount(handle, ResolveBufferData)));
+}
+
+// textBufferViewMeasureForDimensions(handle, width, height) -> packed u64
+// (lineCount << 32) | widthColsMax, returned as a JS Number (exact for the
+// realistic integer range). stuie cabi.rs:1479 -> text_view.rs:1052
+// tbv_measure; a stale view -> (1 << 32) | 0.
+static void TextBufferViewMeasureForDimensions(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t width = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t height = args[2]->Uint32Value(context).FromMaybe(0);
+  const uint64_t packed =
+      ti::TbvMeasure(handle, width, height, ResolveBufferData);
+  args.GetReturnValue().Set(Number::New(isolate, static_cast<double>(packed)));
+}
+
+// textBufferViewGetLineInfo(handle, outU32, maxEntries) -> count
+// Serializes the VIEWPORT-SLICED virtual lines into the u32 out-buffer.
+// stuie cabi.rs:1492 -> text_view.rs:1073 tbv_get_line_info.
+static void TextBufferViewGetLineInfo(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t* out = nullptr;
+  uint32_t max_entries = 0;
+  if (!ResolveU32OutBuffer(args, context, &out, &max_entries)) {
+    args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, 0));
+    return;
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, ti::TbvGetLineInfo(handle, out, max_entries, ResolveBufferData)));
+}
+
+// textBufferViewGetLogicalLineInfo(handle, outU32, maxEntries) -> count
+// Serializes the FULL (un-sliced) virtual lines; widthColsMax = the buffer's
+// max LOGICAL line width. stuie cabi.rs:1508 -> text_view.rs:1095
+// tbv_get_logical_line_info.
+static void TextBufferViewGetLogicalLineInfo(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t* out = nullptr;
+  uint32_t max_entries = 0;
+  if (!ResolveU32OutBuffer(args, context, &out, &max_entries)) {
+    args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, 0));
+    return;
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate,
+      ti::TbvGetLogicalLineInfo(handle, out, max_entries, ResolveBufferData)));
+}
+
 static void Initialize(Local<Object> target,
                        Local<Value> /* unused */,
                        Local<Context> context,
@@ -2834,6 +2940,14 @@ static void Initialize(Local<Object> target,
             TextBufferViewSetTabIndicator);
   SetMethod(context, target, "textBufferViewSetTabIndicatorColor",
             TextBufferViewSetTabIndicatorColor);
+  SetMethod(context, target, "textBufferViewGetVirtualLineCount",
+            TextBufferViewGetVirtualLineCount);
+  SetMethod(context, target, "textBufferViewMeasureForDimensions",
+            TextBufferViewMeasureForDimensions);
+  SetMethod(context, target, "textBufferViewGetLineInfo",
+            TextBufferViewGetLineInfo);
+  SetMethod(context, target, "textBufferViewGetLogicalLineInfo",
+            TextBufferViewGetLogicalLineInfo);
 
   SetFastMethodNoSideEffect(context, target, "yogaCalculateLayout",
                             YogaCalculateLayout,
@@ -3102,6 +3216,10 @@ static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(TextBufferViewSetTruncate);
   registry->Register(TextBufferViewSetTabIndicator);
   registry->Register(TextBufferViewSetTabIndicatorColor);
+  registry->Register(TextBufferViewGetVirtualLineCount);
+  registry->Register(TextBufferViewMeasureForDimensions);
+  registry->Register(TextBufferViewGetLineInfo);
+  registry->Register(TextBufferViewGetLogicalLineInfo);
   registry->Register(RendererDrawBox);
   registry->Register(fast_renderer_draw_box);
   registry->Register(RendererDrawTextWrapped);

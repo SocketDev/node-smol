@@ -30,7 +30,10 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <optional>
+#include <string>
+#include <vector>
 
 namespace tui {
 
@@ -168,6 +171,95 @@ void TbvSetTruncate(uint32_t handle, bool truncate);
 void TbvSetTabIndicator(uint32_t handle, uint32_t code_point);
 void TbvSetTabIndicatorColor(uint32_t handle,
                              std::optional<std::array<uint16_t, 4>> color);
+
+// ─────────────────────────────────────────────────────────────────────────
+// Virtual-line layout / measurement kernel (slice S6)
+//
+// Port of the wrapping kernel stuie text_view.rs drives:
+// calculate_virtual_lines (VLine / VirtualLines / WrapCursor), measure_lines,
+// and serialize_line_info, plus the four public entry points
+// (tbv_virtual_line_count / tbv_measure / tbv_get_line_info /
+// tbv_get_logical_line_info). Cell widths use stuie's own char_width/is_wide
+// ranges (buffer.rs:42-70) rather than the Unicode-17 width tables the rest of
+// node-smol uses, so the wrap results are byte-identical to stuie's fixtures.
+// ─────────────────────────────────────────────────────────────────────────
+
+// A single virtual (visual) line — the wrapping-aware unit
+// calculateVirtualLinesGeneric materializes. text_view.rs:53-68 VLine.
+struct VLine {
+  uint32_t col_offset = 0;           // global newline-inclusive column offset
+  uint32_t width_cols = 0;           // display width of this virtual line
+  uint32_t source_line = 0;          // logical line this vline slices
+  uint32_t source_col_offset = 0;    // start column within the logical line
+  uint32_t wrap_index = 0;           // wrap ordinal within the logical line
+  bool is_truncated = false;         // apply_truncation state (draw path)
+  uint32_t ellipsis_pos = 0;         // column where the "..." begins
+  uint32_t truncation_suffix_start = 0;  // source column the suffix resumes at
+};
+
+// The materialized virtual-line model: the per-vline records plus the
+// per-logical-line (first_vline, vline_count) index. text_view.rs:94-98
+// VirtualLines.
+struct VirtualLines {
+  std::vector<VLine> vlines;
+  std::vector<uint32_t> first_vline;
+  std::vector<uint32_t> vline_counts;
+};
+
+// The buffer inputs the kernel reads for a given buffer handle, mirroring
+// stuie's text_buffer::content_lines / line_widths / tab_width_cols. The
+// binding fills this from tui::TextBuffer; a stale/missing buffer yields the
+// documented per-helper fallbacks (content_lines empty, line_widths == {0},
+// tab_width_cols == kDefaultTabWidth).
+struct BufferData {
+  std::vector<std::string> content_lines;  // text_buffer.rs:388 content_lines
+  std::vector<uint32_t> line_widths;       // text_buffer.rs:480 line_widths
+  uint32_t tab_width_cols = 0;             // text_buffer.rs:368 tab_width_cols
+};
+
+// Resolve a buffer handle to its BufferData. The binding backs this with its
+// TextBuffer registry; the pure-C++ harness backs it with a fixture map. Called
+// with the view's active_tb, exactly where stuie calls text_buffer::* helpers.
+using BufferResolver = std::function<BufferData(uint32_t tb)>;
+
+// Per-logical-line display-column widths for `content_lines` under `tab_width`,
+// using the same cell-width model as the wrap kernel (tabs expand, clusters
+// fold). Faithful to text_buffer.rs:480/899 line_widths / display_length_tabs.
+std::vector<uint32_t> LineWidths(const std::vector<std::string>& content_lines,
+                                 uint32_t tab_width);
+
+// Port of text_view.rs:228-348 calculate_virtual_lines. Produces the per-vline
+// model for wrap modes none(0)/char(1)/word(2). `wrap_width` is nullopt (or a
+// 0/none-mode value) to disable wrapping (one vline per logical line).
+VirtualLines CalculateVirtualLines(
+    const std::vector<std::string>& content_lines, uint32_t tab_width,
+    uint8_t wrap_mode, std::optional<uint32_t> wrap_width,
+    uint32_t first_line_offset);
+
+// ── Public handle entry points (registry lookup + kernel; stale-safe) ──
+
+// tbv_virtual_line_count (text_view.rs:1046-1048): number of virtual lines for
+// the view's wrap config. A stale/wrong-kind view handle returns 0.
+uint32_t TbvVirtualLineCount(uint32_t handle, const BufferResolver& resolve);
+
+// tbv_measure (text_view.rs:1052-1066): pack (line_count << 32) | width_cols_max
+// for the given measure dimensions. A stale view returns (1 << 32) | 0.
+uint64_t TbvMeasure(uint32_t handle, uint32_t width, uint32_t height,
+                    const BufferResolver& resolve);
+
+// tbv_get_line_info (text_view.rs:1073-1088): serialize the VIEWPORT-SLICED
+// virtual lines into the u32 out-buffer [count, widthColsMax, startCols[],
+// widthCols[], sources[], wraps[]] (widthColsMax = max over the slice). Returns
+// the entry count written. A null `out` or stale view writes nothing.
+uint32_t TbvGetLineInfo(uint32_t handle, uint32_t* out, uint32_t max_entries,
+                        const BufferResolver& resolve);
+
+// tbv_get_logical_line_info (text_view.rs:1095-1104): same wire layout but the
+// FULL (un-sliced) virtual-line arrays, with widthColsMax = the buffer's max
+// LOGICAL line width.
+uint32_t TbvGetLogicalLineInfo(uint32_t handle, uint32_t* out,
+                               uint32_t max_entries,
+                               const BufferResolver& resolve);
 
 }  // namespace tui
 

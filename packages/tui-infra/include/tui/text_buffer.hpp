@@ -378,6 +378,16 @@ class TextBuffer {
   // build_line_spans.
   std::vector<std::vector<SpanRun>> BuildLineSpans() const;
 
+  // ── Virtual-line measurement inputs (S6) ──
+
+  // Logical lines: the content bytes split on '\n', each segment kept as its
+  // raw UTF-8 bytes. An empty buffer reports one empty line (split always
+  // yields at least one element), so the vector length equals LineCount().
+  // Faithful port of text_buffer.rs:388 content_lines (from_utf8_lossy +
+  // split('\n')); the kernel that consumes these decodes each line's scalars
+  // lossily, so raw well-formed bytes here are equivalent to the Rust strings.
+  std::vector<std::string> ContentLines() const;
+
  private:
   // Raw content bytes (malformed UTF-8 preserved verbatim). text_buffer.rs:92.
   std::vector<uint8_t> content_;

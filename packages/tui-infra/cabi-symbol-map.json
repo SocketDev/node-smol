@@ -1,5 +1,5 @@
 {
-  "pendingCeiling": 136,
+  "pendingCeiling": 132,
   "rows": [
     {
       "symbol": "attachNativeSpanFeed",
@@ -1026,13 +1026,19 @@
     },
     {
       "symbol": "textBufferViewGetLineInfo",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferViewGetLineInfo"
+      }
     },
     {
       "symbol": "textBufferViewGetLogicalLineInfo",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferViewGetLogicalLineInfo"
+      }
     },
     {
       "symbol": "textBufferViewGetPlainTextBytes",
@@ -1051,8 +1057,11 @@
     },
     {
       "symbol": "textBufferViewGetVirtualLineCount",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferViewGetVirtualLineCount"
+      }
     },
     {
       "symbol": "textBufferViewIsValid",
@@ -1064,8 +1073,11 @@
     },
     {
       "symbol": "textBufferViewMeasureForDimensions",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferViewMeasureForDimensions"
+      }
     },
     {
       "symbol": "textBufferViewResetLocalSelection",

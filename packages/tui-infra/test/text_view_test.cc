@@ -24,6 +24,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <optional>
+#include <string>
+#include <vector>
 
 namespace {
 
@@ -41,6 +43,81 @@ void ExpectEq(uint32_t got, uint32_t want, const char* label) {
     std::fprintf(stderr, "FAIL %s (got %u, want %u)\n", label, got, want);
     ++failures;
   }
+}
+
+void ExpectEqU64(uint64_t got, uint64_t want, const char* label) {
+  if (got != want) {
+    std::fprintf(stderr, "FAIL %s (got %llu, want %llu)\n", label,
+                 static_cast<unsigned long long>(got),
+                 static_cast<unsigned long long>(want));
+    ++failures;
+  }
+}
+
+void ExpectEqVec(const std::vector<uint32_t>& got,
+                 const std::vector<uint32_t>& want, const char* label) {
+  bool ok = got.size() == want.size();
+  for (size_t i = 0; ok && i < got.size(); ++i) {
+    ok = got[i] == want[i];
+  }
+  if (!ok) {
+    std::fprintf(stderr, "FAIL %s (got [", label);
+    for (size_t i = 0; i < got.size(); ++i) {
+      std::fprintf(stderr, "%s%u", i ? "," : "", got[i]);
+    }
+    std::fprintf(stderr, "], want [");
+    for (size_t i = 0; i < want.size(); ++i) {
+      std::fprintf(stderr, "%s%u", i ? "," : "", want[i]);
+    }
+    std::fprintf(stderr, "])\n");
+    ++failures;
+  }
+}
+
+// stuie's text_view.rs #[test] helper `set_text` + text_buffer::content_lines:
+// build the logical-line vector the wrap kernel consumes.
+std::vector<std::string> LinesOf(const std::string& content) {
+  tui::TextBuffer b;
+  b.SetContent(reinterpret_cast<const uint8_t*>(content.data()),
+               content.size());
+  return b.ContentLines();
+}
+
+// A BufferResolver over one fixed content (the harness has no binding-side
+// TextBuffer registry). Mirrors the binding resolver: ContentLines + LineWidths
+// + tab width. Every fixture drives a single buffer, so the handle is ignored.
+tui::BufferResolver ResolverFor(const std::string& content,
+                                uint32_t tab_width = tui::kDefaultTabWidth) {
+  return [content, tab_width](uint32_t /*tb*/) -> tui::BufferData {
+    std::vector<std::string> lines = LinesOf(content);
+    std::vector<uint32_t> widths = tui::LineWidths(lines, tab_width);
+    return tui::BufferData{std::move(lines), std::move(widths), tab_width};
+  };
+}
+
+// Column widths of every virtual line, for the vector-equality fixtures.
+std::vector<uint32_t> WidthsOf(const tui::VirtualLines& vl) {
+  std::vector<uint32_t> out;
+  for (const tui::VLine& v : vl.vlines) {
+    out.push_back(v.width_cols);
+  }
+  return out;
+}
+
+std::vector<uint32_t> SourceLinesOf(const tui::VirtualLines& vl) {
+  std::vector<uint32_t> out;
+  for (const tui::VLine& v : vl.vlines) {
+    out.push_back(v.source_line);
+  }
+  return out;
+}
+
+std::vector<uint32_t> SourceColsOf(const tui::VirtualLines& vl) {
+  std::vector<uint32_t> out;
+  for (const tui::VLine& v : vl.vlines) {
+    out.push_back(v.source_col_offset);
+  }
+  return out;
 }
 
 }  // namespace
@@ -198,6 +275,220 @@ int main() {
     TbvSetTabIndicatorColor(stale, std::array<uint16_t, 4>{1, 2, 3, 4});
     DestroyOwnedChildren(handles::Tag(handles::kKindTextBuffer, 424242));
     Expect(!TbvIsValid(stale), "stale view handle still invalid after no-ops");
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Slice S6: virtual-line layout / measurement kernel.
+  // Every expected value below is lifted DIRECTLY from stuie's own #[test]
+  // fixtures in crates/stuie-cabi/src/text_view.rs (cited per block).
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // TextBuffer::ContentLines split semantics (from_utf8_lossy + split('\n')).
+  {
+    ExpectEqVec({static_cast<uint32_t>(LinesOf("").size())}, {1},
+                "content_lines: empty buffer is one line");
+    Expect(LinesOf("").at(0).empty(), "content_lines: empty buffer -> [\"\"]");
+    const std::vector<std::string> abc = LinesOf("a\nb\n");
+    Expect(abc.size() == 3 && abc[0] == "a" && abc[1] == "b" && abc[2].empty(),
+           "content_lines: trailing newline yields a final empty line");
+  }
+
+  // char_wrap_splits_overwide_line (text_view.rs:2488-2506): "1111111111 1111111"
+  // (18 cols) char-wraps at width 17 into two vlines [17, 1].
+  {
+    const VirtualLines vl =
+        CalculateVirtualLines(LinesOf("1111111111 1111111"),
+                              kDefaultTabWidth, /*char*/ 1, 17, 0);
+    ExpectEq(static_cast<uint32_t>(vl.vlines.size()), 2, "char_split: 2 vlines");
+    ExpectEq(vl.vlines[0].width_cols, 17, "char_split: vline0 width 17");
+    ExpectEq(vl.vlines[1].width_cols, 1, "char_split: vline1 width 1");
+    ExpectEq(vl.vlines[1].source_col_offset, 17,
+             "char_split: vline1 source_col_offset 17");
+    ExpectEq(vl.vlines[0].source_line, 0, "char_split: vline0 source_line 0");
+    ExpectEq(vl.vlines[1].source_line, 0, "char_split: vline1 source_line 0");
+    ExpectEqVec(vl.first_vline, {0}, "char_split: first_vline == [0]");
+    ExpectEqVec(vl.vline_counts, {2}, "char_split: vline_counts == [2]");
+  }
+
+  // char_wrap_line_sources_span_multiple_logical_lines (text_view.rs:2531-2542).
+  {
+    const VirtualLines vl = CalculateVirtualLines(
+        LinesOf("1111111111 1111111\n2222222222 2222222\n333\n444\n555"),
+        kDefaultTabWidth, /*char*/ 1, 17, 0);
+    ExpectEqVec(SourceLinesOf(vl), {0, 0, 1, 1, 2, 3, 4},
+                "multi_line: sources");
+    ExpectEqVec(vl.first_vline, {0, 2, 4, 5, 6}, "multi_line: first_vline");
+    ExpectEqVec(vl.vline_counts, {2, 2, 1, 1, 1}, "multi_line: vline_counts");
+  }
+
+  // word_wrap_keeps_words_intact (text_view.rs:2544-2553): "The quick brown fox"
+  // at width 10 -> "The quick " (10), "brown fox" (9).
+  {
+    const VirtualLines vl = CalculateVirtualLines(
+        LinesOf("The quick brown fox"), kDefaultTabWidth, /*word*/ 2, 10, 0);
+    ExpectEqVec(WidthsOf(vl), {10, 9}, "word_wrap: widths [10,9]");
+  }
+
+  // word_wrap_falls_back_to_char_for_long_word (text_view.rs:2555-2563).
+  {
+    const VirtualLines vl =
+        CalculateVirtualLines(LinesOf("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+                              kDefaultTabWidth, /*word*/ 2, 10, 0);
+    ExpectEqVec(WidthsOf(vl), {10, 10, 6}, "word_wrap: long word char-fills");
+  }
+
+  // word_overflow_enters_fill_mode_for_rest_of_line (text_view.rs:2565-2579).
+  {
+    const VirtualLines vl = CalculateVirtualLines(
+        LinesOf("Amazon Web Services"), kDefaultTabWidth, /*word*/ 2, 5, 0);
+    ExpectEqVec(WidthsOf(vl), {5, 5, 5, 4}, "fill_mode: widths [5,5,5,4]");
+    ExpectEqVec(SourceColsOf(vl), {0, 5, 10, 15},
+                "fill_mode: source_col_offsets");
+  }
+
+  // cjk_run_overflow_fills_width_54_lines (text_view.rs:2581-2597): the
+  // TextTable long-cjk-phrase torture row wraps into [54,54,54,54,31] at
+  // width 54 — a direct exercise of the char_width/is_wide port.
+  {
+    const VirtualLines vl = CalculateVirtualLines(
+        LinesOf("長文の日本語テキストと中文段落和한국어문장을連続して配置し、"
+                "その後に additional English context describing renderer "
+                "behavior, border intersection handling, and selection "
+                "extraction so that this single cell remains a reliable "
+                "wrapping torture test."),
+        kDefaultTabWidth, /*word*/ 2, 54, 0);
+    ExpectEqVec(WidthsOf(vl), {54, 54, 54, 54, 31}, "cjk_torture: widths");
+  }
+
+  // cjk_ascii_transition_is_a_break_but_cjk_run_is_one_unit
+  // (text_view.rs:2599-2614): "foo你好bar" packs onto one width-10 line, and at
+  // width 7 the trailing "bar" unit wraps whole.
+  {
+    ExpectEqVec(WidthsOf(CalculateVirtualLines(LinesOf("foo你好bar"),
+                                               kDefaultTabWidth, 2, 10, 0)),
+                {10}, "cjk_break: width 10 -> [10]");
+    ExpectEqVec(WidthsOf(CalculateVirtualLines(LinesOf("foo你好bar"),
+                                               kDefaultTabWidth, 2, 7, 0)),
+                {7, 3}, "cjk_break: width 7 -> [7,3]");
+  }
+
+  // empty_line_between_words_is_kept (text_view.rs:2616-2626).
+  {
+    const VirtualLines vl = CalculateVirtualLines(
+        LinesOf("First line\n\nThird line"), kDefaultTabWidth, 2, 8, 0);
+    bool has_line1 = false;
+    for (const VLine& v : vl.vlines) {
+      has_line1 = has_line1 || v.source_line == 1;
+    }
+    Expect(has_line1, "empty_line: a vline sources logical line 1");
+    ExpectEq(vl.vline_counts[1], 1, "empty_line: empty line -> 1 vline");
+  }
+
+  // ── tbv_measure packed u64 (text_view.rs measure fixtures) ──
+
+  // no_wrap_reports_widest_line_and_count (text_view.rs:2462-2473).
+  {
+    const uint32_t tb = handles::Tag(handles::kKindTextBuffer, 200);
+    const uint32_t view = TbvCreate(tb);
+    TbvSetWrapMode(view, kWrapNone);
+    const uint64_t packed = TbvMeasure(
+        view, 80, 30, ResolverFor("Short\nAVeryLongLineHere\nMedium"));
+    ExpectEqU64(packed, (uint64_t{3} << 32) | 17,
+                "measure no-wrap: (3 lines, 17 cols)");
+    TbvDestroy(view);
+  }
+
+  // char_wrap_fitting_content_is_one_line (text_view.rs:2475-2486).
+  {
+    const uint32_t tb = handles::Tag(handles::kKindTextBuffer, 201);
+    const uint32_t view = TbvCreate(tb);
+    TbvSetWrapMode(view, 1);  // char
+    const uint64_t packed =
+        TbvMeasure(view, 80, 30, ResolverFor("ABCDEFGHIJKLMNOPQRST"));
+    ExpectEqU64(packed, (uint64_t{1} << 32) | 20,
+                "measure char-fit: (1 line, 20 cols)");
+    TbvDestroy(view);
+  }
+
+  // measure_honors_inline_first_line_offset (text_view.rs:2508-2529).
+  {
+    const uint32_t tb = handles::Tag(handles::kKindTextBuffer, 202);
+    const uint32_t view = TbvCreate(tb);
+    TbvSetWrapMode(view, 1);   // char
+    TbvSetWrapWidth(view, 10);
+    const BufferResolver resolve = ResolverFor("abcdef");
+    ExpectEqU64(TbvMeasure(view, 10, 30, resolve) >> 32, 1,
+                "measure offset=0: 1 line");
+    TbvSetFirstLineOffset(view, 5);
+    ExpectEqU64(TbvMeasure(view, 10, 30, resolve) >> 32, 2,
+                "measure offset=5: 2 lines");
+    TbvDestroy(view);
+  }
+
+  // empty_buffer_measures_one_by_zero (text_view.rs:2628-2638).
+  {
+    const uint32_t tb = handles::Tag(handles::kKindTextBuffer, 203);
+    const uint32_t view = TbvCreate(tb);
+    TbvSetWrapMode(view, 1);  // char
+    ExpectEqU64(TbvMeasure(view, 80, 30, ResolverFor("")),
+                (uint64_t{1} << 32) | 0, "measure empty: (1 line, 0 cols)");
+    TbvDestroy(view);
+  }
+
+  // ── tbv_virtual_line_count + out-buffer serialization contract ──
+  {
+    const uint32_t tb = handles::Tag(handles::kKindTextBuffer, 204);
+    const uint32_t view = TbvCreate(tb);
+    TbvSetWrapMode(view, 1);   // char
+    TbvSetWrapWidth(view, 17);
+    const BufferResolver resolve = ResolverFor("1111111111 1111111");
+
+    ExpectEq(TbvVirtualLineCount(view, resolve), 2,
+             "virtual_line_count: 2 vlines");
+
+    // getLogicalLineInfo: full arrays, widthColsMax = max LOGICAL line width
+    // ("1111111111 1111111" is 18 cols wide).
+    uint32_t buf[64] = {0};
+    const uint32_t n = TbvGetLogicalLineInfo(view, buf, 64, resolve);
+    ExpectEq(n, 2, "logical_line_info: count 2");
+    ExpectEq(buf[0], 2, "logical_line_info: out[0] count");
+    ExpectEq(buf[1], 18, "logical_line_info: out[1] widthColsMax (logical=18)");
+    // Layout: starts[2..], widths[2+n..], sources[2+2n..], wraps[2+3n..].
+    ExpectEq(buf[2], 0, "logical_line_info: starts[0]");
+    ExpectEq(buf[3], 17, "logical_line_info: starts[1]");
+    ExpectEq(buf[4], 17, "logical_line_info: widths[0]");
+    ExpectEq(buf[5], 1, "logical_line_info: widths[1]");
+    ExpectEq(buf[6], 0, "logical_line_info: sources[0]");
+    ExpectEq(buf[7], 0, "logical_line_info: sources[1]");
+    ExpectEq(buf[8], 0, "logical_line_info: wraps[0]");
+    ExpectEq(buf[9], 1, "logical_line_info: wraps[1]");
+
+    // getLineInfo (no viewport): widthColsMax = max over the SLICE (17).
+    uint32_t lbuf[64] = {0};
+    const uint32_t m = TbvGetLineInfo(view, lbuf, 64, resolve);
+    ExpectEq(m, 2, "line_info: count 2");
+    ExpectEq(lbuf[1], 17, "line_info: widthColsMax over slice (17)");
+
+    TbvDestroy(view);
+  }
+
+  // getLineInfo viewport slicing: viewport (x=0, y=1, w=17, h=1) selects just
+  // the second virtual line. tbv_get_line_info slices [y, y+h).
+  {
+    const uint32_t tb = handles::Tag(handles::kKindTextBuffer, 205);
+    const uint32_t view = TbvCreate(tb);
+    TbvSetWrapMode(view, 1);  // char
+    TbvSetViewport(view, 0, 1, 17, 1);  // also pins wrap_width to 17
+    const BufferResolver resolve = ResolverFor("1111111111 1111111");
+    uint32_t buf[64] = {0};
+    const uint32_t n = TbvGetLineInfo(view, buf, 64, resolve);
+    ExpectEq(n, 1, "line_info viewport: sliced to 1 vline");
+    ExpectEq(buf[0], 1, "line_info viewport: out[0] count 1");
+    ExpectEq(buf[1], 1, "line_info viewport: widthColsMax 1");
+    ExpectEq(buf[2], 17, "line_info viewport: starts[0] == 17 (2nd vline)");
+    ExpectEq(buf[3], 1, "line_info viewport: widths[0] == 1");
+    ExpectEq(buf[5], 1, "line_info viewport: wraps[0] == 1");
+    TbvDestroy(view);
   }
 
   if (failures == 0) {
