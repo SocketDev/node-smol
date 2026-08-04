@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "repoName": "node-smol",
   "repo": {
-    "type": "solo"
+    "type": "mono"
   },
   "build": {
     "from": "github-release",
