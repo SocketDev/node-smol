@@ -251,3 +251,18 @@
 	ref = 259f2e2a531af9ed3efa7f66adaa5eb5b53da95f
 	ignore = dirty
 	shallow = true
+# uv-0.12.1 sha256:ebaf65addbbe2163346cadb5e9f35957f36c77d8a9ba45eeb97effeeb884b5fe
+[submodule "upstream/uv"]
+	ref = 329541a503de8a4d9bb021814f9c0875efe033c8
+	path = upstream/uv
+	url = https://github.com/astral-sh/uv.git
+	branch = 0.12.1
+	ignore = dirty
+	shallow = true
+	# Honored by scripts/fleet/git-partial-submodule.mts (vanilla git ignores
+	# this field). uv is a large workspace; only the canonical lock reader
+	# cone is needed for parser_uv.cc lock-step audits.
+	sparse-checkout = crates/uv-resolver/src/lock/
+	# Reference-only checkout: parser_uv.cc lock-step audits read this cone;
+	# no build step consumes it.
+	verify = none

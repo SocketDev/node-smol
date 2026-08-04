@@ -13,6 +13,13 @@
       "upstreamSubpath": "apple-codesign",
       "kind": "feature-parity",
       "tracker": "docs/ports/codesign-infra-lockstep.md"
+    },
+    {
+      "package": "node-smol-builder",
+      "upstream": "astral-sh/uv",
+      "upstreamSubpath": "crates/uv-resolver/src/lock",
+      "kind": "feature-parity",
+      "tracker": "docs/ports/uv-lock-parser-lockstep.md"
     }
   ]
 }
