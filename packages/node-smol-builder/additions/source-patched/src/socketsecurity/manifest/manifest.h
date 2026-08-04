@@ -33,6 +33,7 @@ namespace manifest {
 enum class Ecosystem : uint8_t {
   kNpm = 0,
   kCargo = 1,
+  kPypi = 2,
 };
 
 enum class LockFormat : uint8_t {
@@ -40,6 +41,7 @@ enum class LockFormat : uint8_t {
   kPnpm = 1,
   kYarn = 2,
   kCargo = 3,
+  kUv = 4,
 };
 
 enum class DepType : uint8_t {
@@ -81,6 +83,7 @@ struct ParsedLockfile {
   std::string_view type = "lockfile";
   // Lockfile-format-specific version string. npm: "1" / "2" / "3".
   // pnpm: "5" / "6" / "9". yarn: "1" / "berry". cargo: "0.0.0".
+  // uv: "1" (the top-level `version = N` scalar).
   std::string_view lockVersion;
   Ecosystem ecosystem = Ecosystem::kNpm;
   std::vector<PackageRef> packages;

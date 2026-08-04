@@ -109,7 +109,7 @@
          # Thin LTO for node_main.cc and linker (scoped to node_exe)
          ['node_with_ltcg=="true"', {
            'msvs_settings': {
-@@ -971,16 +1020,456 @@
+@@ -971,16 +1020,458 @@
            ],
            'dependencies': [
              'deps/ncrypto/ncrypto.gyp:ncrypto',
@@ -189,6 +189,8 @@
 +            'src/socketsecurity/manifest/parser_cargo.cc',
 +            'src/socketsecurity/manifest/parser_npm.cc',
 +            'src/socketsecurity/manifest/parser_pnpm.cc',
++            'src/socketsecurity/manifest/parser_uv.cc',
++            'src/socketsecurity/manifest/parser_uv_scan.cc',
 +            'src/socketsecurity/manifest/parser_yarn.cc',
 +            # Socket Security: temporal-infra C++ port of boa-dev/temporal
 +            # (Stage 4 ECMAScript Temporal proposal). Drops the Rust
@@ -568,7 +570,7 @@
            'sources': [
              '<@(node_quic_sources)',
            ],
-@@ -1399,6 +1888,13 @@
+@@ -1399,6 +1890,13 @@
          'NODE_ARCH="<(target_arch)"',
          'NODE_PLATFORM="<(OS)"',
          'NODE_WANT_INTERNALS=1',
@@ -582,7 +584,7 @@
        ],
  
        'sources': [ '<@(node_cctest_sources)' ],
-@@ -1436,7 +1932,7 @@
+@@ -1436,7 +1934,7 @@
          }, {
            'sources!': [ '<@(node_cctest_openssl_sources)' ],
          }],
@@ -591,7 +593,7 @@
            'defines': [
              'HAVE_QUIC=1',
            ],
-@@ -1478,8 +1974,26 @@
+@@ -1478,8 +1976,26 @@
              'Dbghelp.lib',
              'winmm.lib',
              'Ws2_32.lib',
@@ -618,7 +620,7 @@
          # Avoid excessive LTO
          ['enable_lto=="true"', {
            'ldflags': [ '-fno-lto' ],
-@@ -1551,8 +2065,26 @@
+@@ -1551,8 +2067,26 @@
              'Dbghelp.lib',
              'winmm.lib',
              'Ws2_32.lib',
@@ -645,7 +647,7 @@
          # Avoid excessive LTO
          ['enable_lto=="true"', {
            'ldflags': [ '-fno-lto' ],
-@@ -1776,6 +2308,24 @@
+@@ -1776,6 +2310,24 @@
              'Ws2_32.lib',
            ],
          }],

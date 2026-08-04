@@ -86,7 +86,9 @@ Local<Object> BuildPackageRef(Isolate* isolate, Local<Context> context,
     SetProp(isolate, context, obj, "integrity",
             MakeStr(isolate, ref.integrity));
   }
-  const char* eco_str = ecosystem == Ecosystem::kCargo ? "cargo" : "npm";
+  const char* eco_str = ecosystem == Ecosystem::kCargo   ? "cargo"
+                        : ecosystem == Ecosystem::kPypi ? "pypi"
+                                                        : "npm";
   SetProp(isolate, context, obj, "ecosystem", MakeStr(isolate, eco_str));
   const char* dep_str = "prod";
   switch (ref.depType) {
@@ -132,7 +134,9 @@ Local<Object> BuildParsedLockfile(Isolate* isolate, Local<Context> context,
   SetProp(isolate, context, obj, "type", MakeStr(isolate, "lockfile"));
   SetProp(isolate, context, obj, "lockVersion",
           MakeStr(isolate, r.lockVersion));
-  const char* eco_str = r.ecosystem == Ecosystem::kCargo ? "cargo" : "npm";
+  const char* eco_str = r.ecosystem == Ecosystem::kCargo   ? "cargo"
+                        : r.ecosystem == Ecosystem::kPypi ? "pypi"
+                                                          : "npm";
   SetProp(isolate, context, obj, "ecosystem", MakeStr(isolate, eco_str));
 
   // packages array.
@@ -200,7 +204,9 @@ void ParseLockfileJs(const FunctionCallbackInfo<Value>& args) {
   int32_t eco_int = args[1].As<Integer>()->Value();
   int32_t fmt_int = args[2].As<Integer>()->Value();
 
-  if (eco_int < 0 || eco_int > 1 || fmt_int < 0 || fmt_int > 3) {
+  // Upper bounds track the last enum value in manifest.h (kPypi /
+  // kUv) — bump them when appending a new ecosystem or format.
+  if (eco_int < 0 || eco_int > 2 || fmt_int < 0 || fmt_int > 4) {
     ParseError err;
     err.message = "parseLockfile: ecosystem/format out of range";
     err.code = "ERR_OUT_OF_RANGE";

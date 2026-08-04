@@ -8,6 +8,7 @@
 #include "parser_cargo.h"
 #include "parser_npm.h"
 #include "parser_pnpm.h"
+#include "parser_uv.h"
 #include "parser_yarn.h"
 
 namespace node {
@@ -34,6 +35,9 @@ bool ParseLockfile(std::string_view content,
   }
   if (ecosystem == Ecosystem::kCargo && format == LockFormat::kCargo) {
     return ParseCargoLock(content, ctx, out, err);
+  }
+  if (ecosystem == Ecosystem::kPypi && format == LockFormat::kUv) {
+    return ParseUvLock(content, ctx, out, err);
   }
   err->message = "Unsupported (ecosystem, format) pair";
   err->code = "ERR_UNSUPPORTED";
