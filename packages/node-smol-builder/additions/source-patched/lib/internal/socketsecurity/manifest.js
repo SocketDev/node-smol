@@ -4,9 +4,9 @@
 //
 // Native fast path: when the smol_manifest_native C++ binding is
 // available, parseLockfile() routes through it for the supported
-// (ecosystem, format) pairs. Currently wired: ('npm', 'pnpm').
-// Other pairs (yarn, npm, cargo) and the deferred Fix 5 isDev
-// derivation will flip on as the C++ port lands per-format parsers.
+// (ecosystem, format) pairs: ('npm', npm|pnpm|yarn), ('cargo',
+// cargo), and ('pypi', uv). cargo and pypi are native-ONLY — no
+// pure-JS impl here; without the binding they throw ERR_UNSUPPORTED.
 //
 // The binding may be unavailable in unusual configurations (snapshot
 // replay before bindings load, broken builds). The fallback JS impls
@@ -22,10 +22,12 @@ try {
 // Kept in lockstep with test/smol-manifest-native.test.mts (ECO_*, FMT_*).
 const NATIVE_ECO_NPM = 0
 const NATIVE_ECO_CARGO = 1
+const NATIVE_ECO_PYPI = 2
 const NATIVE_FMT_NPM = 0
 const NATIVE_FMT_PNPM = 1
 const NATIVE_FMT_YARN = 2
 const NATIVE_FMT_CARGO = 3
+const NATIVE_FMT_UV = 4
 
 const {
   ArrayPrototypeFilter,
@@ -124,6 +126,12 @@ const LOCKFILE_PATTERNS = ObjectFreeze({
     __proto__: null,
     ecosystem: 'composer',
     format: 'composer',
+    type: 'lockfile',
+  }),
+  'uv.lock': ObjectFreeze({
+    __proto__: null,
+    ecosystem: 'pypi',
+    format: 'uv',
     type: 'lockfile',
   }),
 })
@@ -1296,6 +1304,22 @@ function parseLockfile(content, ecosystem, format) {
       throw new ManifestError(
         'cargo parsing requires the smol Node binary; use ' +
           "socket-lib's parseCargoLock on stock Node",
+        'ERR_UNSUPPORTED',
+      )
+    case 'pypi':
+      // uv.lock parsing is native-only inside the smol Node binary,
+      // same posture as cargo above. The C++ walker reads uv's
+      // canonical lockfile layout directly (astral-sh/uv#20648) and
+      // has no general-TOML fallback; stock Node consumers route
+      // through socket-sdxgen's pypi parser
+      // (src/parsers/pypi/index.mts parseUvLock), the TS contract
+      // this native impl matches.
+      if (_native !== undefined) {
+        return _native.parseLockfile(content, NATIVE_ECO_PYPI, NATIVE_FMT_UV)
+      }
+      throw new ManifestError(
+        'uv.lock parsing requires the smol Node binary; use ' +
+          "socket-sdxgen's pypi parser on stock Node",
         'ERR_UNSUPPORTED',
       )
     default:

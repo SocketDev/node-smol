@@ -53,6 +53,19 @@ describe('node:smol-manifest', () => {
       expect(format.format).toBe('pnpm')
     })
 
+    it('should detect uv.lock as pypi/uv lockfile', () => {
+      const format = detectFormat('uv.lock')
+      expect(format.ecosystem).toBe('pypi')
+      expect(format.format).toBe('uv')
+      expect(format.type).toBe('lockfile')
+    })
+
+    it('should detect uv.lock behind a directory path', () => {
+      const format = detectFormat('/some/project/uv.lock')
+      expect(format.ecosystem).toBe('pypi')
+      expect(format.format).toBe('uv')
+    })
+
     it('should handle path with directory', () => {
       const format = detectFormat('/some/path/to/package.json')
       expect(format.ecosystem).toBe('npm')
@@ -73,6 +86,7 @@ describe('node:smol-manifest', () => {
       expect(supportedFiles.lockfiles).toContain('package-lock.json')
       expect(supportedFiles.lockfiles).toContain('yarn.lock')
       expect(supportedFiles.lockfiles).toContain('pnpm-lock.yaml')
+      expect(supportedFiles.lockfiles).toContain('uv.lock')
     })
   })
 
@@ -409,6 +423,34 @@ snapshots:
       const ts = result.packages.find(p => p.name === 'typescript')
       expect(ts.version).toBe('5.3.0')
       expect(ts.depType).toBe('dev')
+    })
+  })
+
+  describe('parseLockfile() - uv.lock (pypi, native-only)', () => {
+    // uv.lock parsing is native-only, same posture as cargo: the C++
+    // walker (parser_uv.cc) reads uv's canonical layout directly and
+    // there is no pure-JS impl in this module. On stock Node (this
+    // vitest lane) the smol_manifest_native binding is absent, so the
+    // dispatcher must throw ERR_UNSUPPORTED — never silently return.
+    it('throws ERR_UNSUPPORTED without the native binding', () => {
+      const content = 'version = 1\n'
+      try {
+        parseLockfile(content, 'pypi', 'uv')
+        expect.unreachable('parseLockfile should have thrown')
+      } catch (e) {
+        expect(e.name).toBe('ManifestError')
+        expect(e.code).toBe('ERR_UNSUPPORTED')
+        expect(e.message).toMatch(/smol Node binary/)
+      }
+    })
+
+    it('parse() routes uv.lock to the pypi dispatcher (ERR_UNSUPPORTED on stock Node)', () => {
+      try {
+        parse('uv.lock', 'version = 1\n')
+        expect.unreachable('parse should have thrown')
+      } catch (e) {
+        expect(e.code).toBe('ERR_UNSUPPORTED')
+      }
     })
   })
 
