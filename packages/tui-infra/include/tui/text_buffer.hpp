@@ -23,6 +23,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace tui {
@@ -30,6 +32,90 @@ namespace tui {
 // Default tab width, matching OpenTUI's native TextBuffer
 // (text_buffer.rs:22-23 DEFAULT_TAB_WIDTH).
 inline constexpr uint8_t kDefaultTabWidth = 2;
+
+// A packed highlight record — the byte-EXACT 16-byte layout the zig.mts
+// `HighlightStruct` pack/unpack agrees on and the FFI reads/writes verbatim
+// (text_buffer.rs:27-52 HighlightRepr `#[repr(C)]`). Field order/sizes must
+// stay lockstep: start@0, end@4, styleId@8, priority@12(u8), pad@13, hlRef@14.
+struct HighlightRepr {
+  uint32_t start;
+  uint32_t end;
+  uint32_t style_id;
+  uint8_t priority;
+  uint8_t pad;
+  uint16_t hl_ref;
+};
+static_assert(sizeof(HighlightRepr) == 16,
+              "HighlightRepr must be exactly 16 bytes (zig HighlightStruct)");
+static_assert(alignof(HighlightRepr) == 4, "HighlightRepr aligns to 4");
+static_assert(offsetof(HighlightRepr, start) == 0, "start @ 0");
+static_assert(offsetof(HighlightRepr, end) == 4, "end @ 4");
+static_assert(offsetof(HighlightRepr, style_id) == 8, "styleId @ 8");
+static_assert(offsetof(HighlightRepr, priority) == 12, "priority @ 12");
+static_assert(offsetof(HighlightRepr, pad) == 13, "pad @ 13");
+static_assert(offsetof(HighlightRepr, hl_ref) == 14, "hlRef @ 14");
+
+// Byte size of one packed StyledChunkStruct record the shim builds
+// (text_buffer.rs:942 STYLED_RECORD_SIZE): {text:ptr@0, text_len:u64@8,
+// fg:ptr@16, bg:ptr@24, attributes:u32@32, link:ptr@40, link_len:u64@48}.
+inline constexpr size_t kStyledRecordSize = 56;
+
+// Whether a highlight came from a styled chunk (dropped on clear/setText) or was
+// added by the caller (kept across clear/setText). text_buffer.rs:56-60 HlKind.
+enum class HlKind { kStyled, kUser };
+
+// A resolved style: (fg, bg, attributes), each color nullopt when unset.
+// text_buffer.rs:772 StyleTriple (as consumed by resolve_hl_style).
+struct StyleTriple {
+  std::optional<std::array<uint16_t, 4>> fg;
+  std::optional<std::array<uint16_t, 4>> bg;
+  uint32_t attrs = 0;
+};
+
+// A resolved style span over a logical line's column range [col, next_col).
+// fg/bg nullopt means "keep the default"; attrs OR-combines onto the default.
+// Mirrors text_buffer.rs:81-88 SpanRun (the draw path S7 consumes these).
+struct SpanRun {
+  uint32_t col;
+  uint32_t next_col;
+  std::optional<std::array<uint16_t, 4>> fg;
+  std::optional<std::array<uint16_t, 4>> bg;
+  uint32_t attrs;
+};
+
+// One stored highlight: its logical line, the packed record, its kind, and (for
+// Styled highlights produced by SetStyled) the chunk's inline colors/attributes.
+// User highlights resolve their style through the buffer's syntax-style table
+// via hl.style_id instead. text_buffer.rs:62-75 HlEntry.
+struct HlEntry {
+  uint32_t line;
+  HighlightRepr hl;
+  HlKind kind;
+  std::optional<std::array<uint16_t, 4>> fg;
+  std::optional<std::array<uint16_t, 4>> bg;
+  uint32_t attrs;
+};
+
+// ── Minimal internal SyntaxStyle name->id registry (syntax_style.rs) ──
+//
+// A process-global table keyed by u32 handle: register assigns a monotonic
+// 1-based id (0 is the "not found" sentinel), re-registering a name updates it
+// in place and returns the existing id, resolve_by_id maps a 1-based id to its
+// (fg, bg, attributes). SetStyled leans on this to stamp a non-zero synthetic
+// id per colored chunk, and BuildLineSpans resolves User highlights through it.
+//
+// This is the internal stub the S4 slice needs; the 5 syntaxStyle* cabi symbols
+// (create/destroy/register/resolveByName/getStyleCount) stay pending and are
+// NOT wired to V8 — a later slice ports those wrappers on top of this store.
+uint32_t SyntaxStyleCreate();
+void SyntaxStyleDestroy(uint32_t handle);
+uint32_t SyntaxStyleRegister(uint32_t handle,
+                             const std::string& name,
+                             std::optional<std::array<uint16_t, 4>> fg,
+                             std::optional<std::array<uint16_t, 4>> bg,
+                             uint32_t attrs);
+std::optional<StyleTriple> SyntaxStyleResolveById(uint32_t handle, uint32_t id);
+uint32_t SyntaxStyleGetStyleCount(uint32_t handle);
 
 // Failure sentinel for RegisterMem (the shim throws on it). Also the ceiling:
 // a registry that already holds this many slots refuses to grow.
@@ -205,6 +291,73 @@ class TextBuffer {
                                 uint8_t* out,
                                 uint32_t max_len) const;
 
+  // ── Highlights + styled text + syntax style (S4) ──
+
+  // Add a User highlight on `line`. An empty range (start >= end) is dropped
+  // before storing, mirroring zig addHighlightInternal. text_buffer.rs:598-614
+  // add_highlight.
+  void AddHighlight(uint32_t line, const HighlightRepr& hl);
+
+  // Split a display-column range [start, end) across every logical line it
+  // overlaps, emitting one clamped User highlight per overlapping line (zero-
+  // width clamps dropped). text_buffer.rs:623-664 add_highlight_by_char_range.
+  void AddHighlightByCharRange(const HighlightRepr& hl);
+
+  // Drop every highlight whose hlRef equals `hl_ref` (User or Styled).
+  // text_buffer.rs:666-670 remove_highlights_by_ref.
+  void RemoveHighlightsByRef(uint16_t hl_ref);
+
+  // Drop every highlight on `line`. text_buffer.rs:672-676 clear_line_highlights.
+  void ClearLineHighlights(uint32_t line);
+
+  // Drop every highlight (User and Styled). text_buffer.rs:678-680
+  // clear_all_highlights.
+  void ClearAllHighlights();
+
+  // Number of stored highlights. text_buffer.rs:682-684 get_highlight_count.
+  uint32_t HighlightCount() const {
+    return static_cast<uint32_t>(highlights_.size());
+  }
+
+  // Set the owning syntax-style handle (0 detaches). Always returns true for a
+  // live buffer (the stale-handle false lives in the binding). text_buffer.rs
+  // :512-517 set_syntax_style.
+  bool SetSyntaxStyle(uint32_t style) {
+    syntax_style_ = style;
+    return true;
+  }
+
+  uint32_t SyntaxStyle() const {
+    return syntax_style_;
+  }
+
+  // Materialize styled chunks: clear (dropping styled highlights + content),
+  // concatenate each chunk's normalized text into content, and add one Styled
+  // highlight per colored line-segment carrying the chunk's inline colors and a
+  // synthetic per-chunk styleId (registered into the buffer's syntax-style table
+  // when one is attached, else 0). `records` is `count` packed
+  // kStyledRecordSize-byte StyledChunkStructs; text + colors live behind
+  // BORROWED process pointers valid for this synchronous call (copied here).
+  // text_buffer.rs:204-261 set_styled + parse_styled_chunks.
+  void SetStyled(const uint8_t* records, size_t len, uint32_t count);
+
+  // Collect a line's highlights into a heap-allocated array, returning
+  // (ptr, count); (nullptr, 0) when the line has none. The caller MUST hand the
+  // pair back to FreeLineHighlights. text_buffer.rs:784-800 get_line_highlights.
+  std::pair<HighlightRepr*, uint32_t> GetLineHighlights(uint32_t line) const;
+
+  // Free an array produced by GetLineHighlights. text_buffer.rs:806-812
+  // free_line_highlights.
+  static void FreeLineHighlights(HighlightRepr* ptr, uint32_t count);
+
+  // Build the per-logical-line style spans the draw path composites: for each
+  // line the highlights are swept into non-overlapping [col, next_col) runs, the
+  // highest-priority active highlight wins each run, and is resolved to colors
+  // (Styled inline, User via the syntax-style table). Runs with no active
+  // highlight are omitted. Indexed by logical line. text_buffer.rs:694-768
+  // build_line_spans.
+  std::vector<std::vector<SpanRun>> BuildLineSpans() const;
+
  private:
   // Raw content bytes (malformed UTF-8 preserved verbatim). text_buffer.rs:92.
   std::vector<uint8_t> content_;
@@ -231,7 +384,19 @@ class TextBuffer {
   // [[maybe_unused]]. text_buffer.rs:104.
   [[maybe_unused]] bool borrowed_ = false;
 
-  // S4 adds highlights/syntax_style.
+  // Owning syntax-style handle (0 = none). Consumed by SetStyled (synthetic
+  // chunk-id registration) and BuildLineSpans (User-highlight resolution).
+  // text_buffer.rs:97 syntax_style.
+  uint32_t syntax_style_ = 0;
+
+  // Flat highlight list, tagged Styled (from SetStyled) or User (from
+  // AddHighlight). Clear/SetContent drop the Styled ones and keep the User ones;
+  // Reset drops both. text_buffer.rs:99 highlights.
+  std::vector<HlEntry> highlights_;
+
+  // Drop styled-chunk highlights, keep user highlights (text_buffer.rs:134-137
+  // drop_styled_highlights).
+  void DropStyledHighlights();
 };
 
 }  // namespace tui

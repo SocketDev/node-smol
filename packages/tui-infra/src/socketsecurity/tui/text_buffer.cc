@@ -6,17 +6,22 @@
 
 #include "tui/text_buffer.hpp"
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <mutex>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "tui/width.hpp"  // CodepointWidth
+#include "tui/handles.hpp"  // handles::Tag, kKindSyntaxStyle
+#include "tui/width.hpp"    // CodepointWidth
 
 namespace tui {
 
@@ -237,16 +242,30 @@ uint32_t CountLines(const uint8_t* bytes, size_t len) {
 }
 
 void TextBuffer::Clear() {
-  // text_buffer.rs:145-148 clear(): drop content; drop_styled_highlights()
-  // arrives with S4 (no styled highlights exist yet).
+  // text_buffer.rs:145-148 clear(): drop content and the styled highlights,
+  // keeping the user ones.
   content_.clear();
+  DropStyledHighlights();
 }
 
 void TextBuffer::Reset() {
-  // text_buffer.rs:150-154 reset(): drop content and the mem registry;
-  // highlights_.clear() arrives with S4.
+  // text_buffer.rs:150-154 reset(): drop content, ALL highlights, and the mem
+  // registry.
   content_.clear();
+  highlights_.clear();
   mem_.clear();
+}
+
+void TextBuffer::DropStyledHighlights() {
+  // text_buffer.rs:134-137 drop_styled_highlights: retain only User highlights.
+  std::vector<HlEntry> kept;
+  kept.reserve(highlights_.size());
+  for (HlEntry& e : highlights_) {
+    if (e.kind == HlKind::kUser) {
+      kept.push_back(std::move(e));
+    }
+  }
+  highlights_ = std::move(kept);
 }
 
 uint32_t TextBuffer::Length() const {
@@ -307,9 +326,10 @@ bool TextBuffer::ReplaceMem(uint16_t id, const uint8_t* bytes, size_t len) {
 }
 
 void TextBuffer::SetContent(const uint8_t* bytes, size_t len) {
-  // text_buffer.rs:139-143 set_content: CRLF-normalize; drop_styled_highlights()
-  // is a no-op until S4 (no highlights field yet).
+  // text_buffer.rs:139-143 set_content: CRLF-normalize, then drop the styled
+  // highlights (user highlights survive a content swap).
   content_ = NormalizeCrlf(bytes, len);
+  DropStyledHighlights();
 }
 
 void TextBuffer::SetFromMem(uint16_t id) {
@@ -391,6 +411,464 @@ uint32_t TextBuffer::GetTextRangeByCoords(uint32_t start_row,
   }
   const std::vector<uint8_t> sliced = CharSlice(scalars, start, end);
   return CopySliceOut(sliced.data(), sliced.size(), out, max_len);
+}
+
+// ── Highlights + styled text + syntax style (S4) ──────────────────────────
+
+namespace {
+
+// Read a little-endian u32 at `bytes[base..]` (unaligned).
+// text_buffer.rs:955-962 read_u32.
+uint32_t ReadU32Le(const uint8_t* bytes, size_t base) {
+  return static_cast<uint32_t>(bytes[base]) |
+         (static_cast<uint32_t>(bytes[base + 1]) << 8) |
+         (static_cast<uint32_t>(bytes[base + 2]) << 16) |
+         (static_cast<uint32_t>(bytes[base + 3]) << 24);
+}
+
+// Read a little-endian u64 at `bytes[base..]` (unaligned).
+// text_buffer.rs:964-969 read_u64.
+uint64_t ReadU64Le(const uint8_t* bytes, size_t base) {
+  uint64_t v = 0;
+  for (size_t i = 0; i < 8; ++i) {
+    v |= static_cast<uint64_t>(bytes[base + i]) << (8 * i);
+  }
+  return v;
+}
+
+// Dereference a borrowed RGBA buffer pointer (4x u16, low byte per channel). A
+// null address reads as "no color". text_buffer.rs:977-985 read_rgba_ptr.
+std::optional<std::array<uint16_t, 4>> ReadRgbaPtr(uint64_t addr) {
+  if (addr == 0) {
+    return std::nullopt;
+  }
+  const uint16_t* p = reinterpret_cast<const uint16_t*>(
+      static_cast<uintptr_t>(addr));
+  return std::array<uint16_t, 4>{p[0], p[1], p[2], p[3]};
+}
+
+// A decoded styled chunk view into the packed records buffer (borrowed text +
+// colors). text_buffer.rs:946-952 StyledChunk.
+struct StyledChunk {
+  const uint8_t* text;
+  size_t text_len;
+  bool colored;
+  std::optional<std::array<uint16_t, 4>> fg;
+  std::optional<std::array<uint16_t, 4>> bg;
+  uint32_t attrs;
+};
+
+// Parse the packed styled-chunk buffer the shim builds (text_buffer.rs:994-1024
+// parse_styled_chunks): `count` x kStyledRecordSize records. Text + fg/bg colors
+// live behind BORROWED process pointers valid for this synchronous call; the
+// caller (SetStyled) copies before returning. A chunk is "colored" when it
+// carries an fg, bg, or non-zero attributes.
+std::vector<StyledChunk> ParseStyledChunks(const uint8_t* records,
+                                           size_t len,
+                                           uint32_t count) {
+  std::vector<StyledChunk> out;
+  const size_t n = static_cast<size_t>(count);
+  if (records == nullptr || len < n * kStyledRecordSize) {
+    return out;
+  }
+  out.reserve(n);
+  for (size_t i = 0; i < n; ++i) {
+    const size_t base = i * kStyledRecordSize;
+    const uint64_t text_addr = ReadU64Le(records, base);
+    const size_t text_len = static_cast<size_t>(ReadU64Le(records, base + 8));
+    std::optional<std::array<uint16_t, 4>> fg =
+        ReadRgbaPtr(ReadU64Le(records, base + 16));
+    std::optional<std::array<uint16_t, 4>> bg =
+        ReadRgbaPtr(ReadU64Le(records, base + 24));
+    const uint32_t attrs = ReadU32Le(records, base + 32);
+    const uint8_t* text = nullptr;
+    size_t tlen = 0;
+    if (text_addr != 0 && text_len != 0) {
+      text = reinterpret_cast<const uint8_t*>(
+          static_cast<uintptr_t>(text_addr));
+      tlen = text_len;
+    }
+    const bool colored = fg.has_value() || bg.has_value() || attrs != 0;
+    out.push_back(StyledChunk{text, tlen, colored, fg, bg, attrs});
+  }
+  return out;
+}
+
+// Split lossy-decoded `scalars` into per-line display widths (newline-delimited,
+// newlines excluded). Mirrors text_buffer.rs:630-636's split('\n') + width_of
+// over the from_utf8_lossy content (width per codepoint, matching the shipped
+// width surface). The result length always equals (newline count) + 1.
+std::vector<uint32_t> LineWidthsFromScalars(
+    const std::vector<uint32_t>& scalars) {
+  std::vector<uint32_t> widths;
+  uint32_t cur = 0;
+  for (uint32_t cp : scalars) {
+    if (cp == static_cast<uint32_t>('\n')) {
+      widths.push_back(cur);
+      cur = 0;
+    } else {
+      cur += CodepointWidth(cp);
+    }
+  }
+  widths.push_back(cur);
+  return widths;
+}
+
+// ── Minimal internal SyntaxStyle registry (syntax_style.rs) ──
+
+struct SyntaxStyleEntry {
+  std::optional<std::array<uint16_t, 4>> fg;
+  std::optional<std::array<uint16_t, 4>> bg;
+  uint32_t attrs;
+};
+
+struct SyntaxStyleTable {
+  std::unordered_map<std::string, uint32_t> by_name;
+  std::vector<SyntaxStyleEntry> styles;
+};
+
+struct SyntaxStyleRegistryT {
+  std::mutex mu;
+  uint32_t next = 1;
+  std::unordered_map<uint32_t, SyntaxStyleTable> map;
+};
+
+SyntaxStyleRegistryT& SyntaxRegistry() {
+  static SyntaxStyleRegistryT r;
+  return r;
+}
+
+}  // namespace
+
+uint32_t SyntaxStyleCreate() {
+  // syntax_style.rs:93-99 create: monotonic, never 0.
+  SyntaxStyleRegistryT& r = SyntaxRegistry();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const uint32_t index = r.next;
+  r.next += 1;
+  if (r.next == 0) {
+    r.next = 1;  // wrapping_add(1).max(1)
+  }
+  const uint32_t handle = handles::Tag(handles::kKindSyntaxStyle, index);
+  r.map.emplace(handle, SyntaxStyleTable{});
+  return handle;
+}
+
+void SyntaxStyleDestroy(uint32_t handle) {
+  // syntax_style.rs:101-103 destroy.
+  SyntaxStyleRegistryT& r = SyntaxRegistry();
+  std::lock_guard<std::mutex> lock(r.mu);
+  r.map.erase(handle);
+}
+
+uint32_t SyntaxStyleRegister(uint32_t handle,
+                             const std::string& name,
+                             std::optional<std::array<uint16_t, 4>> fg,
+                             std::optional<std::array<uint16_t, 4>> bg,
+                             uint32_t attrs) {
+  // syntax_style.rs:42-55 register (via 105-116): update-in-place on a known
+  // name (returns its 1-based id), else append. A stale handle -> 0.
+  SyntaxStyleRegistryT& r = SyntaxRegistry();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.map.find(handle);
+  if (it == r.map.end()) {
+    return 0;
+  }
+  SyntaxStyleTable& t = it->second;
+  auto found = t.by_name.find(name);
+  if (found != t.by_name.end()) {
+    const uint32_t id = found->second;
+    if (id >= 1 && static_cast<size_t>(id - 1) < t.styles.size()) {
+      t.styles[id - 1] = SyntaxStyleEntry{fg, bg, attrs};
+    }
+    return id;
+  }
+  t.styles.push_back(SyntaxStyleEntry{fg, bg, attrs});
+  const uint32_t id = static_cast<uint32_t>(t.styles.size());
+  t.by_name.emplace(name, id);
+  return id;
+}
+
+std::optional<StyleTriple> SyntaxStyleResolveById(uint32_t handle, uint32_t id) {
+  // syntax_style.rs:61-70 resolve_id (via 122-124): id 0 or out-of-range -> None.
+  SyntaxStyleRegistryT& r = SyntaxRegistry();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.map.find(handle);
+  if (it == r.map.end() || id == 0) {
+    return std::nullopt;
+  }
+  const SyntaxStyleTable& t = it->second;
+  if (static_cast<size_t>(id - 1) >= t.styles.size()) {
+    return std::nullopt;
+  }
+  const SyntaxStyleEntry& s = t.styles[id - 1];
+  return StyleTriple{s.fg, s.bg, s.attrs};
+}
+
+uint32_t SyntaxStyleGetStyleCount(uint32_t handle) {
+  // syntax_style.rs:135-140 get_style_count; stale -> 0.
+  SyntaxStyleRegistryT& r = SyntaxRegistry();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.map.find(handle);
+  return it == r.map.end() ? 0
+                           : static_cast<uint32_t>(it->second.styles.size());
+}
+
+void TextBuffer::AddHighlight(uint32_t line, const HighlightRepr& hl) {
+  // text_buffer.rs:598-614 add_highlight: drop empty ranges, else store as User.
+  if (hl.start >= hl.end) {
+    return;
+  }
+  highlights_.push_back(
+      HlEntry{line, hl, HlKind::kUser, std::nullopt, std::nullopt, 0});
+}
+
+void TextBuffer::AddHighlightByCharRange(const HighlightRepr& hl) {
+  // text_buffer.rs:623-664 add_highlight_by_char_range: split [start,end) across
+  // every logical line it overlaps, clamping to per-line [col_start,col_end).
+  const uint32_t start = hl.start;
+  const uint32_t end = hl.end;
+  if (start >= end) {
+    return;
+  }
+  const std::vector<uint32_t> scalars =
+      DecodeScalarsLossy(content_.data(), content_.size());
+  const std::vector<uint32_t> widths = LineWidthsFromScalars(scalars);
+  uint32_t col_offset = 0;
+  for (size_t line_idx = 0; line_idx < widths.size(); ++line_idx) {
+    const uint32_t width = widths[line_idx];
+    const uint32_t line_start = col_offset;
+    const uint32_t line_end = col_offset + width;
+    col_offset = line_end;
+    if (line_end <= start) {
+      continue;  // line ends before the range begins
+    }
+    if (line_start >= end) {
+      break;  // this line (and every later one) begins after the range
+    }
+    const uint32_t col_start = start > line_start ? start - line_start : 0;
+    const uint32_t col_end = end < line_end ? end - line_start : width;
+    if (col_start >= col_end) {
+      continue;
+    }
+    highlights_.push_back(HlEntry{static_cast<uint32_t>(line_idx),
+                                  HighlightRepr{col_start, col_end, hl.style_id,
+                                                hl.priority, 0, hl.hl_ref},
+                                  HlKind::kUser, std::nullopt, std::nullopt, 0});
+  }
+}
+
+void TextBuffer::RemoveHighlightsByRef(uint16_t hl_ref) {
+  // text_buffer.rs:666-670 remove_highlights_by_ref.
+  highlights_.erase(
+      std::remove_if(highlights_.begin(), highlights_.end(),
+                     [hl_ref](const HlEntry& e) {
+                       return e.hl.hl_ref == hl_ref;
+                     }),
+      highlights_.end());
+}
+
+void TextBuffer::ClearLineHighlights(uint32_t line) {
+  // text_buffer.rs:672-676 clear_line_highlights.
+  highlights_.erase(
+      std::remove_if(highlights_.begin(), highlights_.end(),
+                     [line](const HlEntry& e) { return e.line == line; }),
+      highlights_.end());
+}
+
+void TextBuffer::ClearAllHighlights() {
+  // text_buffer.rs:678-680 clear_all_highlights.
+  highlights_.clear();
+}
+
+namespace {
+
+// Record one styled-chunk highlight carrying the chunk's inline colors and the
+// synthetic per-chunk style_id (text_buffer.rs:265-281 push_styled_hl):
+// priority 1, hlRef 0.
+HlEntry MakeStyledHl(uint32_t line,
+                     uint32_t start,
+                     uint32_t end,
+                     uint32_t style_id,
+                     const StyledChunk& chunk) {
+  return HlEntry{line,
+                 HighlightRepr{start, end, style_id, 1, 0, 0},
+                 HlKind::kStyled,
+                 chunk.fg,
+                 chunk.bg,
+                 chunk.attrs};
+}
+
+}  // namespace
+
+void TextBuffer::SetStyled(const uint8_t* records, size_t len, uint32_t count) {
+  // text_buffer.rs:204-261 set_styled: clear (drops styled highlights +
+  // content), then per chunk register a synthetic style (once per colored chunk)
+  // and record one Styled highlight per colored line-segment.
+  Clear();
+  const std::vector<StyledChunk> chunks = ParseStyledChunks(records, len, count);
+  const uint32_t tab_width = static_cast<uint32_t>(tab_width_);
+  uint32_t col = 0;
+  uint32_t line = 0;
+  for (size_t i = 0; i < chunks.size(); ++i) {
+    const StyledChunk& chunk = chunks[i];
+    // Register a SYNTHETIC per-chunk style ("chunk{i}") ONCE per colored chunk,
+    // stamping its 1-based id onto every line segment; buffers with no
+    // syntax-style handle keep 0 (text_buffer.rs:218-228).
+    uint32_t style_id = 0;
+    if (chunk.colored && syntax_style_ != 0) {
+      style_id = SyntaxStyleRegister(syntax_style_, "chunk" + std::to_string(i),
+                                     chunk.fg, chunk.bg, chunk.attrs);
+    }
+    const std::vector<uint8_t> norm = NormalizeCrlf(chunk.text, chunk.text_len);
+    const std::vector<uint32_t> scalars =
+        DecodeScalarsLossy(norm.data(), norm.size());
+    uint32_t seg_line = line;
+    uint32_t seg_start = col;
+    for (uint32_t cp : scalars) {
+      if (cp == static_cast<uint32_t>('\n')) {
+        if (chunk.colored && col > seg_start) {
+          highlights_.push_back(
+              MakeStyledHl(seg_line, seg_start, col, style_id, chunk));
+        }
+        line += 1;
+        col = 0;
+        seg_line = line;
+        seg_start = 0;
+      } else if (cp == static_cast<uint32_t>('\t')) {
+        col += tab_width;
+      } else {
+        col += CodepointWidth(cp);
+      }
+    }
+    if (chunk.colored && col > seg_start) {
+      highlights_.push_back(
+          MakeStyledHl(seg_line, seg_start, col, style_id, chunk));
+    }
+    content_.insert(content_.end(), norm.begin(), norm.end());
+  }
+}
+
+std::pair<HighlightRepr*, uint32_t> TextBuffer::GetLineHighlights(
+    uint32_t line) const {
+  // text_buffer.rs:784-800 get_line_highlights: collect the line's records into
+  // a heap array; (nullptr, 0) when the line has none.
+  std::vector<HighlightRepr> items;
+  for (const HlEntry& e : highlights_) {
+    if (e.line == line) {
+      items.push_back(e.hl);
+    }
+  }
+  if (items.empty()) {
+    return {nullptr, 0};
+  }
+  const uint32_t count = static_cast<uint32_t>(items.size());
+  HighlightRepr* ptr = new HighlightRepr[count];
+  std::memcpy(ptr, items.data(), static_cast<size_t>(count) * sizeof(HighlightRepr));
+  return {ptr, count};
+}
+
+void TextBuffer::FreeLineHighlights(HighlightRepr* ptr, uint32_t count) {
+  // text_buffer.rs:806-812 free_line_highlights: free the pair; null/0 is a
+  // no-op.
+  if (ptr == nullptr || count == 0) {
+    return;
+  }
+  delete[] ptr;
+}
+
+std::vector<std::vector<SpanRun>> TextBuffer::BuildLineSpans() const {
+  // text_buffer.rs:694-768 build_line_spans: per line, sweep highlights into
+  // non-overlapping [col, next_col) runs; the strictly-highest-priority active
+  // highlight (first wins ties) resolves each run's colors.
+  const size_t line_count = static_cast<size_t>(LineCount());
+  const uint32_t syntax = syntax_style_;
+  std::vector<std::vector<SpanRun>> out(line_count);
+
+  for (size_t line_idx = 0; line_idx < line_count; ++line_idx) {
+    const uint32_t line = static_cast<uint32_t>(line_idx);
+    // The line's highlights, kept in stored order (ties resolve to the first).
+    std::vector<const HlEntry*> hls;
+    for (const HlEntry& e : highlights_) {
+      if (e.line == line) {
+        hls.push_back(&e);
+      }
+    }
+    if (hls.empty()) {
+      continue;
+    }
+
+    // Boundary events: at a shared column, ends sort before starts.
+    struct Event {
+      uint32_t col;
+      bool is_start;
+      size_t idx;
+    };
+    std::vector<Event> events;
+    events.reserve(hls.size() * 2);
+    for (size_t idx = 0; idx < hls.size(); ++idx) {
+      events.push_back(Event{hls[idx]->hl.start, true, idx});
+      events.push_back(Event{hls[idx]->hl.end, false, idx});
+    }
+    std::stable_sort(events.begin(), events.end(),
+                     [](const Event& a, const Event& b) {
+                       if (a.col != b.col) {
+                         return a.col < b.col;
+                       }
+                       if (a.is_start != b.is_start) {
+                         return a.is_start < b.is_start;  // false(end) first
+                       }
+                       return a.idx < b.idx;
+                     });
+
+    std::vector<size_t> active;
+    uint32_t current_col = 0;
+    for (const Event& ev : events) {
+      if (ev.col > current_col) {
+        // Winner: strictly-highest priority among active (first wins ties).
+        bool have_best = false;
+        size_t best = 0;
+        int best_priority = -1;
+        for (size_t idx : active) {
+          const int p = static_cast<int>(hls[idx]->hl.priority);
+          if (p > best_priority) {
+            best_priority = p;
+            best = idx;
+            have_best = true;
+          }
+        }
+        if (have_best) {
+          const HlEntry& e = *hls[best];
+          std::optional<std::array<uint16_t, 4>> fg;
+          std::optional<std::array<uint16_t, 4>> bg;
+          uint32_t attrs = 0;
+          if (e.kind == HlKind::kStyled) {
+            fg = e.fg;
+            bg = e.bg;
+            attrs = e.attrs;
+          } else {
+            std::optional<StyleTriple> resolved =
+                SyntaxStyleResolveById(syntax, e.hl.style_id);
+            if (resolved.has_value()) {
+              fg = resolved->fg;
+              bg = resolved->bg;
+              attrs = resolved->attrs;
+            }
+          }
+          out[line_idx].push_back(
+              SpanRun{current_col, ev.col, fg, bg, attrs});
+        }
+        current_col = ev.col;
+      }
+      if (ev.is_start) {
+        active.push_back(ev.idx);
+      } else {
+        active.erase(std::remove(active.begin(), active.end(), ev.idx),
+                     active.end());
+      }
+    }
+  }
+  return out;
 }
 
 }  // namespace tui

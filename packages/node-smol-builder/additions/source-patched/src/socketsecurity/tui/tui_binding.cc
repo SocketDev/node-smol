@@ -2325,6 +2325,184 @@ static void TextBufferGetTextRangeByCoords(
   args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
 }
 
+// ── Highlights + styled text + syntax style (S4) ──
+//
+// stuie routes the packed highlight/styled records through raw (ptr, len) FFI
+// (cabi.rs:1203-1325). Here the JS side hands the same bytes as a Uint8Array;
+// the 16-byte HighlightStruct and the kStyledRecordSize StyledChunkStructs keep
+// their exact packed layout (ti::HighlightRepr is byte-identical, so the record
+// is memcpy'd in). A stale handle resolves to the registry `with` default.
+
+// Read a packed 16-byte HighlightStruct from a JS Uint8Array into a
+// ti::HighlightRepr (stuie cabi.rs:1052 read_highlight, a repr(C) unaligned
+// read). A short/absent array zero-fills, matching a zeroed struct.
+static ti::HighlightRepr ReadHighlight(Local<Value> value) {
+  ti::HighlightRepr hl{0, 0, 0, 0, 0, 0};
+  size_t len = 0;
+  const uint8_t* bytes = Uint8ArrayBytes(value, &len);
+  if (bytes != nullptr && len >= sizeof(ti::HighlightRepr)) {
+    std::memcpy(&hl, bytes, sizeof(ti::HighlightRepr));
+  }
+  return hl;
+}
+
+// textBufferAddHighlight(handle, lineIdx, highlightBytes)
+// stuie cabi.rs:1260 -> text_buffer.rs:598 add_highlight; stale -> no-op.
+static void TextBufferAddHighlight(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t line = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->AddHighlight(line, ReadHighlight(args[2]));
+  }
+}
+
+// textBufferAddHighlightByCharRange(handle, highlightBytes)
+// stuie cabi.rs:1269 -> text_buffer.rs:623 add_highlight_by_char_range; stale ->
+// no-op.
+static void TextBufferAddHighlightByCharRange(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->AddHighlightByCharRange(ReadHighlight(args[1]));
+  }
+}
+
+// textBufferRemoveHighlightsByRef(handle, hlRef)
+// stuie cabi.rs:1274 -> text_buffer.rs:666 remove_highlights_by_ref. hlRef is a
+// u16 at the FFI boundary; stale -> no-op.
+static void TextBufferRemoveHighlightsByRef(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t hl_ref = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->RemoveHighlightsByRef(static_cast<uint16_t>(hl_ref));
+  }
+}
+
+// textBufferClearLineHighlights(handle, lineIdx)
+// stuie cabi.rs:1279 -> text_buffer.rs:672 clear_line_highlights; stale -> no-op.
+static void TextBufferClearLineHighlights(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t line = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->ClearLineHighlights(line);
+  }
+}
+
+// textBufferClearAllHighlights(handle)
+// stuie cabi.rs:1284 -> text_buffer.rs:678 clear_all_highlights; stale -> no-op.
+static void TextBufferClearAllHighlights(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->ClearAllHighlights();
+  }
+}
+
+// textBufferGetHighlightCount(handle) -> count
+// stuie cabi.rs:1289 -> text_buffer.rs:682 get_highlight_count; stale -> 0.
+static void TextBufferGetHighlightCount(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  uint32_t n = buffer == nullptr ? 0 : buffer->HighlightCount();
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// textBufferSetSyntaxStyle(handle, style) -> ok
+// stuie cabi.rs:1294 -> text_buffer.rs:512 set_syntax_style; stale -> false.
+static void TextBufferSetSyntaxStyle(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t style = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  args.GetReturnValue().Set(buffer != nullptr && buffer->SetSyntaxStyle(style));
+}
+
+// textBufferGetLineHighlightsPtr(handle, lineIdx, outCount) -> ptr
+// stuie cabi.rs:1306 -> text_buffer.rs:784 get_line_highlights. Writes the count
+// into outCount (a Uint32Array(>=1)) and returns the heap array's address as a
+// Number (0 when the line has none). The caller frees it via
+// textBufferFreeLineHighlights, matching the FFI (ptr, count) contract.
+static void TextBufferGetLineHighlightsPtr(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t line = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  ti::HighlightRepr* ptr = nullptr;
+  uint32_t count = 0;
+  if (buffer != nullptr) {
+    auto pair = buffer->GetLineHighlights(line);
+    ptr = pair.first;
+    count = pair.second;
+  }
+  if (args[2]->IsUint32Array()) {
+    Local<Uint32Array> arr = args[2].As<Uint32Array>();
+    if (arr->Length() >= 1) {
+      auto store = arr->Buffer()->GetBackingStore();
+      uint32_t* out = reinterpret_cast<uint32_t*>(
+          static_cast<uint8_t*>(store->Data()) + arr->ByteOffset());
+      out[0] = count;
+    }
+  }
+  args.GetReturnValue().Set(Number::New(
+      isolate, static_cast<double>(reinterpret_cast<uintptr_t>(ptr))));
+}
+
+// textBufferFreeLineHighlights(ptr, count)
+// stuie cabi.rs:1323 -> text_buffer.rs:806 free_line_highlights. `ptr`/`count`
+// must be a pair returned by textBufferGetLineHighlightsPtr, freed once.
+static void TextBufferFreeLineHighlights(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uintptr_t addr =
+      static_cast<uintptr_t>(args[0]->NumberValue(context).FromMaybe(0));
+  uint32_t count = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer::FreeLineHighlights(reinterpret_cast<ti::HighlightRepr*>(addr),
+                                     count);
+}
+
+// textBufferSetStyledText(handle, records, count)
+// stuie cabi.rs:1203 -> text_buffer.rs:508 set_styled. `records` is the packed
+// StyledChunkStruct buffer (a Uint8Array); text + colors live behind borrowed
+// process pointers valid for this synchronous call (copied by SetStyled). A
+// stale handle -> no-op.
+static void TextBufferSetStyledText(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t count = args[2]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    return;
+  }
+  size_t len = 0;
+  const uint8_t* records = Uint8ArrayBytes(args[1], &len);
+  buffer->SetStyled(records, len, count);
+}
+
 static void Initialize(Local<Object> target,
                        Local<Value> /* unused */,
                        Local<Context> context,
@@ -2477,6 +2655,25 @@ static void Initialize(Local<Object> target,
   SetMethod(context, target, "textBufferGetTextRange", TextBufferGetTextRange);
   SetMethod(context, target, "textBufferGetTextRangeByCoords",
             TextBufferGetTextRangeByCoords);
+  SetMethod(context, target, "textBufferAddHighlight", TextBufferAddHighlight);
+  SetMethod(context, target, "textBufferAddHighlightByCharRange",
+            TextBufferAddHighlightByCharRange);
+  SetMethod(context, target, "textBufferRemoveHighlightsByRef",
+            TextBufferRemoveHighlightsByRef);
+  SetMethod(context, target, "textBufferClearLineHighlights",
+            TextBufferClearLineHighlights);
+  SetMethod(context, target, "textBufferClearAllHighlights",
+            TextBufferClearAllHighlights);
+  SetMethod(context, target, "textBufferGetHighlightCount",
+            TextBufferGetHighlightCount);
+  SetMethod(context, target, "textBufferSetSyntaxStyle",
+            TextBufferSetSyntaxStyle);
+  SetMethod(context, target, "textBufferGetLineHighlightsPtr",
+            TextBufferGetLineHighlightsPtr);
+  SetMethod(context, target, "textBufferFreeLineHighlights",
+            TextBufferFreeLineHighlights);
+  SetMethod(context, target, "textBufferSetStyledText",
+            TextBufferSetStyledText);
 
   SetFastMethodNoSideEffect(context, target, "yogaCalculateLayout",
                             YogaCalculateLayout,
@@ -2724,6 +2921,16 @@ static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(TextBufferGetPlainText);
   registry->Register(TextBufferGetTextRange);
   registry->Register(TextBufferGetTextRangeByCoords);
+  registry->Register(TextBufferAddHighlight);
+  registry->Register(TextBufferAddHighlightByCharRange);
+  registry->Register(TextBufferRemoveHighlightsByRef);
+  registry->Register(TextBufferClearLineHighlights);
+  registry->Register(TextBufferClearAllHighlights);
+  registry->Register(TextBufferGetHighlightCount);
+  registry->Register(TextBufferSetSyntaxStyle);
+  registry->Register(TextBufferGetLineHighlightsPtr);
+  registry->Register(TextBufferFreeLineHighlights);
+  registry->Register(TextBufferSetStyledText);
   registry->Register(RendererDrawBox);
   registry->Register(fast_renderer_draw_box);
   registry->Register(RendererDrawTextWrapped);
