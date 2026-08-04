@@ -131,6 +131,10 @@ minimumReleaseAgeExclude:
 allowBuilds:
   '@socketsecurity/sdk': false
   cpu-features: false
+  # onnxruntime-node's postinstall downloads prebuilt binaries; the repo
+  # builds onnxruntime from source in packages/onnxruntime-builder, so the
+  # script stays denied like every other entry here (fail-closed posture).
+  onnxruntime-node: false
   protobufjs: false
   puppeteer: false
   ssh2: false
