@@ -103,7 +103,7 @@ export function getCCRemapFlagsString() {
  */
 export function getEncodedRustflags(extraFlags = []) {
   const all = [...getRustcRemapFlags(), ...extraFlags]
-  return all.join('')
+  return all.join('\u001F')
 }
 
 /**

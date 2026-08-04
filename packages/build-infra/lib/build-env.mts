@@ -34,7 +34,7 @@ export function printSetupResults(results: {
     logger.info('Build Environment:')
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
     for (const message of results.messages) {
-      logger.info(`  ${message}`) // socket-lint: allow logger-decoration
+      logger.info(message)
     }
   }
 
@@ -43,13 +43,13 @@ export function printSetupResults(results: {
     logger.warn('Missing Prerequisites:')
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
     for (const error of results.errors) {
-      logger.warn(`  ${error}`) // socket-lint: allow logger-decoration
+      logger.warn(error)
     }
   }
 
   if (!results.success) {
     logger.fail('Build environment setup failed')
-    logger.info('   Run setup script to install missing tools') // socket-lint: allow logger-decoration
+    logger.info('Run setup script to install missing tools')
     logger.error('')
   }
 }

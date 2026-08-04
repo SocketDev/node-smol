@@ -85,11 +85,12 @@ describe('check-lockstep regex patterns', () => {
   it('V8 call-extraction regex pulls Class + method from a synthetic call', () => {
     stageV8File(fixtureRoot, ['temporal_rs::FakeAbsent::method'])
     const call = 'temporal_rs::FakeAbsent::method('
-    const pattern = /temporal_rs::([A-Z][A-Za-z0-9]*)::([a-z_][a-z_0-9]*)\s*\(/g // socket-lint: allow capture
+    const pattern =
+      /temporal_rs::(?<className>[A-Z][A-Za-z0-9]*)::(?<method>[a-z_][a-z_0-9]*)\s*\(/g
     const matches = Array.from(call.matchAll(pattern))
     expect(matches.length).toBe(1)
-    expect(matches[0]![1]).toBe('FakeAbsent')
-    expect(matches[0]![2]).toBe('method')
+    expect(matches[0]!.groups?.['className']).toBe('FakeAbsent')
+    expect(matches[0]!.groups?.['method']).toBe('method')
   })
 
   it('shim-method extraction finds declared methods, not undeclared ones', () => {
