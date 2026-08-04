@@ -33,17 +33,43 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
+
+#include "tui/text_buffer.hpp"  // SpanRun, TextBuffer (draw model + extraction)
 
 namespace tui {
 
 // No wrapping (1:1 logical->visual line mapping). text_view.rs:29 WRAP_NONE.
 inline constexpr uint8_t kWrapNone = 0;
 
+// packSelectionInfo's "no selection" sentinel: all-ones u64. Returned by
+// GetSelection for a cleared OR zero-width selection. text_view.rs:33
+// NO_SELECTION.
+inline constexpr uint64_t kNoSelection = 0xFFFF'FFFF'FFFF'FFFFULL;
+
+// An active text selection over the view's newline-inclusive column space.
+// `start`/`end` are COLUMN offsets (each cluster occupies its display width,
+// each newline one column); `bg`/`fg` carry the optional selection colors
+// (nullopt falls back to the buffer defaults / reverse-video swap at draw time).
+// text_view.rs:41-46 Selection.
+struct Selection {
+  uint32_t start = 0;
+  uint32_t end = 0;
+  std::optional<std::array<uint16_t, 4>> bg;
+  std::optional<std::array<uint16_t, 4>> fg;
+};
+
+// Forward declaration: the virtual-line record (defined below with the S6
+// measurement kernel). The local-selection resolvers take the view's already-
+// materialized virtual lines by reference, so a forward declaration suffices
+// here — the .cc sees the complete type.
+struct VLine;
+
 // A native text-buffer view: the active/original buffer handles plus the wrap /
-// viewport / truncation / tab-indicator configuration. Mirrors the lifecycle +
-// config fields of text_view.rs:611-629 TextBufferView (the selection and
-// derived-model fields are deferred to later slices).
+// viewport / truncation / tab-indicator configuration and the active selection.
+// Mirrors text_view.rs:611-629 TextBufferView.
 struct TextBufferView {
   // Buffer currently measured/rendered (may be a placeholder an EditorView
   // swaps in). Starts as the creation buffer. text_view.rs:613-615.
@@ -69,6 +95,13 @@ struct TextBufferView {
   // Tab-indicator color RGBA lanes; nullopt = fall back to the cell foreground.
   // text_view.rs:623.
   std::optional<std::array<uint16_t, 4>> tab_indicator_color;
+
+  // The active selection (nullopt when cleared). text_view.rs:625.
+  std::optional<Selection> selection;
+  // The stored anchor column offset that updateLocalSelection extends the focus
+  // against (mirrors text-buffer-view.zig::selection_anchor_offset).
+  // text_view.rs:627-628.
+  std::optional<uint32_t> selection_anchor_offset;
 
   // text_view.rs:632-646 TextBufferView::new — active_tb == original_tb == tb,
   // all config at its documented default.
@@ -121,6 +154,83 @@ struct TextBufferView {
   void SetTabIndicatorColor(std::optional<std::array<uint16_t, 4>> color) {
     tab_indicator_color = color;
   }
+
+  // ── Selection state (faithful to text_view.rs:1110-1195) ──
+
+  // setSelection: store an explicit [start, end) column-offset selection.
+  // text_view.rs:1110-1121.
+  void SetSelection(uint32_t start, uint32_t end,
+                    std::optional<std::array<uint16_t, 4>> bg,
+                    std::optional<std::array<uint16_t, 4>> fg) {
+    selection = Selection{start, end, bg, fg};
+  }
+
+  // updateSelection: replace the selection end (and colors) keeping start; a
+  // no-op when there is no active selection. text_view.rs:1124-1136.
+  void UpdateSelection(uint32_t end, std::optional<std::array<uint16_t, 4>> bg,
+                       std::optional<std::array<uint16_t, 4>> fg) {
+    if (selection.has_value()) {
+      selection = Selection{selection->start, end, bg, fg};
+    }
+  }
+
+  // resetSelection: clear the selection, keeping the stored anchor offset.
+  // text_view.rs:1139-1141.
+  void ResetSelection() {
+    selection = std::nullopt;
+  }
+
+  // packSelectionInfo: kNoSelection for none or zero-width, else
+  // (start << 32) | end. text_view.rs:1145-1150.
+  uint64_t GetSelection() const {
+    if (selection.has_value() && selection->start != selection->end) {
+      return (static_cast<uint64_t>(selection->start) << 32) |
+             static_cast<uint64_t>(selection->end);
+    }
+    return kNoSelection;
+  }
+
+  // resetLocalSelection: clear the selection AND the stored anchor offset.
+  // text_view.rs:1185-1190.
+  void ResetLocalSelection() {
+    selection = std::nullopt;
+    selection_anchor_offset = std::nullopt;
+  }
+
+  // ── Local (screen-coordinate) selection resolvers (text_view.rs:687-834) ──
+  // Each takes the view's already-materialized virtual lines (the caller runs
+  // virtual_lines() once) since a selection change never alters wrapping.
+
+  // getTextEndOffset: the end column of the last virtual line, ellipsis-aware
+  // for a truncated last line. text_view.rs:674-686.
+  uint32_t TextEndOffset(const std::vector<VLine>& vlines) const;
+
+  // coordsToCharOffset: resolve a local (x, y) to a column offset in the
+  // newline-inclusive space (viewport scroll + clamp + ellipsis mapping).
+  // text_view.rs:692-728.
+  uint32_t CoordsToCharOffset(const std::vector<VLine>& vlines, int32_t x,
+                              int32_t y) const;
+
+  // setLocalSelectionStyle: resolve anchor+focus screen coords into a selection,
+  // returning whether the stored range changed. text_view.rs:729-784.
+  bool SetLocalSelection(const std::vector<VLine>& vlines, int32_t ax,
+                         int32_t ay, int32_t fx, int32_t fy,
+                         std::optional<std::array<uint16_t, 4>> bg,
+                         std::optional<std::array<uint16_t, 4>> fg);
+
+  // updateLocalSelectionStyle: focus-only extension when an anchor offset is
+  // stored, else delegates to SetLocalSelection. text_view.rs:786-801.
+  bool UpdateLocalSelection(const std::vector<VLine>& vlines, int32_t ax,
+                            int32_t ay, int32_t fx, int32_t fy,
+                            std::optional<std::array<uint16_t, 4>> bg,
+                            std::optional<std::array<uint16_t, 4>> fg);
+
+  // updateLocalSelectionFocusOnly: extend the focus against the stored anchor.
+  // text_view.rs:803-834.
+  bool UpdateLocalSelectionFocusOnly(const std::vector<VLine>& vlines,
+                                     int32_t fx, int32_t fy,
+                                     std::optional<std::array<uint16_t, 4>> bg,
+                                     std::optional<std::array<uint16_t, 4>> fg);
 };
 
 // ── View registry (handle -> TextBufferView) ──
@@ -260,6 +370,132 @@ uint32_t TbvGetLineInfo(uint32_t handle, uint32_t* out, uint32_t max_entries,
 uint32_t TbvGetLogicalLineInfo(uint32_t handle, uint32_t* out,
                                uint32_t max_entries,
                                const BufferResolver& resolve);
+
+// ─────────────────────────────────────────────────────────────────────────
+// Selection + text extraction + draw (slice S7)
+//
+// Port of stuie text_view.rs's TextBufferView selection surface (tbv_set/update/
+// reset/get_selection + the local screen-coord variants), the width-aware text
+// extraction (tbv_get_selected_text_bytes / tbv_get_plain_text_bytes), and the
+// draw path (tbv_draw_model + draw_model_into). The draw/extraction paths reach
+// the backing TextBuffer through a TextBufferAccessor, the C++ seam for stuie's
+// cross-module text_buffer::* calls (content_lines / build_line_spans /
+// default_* / get_text_range_by_cols / get_plain_text). A stale/missing buffer
+// resolves to nullptr, yielding the same per-helper fallbacks as stuie.
+// ─────────────────────────────────────────────────────────────────────────
+
+// Resolve a buffer handle to its live TextBuffer (const — every draw/extraction
+// read is const), or nullptr for a stale/missing/wrong-kind handle. The binding
+// backs this with its TextBuffer registry; the pure-C++ harness backs it with a
+// fixture buffer.
+using TextBufferAccessor = std::function<const TextBuffer*(uint32_t tb)>;
+
+// ── Handle-level selection entry points (registry lookup; stale-safe) ──
+
+// tbv_set_selection (text_view.rs:1110): store an explicit [start, end).
+void TbvSetSelection(uint32_t handle, uint32_t start, uint32_t end,
+                     std::optional<std::array<uint16_t, 4>> bg,
+                     std::optional<std::array<uint16_t, 4>> fg);
+
+// tbv_update_selection (text_view.rs:1124): replace end/colors, keep start.
+void TbvUpdateSelection(uint32_t handle, uint32_t end,
+                        std::optional<std::array<uint16_t, 4>> bg,
+                        std::optional<std::array<uint16_t, 4>> fg);
+
+// tbv_reset_selection (text_view.rs:1139): clear the selection.
+void TbvResetSelection(uint32_t handle);
+
+// tbv_get_selection (text_view.rs:1145): packed selection info; a stale view
+// returns kNoSelection.
+uint64_t TbvGetSelection(uint32_t handle);
+
+// tbv_set_local_selection (text_view.rs:1154): resolve screen coords to a
+// selection, returning whether the stored range changed. A stale view -> false.
+bool TbvSetLocalSelection(uint32_t handle, int32_t ax, int32_t ay, int32_t fx,
+                          int32_t fy, std::optional<std::array<uint16_t, 4>> bg,
+                          std::optional<std::array<uint16_t, 4>> fg,
+                          const BufferResolver& resolve);
+
+// tbv_update_local_selection (text_view.rs:1170): focus-only extension against
+// the stored anchor, or a fresh set_local_selection when no anchor is stored.
+// A stale view -> false.
+bool TbvUpdateLocalSelection(uint32_t handle, int32_t ax, int32_t ay,
+                             int32_t fx, int32_t fy,
+                             std::optional<std::array<uint16_t, 4>> bg,
+                             std::optional<std::array<uint16_t, 4>> fg,
+                             const BufferResolver& resolve);
+
+// tbv_reset_local_selection (text_view.rs:1185): clear selection AND anchor.
+void TbvResetLocalSelection(uint32_t handle);
+
+// ── Text extraction (stale-safe) ──
+
+// tbv_get_selected_text_bytes (text_view.rs:1198): copy the selected text into
+// `out` (0 for no selection or a zero-width one). Column offsets are converted
+// to bytes width-aware so graphemes select whole. `accessor` resolves the
+// active buffer. A stale view or missing buffer -> 0.
+uint32_t TbvGetSelectedTextBytes(uint32_t handle, uint8_t* out, uint32_t max_len,
+                                 const TextBufferAccessor& accessor);
+
+// tbv_get_plain_text_bytes (text_view.rs:1219): copy the active buffer's raw
+// content into `out`; returns bytes written (0 for empty / max_len == 0 / stale
+// view / missing buffer).
+uint32_t TbvGetPlainTextBytes(uint32_t handle, uint8_t* out, uint32_t max_len,
+                              const TextBufferAccessor& accessor);
+
+// ── Draw model + draw ──
+
+// A view's draw params: the active buffer's logical lines + style spans + tab
+// width + resolved default attributes, the full virtual-line model, the
+// resolved viewport, the wrap-none flag, the selection, and the tab indicator.
+// Mirrors text_view.rs:923-947 DrawModel (content_lines is carried here rather
+// than re-fetched inside draw_model_into, since the C++ side has no global
+// buffer registry to re-fetch from). prefill_bg is EditorView-only, so it is
+// always nullopt for a plain TextBufferView draw.
+struct DrawModel {
+  // The active buffer handle — the draw caller resolves its default colors from
+  // this (stuie's draw_view_model calls text_buffer::default_colors(model.tb)).
+  uint32_t tb = 0;
+  std::vector<std::string> content_lines;
+  std::vector<VLine> vlines;
+  uint32_t offset_x = 0;
+  uint32_t offset_y = 0;
+  std::optional<uint32_t> width;
+  std::optional<uint32_t> height;
+  bool wrap_none = true;
+  std::optional<Selection> selection;
+  std::vector<std::vector<SpanRun>> spans_by_line;
+  uint32_t default_attrs = 0;
+  uint32_t tab_width = 0;
+  std::optional<uint32_t> tab_indicator;
+  std::optional<std::array<uint16_t, 4>> tab_indicator_color;
+  std::optional<std::array<uint16_t, 4>> prefill_bg;
+};
+
+// The per-cluster draw sink draw_model_into invokes: (text, cx, cy, fg, bg,
+// attrs). fg/bg are raw [u16;4] RGBA lanes (value in the low byte); cx/cy may be
+// negative when the view is scrolled off the top/left. Mirrors the FnMut in
+// text_view.rs:2236-2238.
+using DrawCallback =
+    std::function<void(std::string_view, int32_t, int32_t,
+                       const std::array<uint16_t, 4>&,
+                       const std::array<uint16_t, 4>&, uint32_t)>;
+
+// tbv_draw_model (text_view.rs:949-980): materialize the draw model for the
+// view, pulling content/spans/defaults/tab-width from the buffer via `accessor`.
+// nullopt only for a stale/wrong-kind VIEW handle; a stale BUFFER resolves to
+// the documented empty fallbacks.
+std::optional<DrawModel> TbvDrawModel(uint32_t handle,
+                                      const TextBufferAccessor& accessor);
+
+// draw_model_into (text_view.rs:2236-2354): draw the model's visible virtual
+// lines at (x, y), compositing style spans over the defaults, then the
+// selection override, then the reverse-video swap, then tab-indicator fill;
+// truncated lines render prefix + "..." + suffix. `def_fg`/`def_bg` are the
+// buffer's resolved default colors.
+void DrawModelInto(const DrawModel& model, const DrawCallback& draw,
+                   std::array<uint16_t, 4> def_fg,
+                   std::array<uint16_t, 4> def_bg, int32_t x, int32_t y);
 
 }  // namespace tui
 

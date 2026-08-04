@@ -17,12 +17,13 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "tui/handles.hpp"  // handles::Tag, kKindTextBufferView
-#include "tui/utf8.hpp"     // DecodeUtf8
+#include "tui/utf8.hpp"     // DecodeUtf8, EncodeUtf8
 
 namespace tui {
 
@@ -782,6 +783,536 @@ uint32_t TbvGetLogicalLineInfo(uint32_t handle, uint32_t* out,
     return SerializeLineInfo(vl.vlines.data(), vl.vlines.size(), max_w, out,
                              max_entries);
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Selection + text extraction + draw (slice S7)
+//
+// Faithful port of stuie text_view.rs's TextBufferView selection resolvers
+// (set/update local selection over the virtual-line model), the width-aware
+// extraction, and draw_model_into (span composition + selection override +
+// reverse-video + tab-indicator fill + ellipsis-aware truncation).
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── TextBufferView local-selection resolvers (text_view.rs:674-834) ──
+
+uint32_t TextBufferView::TextEndOffset(const std::vector<VLine>& vlines) const {
+  if (vlines.empty()) {
+    return 0;
+  }
+  const VLine& v = vlines.back();
+  if (v.is_truncated) {
+    // v.col_offset + suffix_start + width_cols.saturating_sub(ellipsis_pos + 3).
+    const uint32_t drop = v.ellipsis_pos + 3;
+    const uint32_t tail = v.width_cols > drop ? v.width_cols - drop : 0;
+    return v.col_offset + v.truncation_suffix_start + tail;
+  }
+  return v.col_offset + v.width_cols;
+}
+
+uint32_t TextBufferView::CoordsToCharOffset(const std::vector<VLine>& vlines,
+                                            int32_t x, int32_t y) const {
+  if (vlines.empty()) {
+    return 0;
+  }
+  int32_t y_offset = 0;
+  int32_t x_offset = 0;
+  if (viewport.has_value()) {
+    // x-scroll applies only when wrapping is off (mirrors coordsToCharOffset).
+    x_offset = (wrap_mode == kWrapNone) ? static_cast<int32_t>((*viewport)[0])
+                                        : 0;
+    y_offset = static_cast<int32_t>((*viewport)[1]);
+  }
+  const int32_t abs_y = y + y_offset;
+  const int32_t abs_x = x + x_offset;
+  const int32_t max_y = static_cast<int32_t>(vlines.size()) - 1;
+  const int32_t clamped_y = std::clamp(abs_y, 0, max_y);
+  const VLine& v = vlines[static_cast<size_t>(clamped_y)];
+  uint32_t local_x = static_cast<uint32_t>(
+      std::clamp(abs_x, 0, static_cast<int32_t>(v.width_cols)));
+  if (v.is_truncated) {
+    const uint32_t ellipsis_width = 3;
+    if (local_x >= v.ellipsis_pos && local_x < v.ellipsis_pos + ellipsis_width) {
+      local_x = v.ellipsis_pos;
+    } else if (local_x >= v.ellipsis_pos + ellipsis_width) {
+      local_x =
+          v.truncation_suffix_start + (local_x - v.ellipsis_pos - ellipsis_width);
+    }
+  }
+  return v.col_offset + local_x;
+}
+
+bool TextBufferView::SetLocalSelection(
+    const std::vector<VLine>& vlines, int32_t ax, int32_t ay, int32_t fx,
+    int32_t fy, std::optional<std::array<uint16_t, 4>> bg,
+    std::optional<std::array<uint16_t, 4>> fg) {
+  const int32_t max_y = static_cast<int32_t>(vlines.size()) - 1;
+  const bool anchor_above = ay < 0;
+  const bool focus_above = fy < 0;
+  const bool anchor_below = ay > max_y;
+  const bool focus_below = fy > max_y;
+
+  // Both endpoints off the same edge: clear the selection + anchor.
+  if ((anchor_above && focus_above) || (anchor_below && focus_below)) {
+    const bool had = selection.has_value();
+    selection = std::nullopt;
+    selection_anchor_offset = std::nullopt;
+    return had;
+  }
+
+  const uint32_t text_end = TextEndOffset(vlines);
+  const uint32_t anchor_offset =
+      (anchor_above || ax < 0) ? 0u
+      : anchor_below           ? text_end
+                               : CoordsToCharOffset(vlines, ax, ay);
+  const uint32_t focus_offset =
+      (focus_above || fx < 0) ? 0u
+      : focus_below           ? text_end
+                              : CoordsToCharOffset(vlines, fx, fy);
+
+  selection_anchor_offset = anchor_offset;
+  const uint32_t new_start = std::min(anchor_offset, focus_offset);
+  const uint32_t new_end = std::max(anchor_offset, focus_offset);
+  const bool changed = selection.has_value()
+                           ? (selection->start != new_start ||
+                              selection->end != new_end)
+                           : true;
+  selection = Selection{new_start, new_end, bg, fg};
+  return changed;
+}
+
+bool TextBufferView::UpdateLocalSelection(
+    const std::vector<VLine>& vlines, int32_t ax, int32_t ay, int32_t fx,
+    int32_t fy, std::optional<std::array<uint16_t, 4>> bg,
+    std::optional<std::array<uint16_t, 4>> fg) {
+  if (selection_anchor_offset.has_value()) {
+    return UpdateLocalSelectionFocusOnly(vlines, fx, fy, bg, fg);
+  }
+  return SetLocalSelection(vlines, ax, ay, fx, fy, bg, fg);
+}
+
+bool TextBufferView::UpdateLocalSelectionFocusOnly(
+    const std::vector<VLine>& vlines, int32_t fx, int32_t fy,
+    std::optional<std::array<uint16_t, 4>> bg,
+    std::optional<std::array<uint16_t, 4>> fg) {
+  if (!selection_anchor_offset.has_value()) {
+    return false;
+  }
+  const uint32_t anchor_offset = *selection_anchor_offset;
+  const int32_t max_y = static_cast<int32_t>(vlines.size()) - 1;
+  const bool focus_above = fy < 0;
+  const bool focus_below = fy > max_y;
+  const uint32_t text_end = TextEndOffset(vlines);
+  const uint32_t focus_col_offset =
+      (focus_above || fx < 0) ? 0u
+      : focus_below           ? text_end
+                              : CoordsToCharOffset(vlines, fx, fy);
+
+  const uint32_t new_start = std::min(anchor_offset, focus_col_offset);
+  uint32_t new_end = std::max(anchor_offset, focus_col_offset);
+  // A backward focus extends the end by one (so the anchored glyph stays in).
+  if (focus_col_offset < anchor_offset) {
+    new_end = std::min(new_end + 1, text_end);
+  }
+  selection = Selection{new_start, new_end, bg, fg};
+  return true;
+}
+
+// ── Handle-level selection entry points ──
+
+void TbvSetSelection(uint32_t handle, uint32_t start, uint32_t end,
+                     std::optional<std::array<uint16_t, 4>> bg,
+                     std::optional<std::array<uint16_t, 4>> fg) {
+  WithTbv(handle, [&](TextBufferView& v) { v.SetSelection(start, end, bg, fg); });
+}
+
+void TbvUpdateSelection(uint32_t handle, uint32_t end,
+                        std::optional<std::array<uint16_t, 4>> bg,
+                        std::optional<std::array<uint16_t, 4>> fg) {
+  WithTbv(handle, [&](TextBufferView& v) { v.UpdateSelection(end, bg, fg); });
+}
+
+void TbvResetSelection(uint32_t handle) {
+  WithTbv(handle, [&](TextBufferView& v) { v.ResetSelection(); });
+}
+
+uint64_t TbvGetSelection(uint32_t handle) {
+  return WithTbvRet<uint64_t>(
+      handle, kNoSelection,
+      [&](const TextBufferView& v) { return v.GetSelection(); });
+}
+
+bool TbvSetLocalSelection(uint32_t handle, int32_t ax, int32_t ay, int32_t fx,
+                          int32_t fy, std::optional<std::array<uint16_t, 4>> bg,
+                          std::optional<std::array<uint16_t, 4>> fg,
+                          const BufferResolver& resolve) {
+  return WithTbvRet<bool>(handle, false, [&](TextBufferView& v) {
+    const VirtualLines vl = VirtualLinesFor(v, resolve);
+    return v.SetLocalSelection(vl.vlines, ax, ay, fx, fy, bg, fg);
+  });
+}
+
+bool TbvUpdateLocalSelection(uint32_t handle, int32_t ax, int32_t ay, int32_t fx,
+                             int32_t fy,
+                             std::optional<std::array<uint16_t, 4>> bg,
+                             std::optional<std::array<uint16_t, 4>> fg,
+                             const BufferResolver& resolve) {
+  return WithTbvRet<bool>(handle, false, [&](TextBufferView& v) {
+    const VirtualLines vl = VirtualLinesFor(v, resolve);
+    return v.UpdateLocalSelection(vl.vlines, ax, ay, fx, fy, bg, fg);
+  });
+}
+
+void TbvResetLocalSelection(uint32_t handle) {
+  WithTbv(handle, [&](TextBufferView& v) { v.ResetLocalSelection(); });
+}
+
+// ── Text extraction ──
+
+uint32_t TbvGetSelectedTextBytes(uint32_t handle, uint8_t* out, uint32_t max_len,
+                                 const TextBufferAccessor& accessor) {
+  // Snapshot the (start, end, active_tb) range if a non-empty selection exists;
+  // the buffer read then happens outside the view lock (accessor takes the
+  // buffer's own lock). Mirrors tbv_get_selected_text_bytes (text_view.rs:1198).
+  struct Range {
+    bool present;
+    uint32_t start;
+    uint32_t end;
+    uint32_t tb;
+  };
+  const Range range = WithTbvRet<Range>(
+      handle, Range{false, 0, 0, 0}, [&](const TextBufferView& v) -> Range {
+        if (v.selection.has_value() && v.selection->start != v.selection->end) {
+          return Range{true, v.selection->start, v.selection->end, v.active_tb};
+        }
+        return Range{false, 0, 0, 0};
+      });
+  if (!range.present) {
+    return 0;
+  }
+  const TextBuffer* b = accessor(range.tb);
+  if (b == nullptr) {
+    return 0;
+  }
+  return b->GetTextRangeByCols(range.start, range.end, out, max_len);
+}
+
+uint32_t TbvGetPlainTextBytes(uint32_t handle, uint8_t* out, uint32_t max_len,
+                              const TextBufferAccessor& accessor) {
+  if (max_len == 0 || out == nullptr) {
+    return 0;
+  }
+  const uint32_t tb = WithTbvRet<uint32_t>(
+      handle, 0, [&](const TextBufferView& v) { return v.active_tb; });
+  if (tb == 0) {
+    return 0;
+  }
+  const TextBuffer* b = accessor(tb);
+  if (b == nullptr) {
+    return 0;
+  }
+  return b->GetPlainText(out, max_len);
+}
+
+// ── Draw helpers (text_view.rs:488-2434) ──
+
+namespace {
+
+// Reverse-video attribute bit (TextAttributes.INVERSE). text_view.rs:2208.
+constexpr uint32_t kAttrInverse = 1u << 5;
+// The ellipsis glyph, drawn three times in a truncated line's middle.
+// text_view.rs:2210 ELLIPSIS_STR.
+constexpr std::string_view kEllipsisStr = ".";
+
+// A cell ready to draw. text_view.rs:2216-2229 DrawCell.
+struct DrawCell {
+  std::string_view text;
+  uint32_t width;
+  std::optional<uint32_t> source_col;  // nullopt for ellipsis cells
+  uint32_t sel_offset;
+  bool is_ellipsis;
+};
+
+// A composited (fg, bg, attrs) triple. Return-by-struct so draw_model_into needs
+// no <tuple>.
+struct CompositedStyle {
+  std::array<uint16_t, 4> fg;
+  std::array<uint16_t, 4> bg;
+  uint32_t attrs;
+};
+
+// A char is a valid Unicode scalar (char::from_u32 in stuie): <= U+10FFFF and
+// not a UTF-16 surrogate. Used for the tab-indicator glyph.
+bool IsValidScalar(uint32_t cp) {
+  return cp <= 0x10FFFF && !(cp >= 0xD800 && cp <= 0xDFFF);
+}
+
+// text_view.rs:493-514 slice_line_cols: the grapheme-cluster slices covering
+// display columns [start_col, start_col + width). Each pair is (cluster bytes,
+// cluster display width); a '\t' expands to tab_width. The returned string_views
+// borrow `line`.
+std::vector<std::pair<std::string_view, uint32_t>> SliceLineCols(
+    std::string_view line, uint32_t start_col, uint32_t width,
+    uint32_t tab_width) {
+  const uint32_t end_col =
+      (start_col > UINT32_MAX - width) ? UINT32_MAX : start_col + width;
+  uint32_t col = 0;
+  std::vector<std::pair<std::string_view, uint32_t>> out;
+  const char* const data = line.data();
+  const char* const end = data + line.size();
+  size_t pos = 0;
+  while (pos < line.size()) {
+    const std::pair<size_t, uint32_t> cl = NextCluster(data + pos, end);
+    const uint32_t w =
+        (line[pos] == '\t') ? tab_width : cl.second;
+    if (col >= start_col && col < end_col) {
+      out.emplace_back(std::string_view(data + pos, cl.first), w);
+    }
+    col = (col > UINT32_MAX - w) ? UINT32_MAX : col + w;
+    pos += cl.first;
+    if (col >= end_col) {
+      break;
+    }
+  }
+  return out;
+}
+
+// text_view.rs:2360-2405 truncated_cells: prefix source columns, three collapsed
+// "..." ellipsis cells, then the suffix source columns.
+std::vector<DrawCell> TruncatedCells(const VLine& v, std::string_view line,
+                                     uint32_t tab_width) {
+  const uint32_t line_col = v.col_offset;
+  const std::vector<std::pair<std::string_view, uint32_t>> all =
+      SliceLineCols(line, v.source_col_offset, UINT32_MAX, tab_width);
+  std::vector<DrawCell> out;
+  uint32_t col = 0;
+  // Prefix: columns [0, ellipsis_pos).
+  for (const auto& cell : all) {
+    if (col >= v.ellipsis_pos) {
+      break;
+    }
+    out.push_back(DrawCell{cell.first, cell.second,
+                           std::optional<uint32_t>(v.source_col_offset + col),
+                           line_col + col, false});
+    col += cell.second;
+  }
+  // Ellipsis: three cells collapsing to line_col + ellipsis_pos.
+  for (int i = 0; i < 3; ++i) {
+    out.push_back(DrawCell{kEllipsisStr, 1, std::nullopt,
+                           line_col + v.ellipsis_pos, true});
+  }
+  // Suffix: columns >= truncation_suffix_start.
+  col = 0;
+  for (const auto& cell : all) {
+    if (col >= v.truncation_suffix_start) {
+      out.push_back(DrawCell{cell.first, cell.second,
+                             std::optional<uint32_t>(v.source_col_offset + col),
+                             line_col + col, false});
+    }
+    col += cell.second;
+  }
+  return out;
+}
+
+// text_view.rs:2412-2430 composite_span: the style span covering `col` over the
+// buffer defaults; fg/bg fall back when the span leaves them unset, attrs
+// OR-combines.
+CompositedStyle CompositeSpan(const std::vector<SpanRun>* spans, uint32_t col,
+                              const std::array<uint16_t, 4>& def_fg,
+                              const std::array<uint16_t, 4>& def_bg,
+                              uint32_t def_attrs) {
+  if (spans != nullptr) {
+    for (const SpanRun& s : *spans) {
+      if (col >= s.col && col < s.next_col) {
+        return CompositedStyle{s.fg.value_or(def_fg), s.bg.value_or(def_bg),
+                               def_attrs | s.attrs};
+      }
+    }
+  }
+  return CompositedStyle{def_fg, def_bg, def_attrs};
+}
+
+// text_view.rs:2433-2452 apply_selection: an explicit selection bg replaces the
+// bg (and fg when set); otherwise fg/bg swap (bg falling back to opaque black
+// when transparent).
+void ApplySelection(std::array<uint16_t, 4>& fg, std::array<uint16_t, 4>& bg,
+                    const Selection& sel) {
+  if (sel.bg.has_value()) {
+    bg = *sel.bg;
+    if (sel.fg.has_value()) {
+      fg = *sel.fg;
+    }
+  } else {
+    const std::array<uint16_t, 4> temp = fg;
+    fg = ((bg[3] & 0xff) > 0) ? bg : std::array<uint16_t, 4>{0, 0, 0, 255};
+    bg = temp;
+  }
+}
+
+}  // namespace
+
+std::optional<DrawModel> TbvDrawModel(uint32_t handle,
+                                      const TextBufferAccessor& accessor) {
+  return WithTbvRet<std::optional<DrawModel>>(
+      handle, std::nullopt,
+      [&](const TextBufferView& v) -> std::optional<DrawModel> {
+        const TextBuffer* b = accessor(v.active_tb);
+        // Per-helper fallbacks for a stale/missing buffer, matching stuie's
+        // registry `with` defaults (content_lines empty, tab default, no spans).
+        std::vector<std::string> content_lines =
+            b ? b->ContentLines() : std::vector<std::string>{};
+        const uint32_t tab_width = b ? b->TabWidth() : kDefaultTabWidth;
+
+        const std::optional<uint32_t> ww = (v.wrap_mode != kWrapNone)
+                                               ? v.wrap_width
+                                               : std::optional<uint32_t>{};
+        VirtualLines vl = CalculateVirtualLines(content_lines, tab_width,
+                                                v.wrap_mode, ww,
+                                                v.first_line_offset);
+        if (v.truncate && v.viewport.has_value()) {
+          ApplyTruncation(vl.vlines, (*v.viewport)[2]);
+        }
+
+        DrawModel m;
+        m.tb = v.active_tb;
+        m.content_lines = std::move(content_lines);
+        m.vlines = std::move(vl.vlines);
+        if (v.viewport.has_value()) {
+          m.offset_x = (*v.viewport)[0];
+          m.offset_y = (*v.viewport)[1];
+          m.width = (*v.viewport)[2];
+          m.height = (*v.viewport)[3];
+        }
+        m.wrap_none = (v.wrap_mode == kWrapNone);
+        m.selection = v.selection;
+        m.spans_by_line =
+            b ? b->BuildLineSpans() : std::vector<std::vector<SpanRun>>{};
+        m.default_attrs = b ? b->DefaultAttributes().value_or(0) : 0;
+        m.tab_width = tab_width;
+        m.tab_indicator = v.tab_indicator;
+        m.tab_indicator_color = v.tab_indicator_color;
+        m.prefill_bg = std::nullopt;  // EditorView-only; never set for a TBV.
+        return m;
+      });
+}
+
+void DrawModelInto(const DrawModel& model, const DrawCallback& draw,
+                   std::array<uint16_t, 4> def_fg,
+                   std::array<uint16_t, 4> def_bg, int32_t x, int32_t y) {
+  const std::vector<std::string>& lines = model.content_lines;
+  const size_t offset_y = model.offset_y;
+  const std::optional<uint32_t>& clip_w = model.width;
+  const uint32_t scroll_x = model.wrap_none ? model.offset_x : 0u;
+  const uint32_t def_attrs = model.default_attrs;
+  const uint32_t tab_width = model.tab_width;
+
+  // EditorView viewport-bg prefill (never set for a plain TextBufferView, but
+  // ported for fidelity). text_view.rs:2255-2263.
+  if (model.prefill_bg.has_value() && model.width.has_value() &&
+      model.height.has_value()) {
+    const std::array<uint16_t, 4> pbg = *model.prefill_bg;
+    const std::array<uint16_t, 4> white{255, 255, 255, 255};
+    for (int32_t dy = 0; dy < static_cast<int32_t>(*model.height); ++dy) {
+      for (int32_t dx = 0; dx < static_cast<int32_t>(*model.width); ++dx) {
+        draw(std::string_view(" ", 1), x + dx, y + dy, white, pbg, def_attrs);
+      }
+    }
+  }
+
+  size_t row_i = 0;
+  for (size_t vidx = offset_y; vidx < model.vlines.size(); ++vidx, ++row_i) {
+    if (model.height.has_value() && row_i >= static_cast<size_t>(*model.height)) {
+      break;
+    }
+    const VLine& v = model.vlines[vidx];
+    const int32_t row = y + static_cast<int32_t>(row_i);
+    if (v.source_line >= lines.size()) {
+      continue;
+    }
+    const std::string& line = lines[v.source_line];
+    const std::vector<SpanRun>* spans =
+        (v.source_line < model.spans_by_line.size())
+            ? &model.spans_by_line[v.source_line]
+            : nullptr;
+
+    std::vector<DrawCell> cells;
+    if (v.is_truncated) {
+      cells = TruncatedCells(v, line, tab_width);
+    } else {
+      const uint32_t start_col = v.source_col_offset + scroll_x;
+      uint32_t gcol = v.col_offset + scroll_x;
+      uint32_t scol = start_col;
+      for (const auto& cell :
+           SliceLineCols(line, start_col, v.width_cols, tab_width)) {
+        cells.push_back(DrawCell{cell.first, cell.second,
+                                 std::optional<uint32_t>(scol), gcol, false});
+        gcol += cell.second;
+        scol += cell.second;
+      }
+    }
+
+    int32_t cx = x;
+    uint32_t cols_drawn = 0;
+    for (const DrawCell& cell : cells) {
+      if (clip_w.has_value() && cols_drawn >= *clip_w) {
+        break;
+      }
+      // Base style from the composited spans (defaults for ellipsis cells).
+      std::array<uint16_t, 4> fg;
+      std::array<uint16_t, 4> bg;
+      uint32_t attrs;
+      if (!cell.is_ellipsis && cell.source_col.has_value()) {
+        const CompositedStyle st =
+            CompositeSpan(spans, *cell.source_col, def_fg, def_bg, def_attrs);
+        fg = st.fg;
+        bg = st.bg;
+        attrs = st.attrs;
+      } else {
+        fg = def_fg;
+        bg = def_bg;
+        attrs = def_attrs;
+      }
+      // Selection override (whole glyph keyed on its start offset).
+      if (model.selection.has_value()) {
+        const Selection& sel = *model.selection;
+        if (cell.sel_offset >= sel.start && cell.sel_offset < sel.end) {
+          ApplySelection(fg, bg, sel);
+        }
+      }
+      // Reverse-video swap.
+      if ((attrs & kAttrInverse) != 0) {
+        std::swap(fg, bg);
+      }
+
+      if (!cell.is_ellipsis && !cell.text.empty() && cell.text[0] == '\t') {
+        // Tab indicator: first cell = indicator glyph (indicator color, fallback
+        // fg), remaining width-1 cells = spaces in fg.
+        char glyph_buf[4];
+        for (uint32_t k = 0; k < cell.width; ++k) {
+          std::string_view glyph;
+          std::array<uint16_t, 4> cfg;
+          if (k == 0) {
+            if (model.tab_indicator.has_value() &&
+                IsValidScalar(*model.tab_indicator)) {
+              const size_t n = EncodeUtf8(*model.tab_indicator, glyph_buf);
+              glyph = std::string_view(glyph_buf, n);
+            } else {
+              glyph = std::string_view(" ", 1);
+            }
+            cfg = model.tab_indicator_color.value_or(fg);
+          } else {
+            glyph = std::string_view(" ", 1);
+            cfg = fg;
+          }
+          draw(glyph, cx + static_cast<int32_t>(k), row, cfg, bg, attrs);
+        }
+      } else {
+        draw(cell.text, cx, row, fg, bg, attrs);
+      }
+      cx += static_cast<int32_t>(cell.width);
+      cols_drawn += cell.width;
+    }
+  }
 }
 
 }  // namespace tui

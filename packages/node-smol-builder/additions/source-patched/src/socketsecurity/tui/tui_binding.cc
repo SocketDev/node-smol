@@ -112,6 +112,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -2748,6 +2749,214 @@ static void TextBufferViewGetLogicalLineInfo(
       ti::TbvGetLogicalLineInfo(handle, out, max_entries, ResolveBufferData)));
 }
 
+// ── TextBufferView selection + extraction + draw (slice S7) ──
+//
+// The selection surface text-buffer-view.ts drives: explicit [start, end)
+// column-offset selection, screen-coord (local) resolution, packed
+// getSelectionInfo, width-aware selected-text extraction, plain-text readout,
+// and the draw-into-a-renderer path. Optional colors arrive as RGBA.buffer
+// (Uint16Array(4)) pointers, read via ReadOptionalRgba (nullopt when absent).
+
+// The TextBufferAccessor the draw/extraction paths read (text_view.hpp): resolve
+// a buffer handle in THIS binding's TextBuffer registry to its live TextBuffer,
+// the C++ seam for stuie's cross-module text_buffer::* calls. A stale/missing
+// buffer resolves to nullptr, yielding the documented empty/zero fallbacks.
+static const ti::TextBuffer* ResolveTextBufferConst(uint32_t tb) {
+  return LookupTextBuffer(tb);
+}
+
+// textBufferViewSetSelection(handle, start, end, bgPtr, fgPtr)
+// stuie cabi.rs:1523 -> text_view.rs:1110 tbv_set_selection.
+static void TextBufferViewSetSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t start = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t end = args[2]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetSelection(handle, start, end, ReadOptionalRgba(args[3]),
+                      ReadOptionalRgba(args[4]));
+}
+
+// textBufferViewUpdateSelection(handle, end, bgPtr, fgPtr)
+// stuie cabi.rs:1544 -> text_view.rs:1124 tbv_update_selection.
+static void TextBufferViewUpdateSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t end = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TbvUpdateSelection(handle, end, ReadOptionalRgba(args[2]),
+                         ReadOptionalRgba(args[3]));
+}
+
+// textBufferViewResetSelection(handle)
+// stuie cabi.rs:1553 -> text_view.rs:1139 tbv_reset_selection.
+static void TextBufferViewResetSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TbvResetSelection(handle);
+}
+
+// textBufferViewGetSelection(handle) -> packedInfo (as a JS Number; exact for
+// the realistic (start<<32)|end range). stuie cabi.rs:1559 -> text_view.rs:1145
+// tbv_get_selection; a stale view -> NO_SELECTION (all-ones).
+static void TextBufferViewGetSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  args.GetReturnValue().Set(
+      Number::New(isolate, static_cast<double>(ti::TbvGetSelection(handle))));
+}
+
+// textBufferViewSetLocalSelection(handle, ax, ay, fx, fy, bgPtr, fgPtr)
+//   -> changed. stuie cabi.rs:1567 -> text_view.rs:1154 tbv_set_local_selection.
+static void TextBufferViewSetLocalSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  int32_t ax = args[1]->Int32Value(context).FromMaybe(0);
+  int32_t ay = args[2]->Int32Value(context).FromMaybe(0);
+  int32_t fx = args[3]->Int32Value(context).FromMaybe(0);
+  int32_t fy = args[4]->Int32Value(context).FromMaybe(0);
+  const bool changed = ti::TbvSetLocalSelection(
+      handle, ax, ay, fx, fy, ReadOptionalRgba(args[5]),
+      ReadOptionalRgba(args[6]), ResolveBufferData);
+  args.GetReturnValue().Set(Boolean::New(isolate, changed));
+}
+
+// textBufferViewUpdateLocalSelection(handle, ax, ay, fx, fy, bgPtr, fgPtr)
+//   -> changed. stuie cabi.rs:1587 -> text_view.rs:1170
+//   tbv_update_local_selection.
+static void TextBufferViewUpdateLocalSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  int32_t ax = args[1]->Int32Value(context).FromMaybe(0);
+  int32_t ay = args[2]->Int32Value(context).FromMaybe(0);
+  int32_t fx = args[3]->Int32Value(context).FromMaybe(0);
+  int32_t fy = args[4]->Int32Value(context).FromMaybe(0);
+  const bool changed = ti::TbvUpdateLocalSelection(
+      handle, ax, ay, fx, fy, ReadOptionalRgba(args[5]),
+      ReadOptionalRgba(args[6]), ResolveBufferData);
+  args.GetReturnValue().Set(Boolean::New(isolate, changed));
+}
+
+// textBufferViewResetLocalSelection(handle)
+// stuie cabi.rs:1611 -> text_view.rs:1185 tbv_reset_local_selection.
+static void TextBufferViewResetLocalSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TbvResetLocalSelection(handle);
+}
+
+// textBufferViewGetSelectedTextBytes(handle, out, maxLen) -> bytesWritten
+// stuie cabi.rs:1620 -> text_view.rs:1198 tbv_get_selected_text_bytes.
+static void TextBufferViewGetSelectedTextBytes(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_len = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t n = 0;
+  if (args[1]->IsUint8Array()) {
+    Local<Uint8Array> arr = args[1].As<Uint8Array>();
+    if (max_len > arr->ByteLength()) {
+      max_len = static_cast<uint32_t>(arr->ByteLength());
+    }
+    auto store = arr->Buffer()->GetBackingStore();
+    uint8_t* out = static_cast<uint8_t*>(store->Data()) + arr->ByteOffset();
+    n = ti::TbvGetSelectedTextBytes(handle, out, max_len,
+                                    ResolveTextBufferConst);
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// textBufferViewGetPlainTextBytes(handle, out, maxLen) -> bytesWritten
+// stuie cabi.rs:1633 -> text_view.rs:1219 tbv_get_plain_text_bytes.
+static void TextBufferViewGetPlainTextBytes(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_len = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t n = 0;
+  if (args[1]->IsUint8Array()) {
+    Local<Uint8Array> arr = args[1].As<Uint8Array>();
+    if (max_len > arr->ByteLength()) {
+      max_len = static_cast<uint32_t>(arr->ByteLength());
+    }
+    auto store = arr->Buffer()->GetBackingStore();
+    uint8_t* out = static_cast<uint8_t*>(store->Data()) + arr->ByteOffset();
+    n = ti::TbvGetPlainTextBytes(handle, out, max_len, ResolveTextBufferConst);
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// bufferDrawTextBufferView(rendererId, viewHandle, x, y)
+// stuie cabi.rs:468 bufferDrawTextBufferView -> text_view.rs:974 tbv_draw_model
+// + text_view.rs:2236 draw_model_into. CROSS-REGISTRY: builds the view's draw
+// model (spans composited over the buffer defaults + selection override +
+// reverse-video + tab-indicator fill + ellipsis-aware truncation) and blits each
+// cluster into the renderer's Next() cell buffer. A stale renderer OR view is a
+// no-op.
+static void BufferDrawTextBufferView(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t renderer_id = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t view = args[1]->Uint32Value(context).FromMaybe(0);
+  int32_t x = args[2]->Int32Value(context).FromMaybe(0);
+  int32_t y = args[3]->Int32Value(context).FromMaybe(0);
+  ti::Renderer* renderer = LookupRenderer(renderer_id);
+  if (renderer == nullptr) {
+    return;
+  }
+  std::optional<ti::DrawModel> model =
+      ti::TbvDrawModel(view, ResolveTextBufferConst);
+  if (!model.has_value()) {
+    return;
+  }
+  // Resolve the active buffer's default colors (white fg / transparent bg
+  // fallback for a stale buffer), mirroring draw_view_model's
+  // default_colors(model.tb) (cabi.rs:451).
+  std::array<uint16_t, 4> def_fg{255, 255, 255, 255};
+  std::array<uint16_t, 4> def_bg{0, 0, 0, 0};
+  const ti::TextBuffer* buffer = LookupTextBuffer(model->tb);
+  if (buffer != nullptr) {
+    const std::pair<std::array<uint16_t, 4>, std::array<uint16_t, 4>> colors =
+        buffer->DefaultColors();
+    def_fg = colors.first;
+    def_bg = colors.second;
+  }
+  auto& next = renderer->Next();
+  ti::DrawModelInto(
+      *model,
+      [&next](std::string_view s, int32_t cx, int32_t cy,
+              const std::array<uint16_t, 4>& fg,
+              const std::array<uint16_t, 4>& bg, uint32_t attrs) {
+        // Off-screen cells (negative cx/cy wrap to a huge unsigned index) are
+        // dropped by CellBuffer's bounds check. Colors are the RGBA lanes' low
+        // (value) bytes; the cell grid is 8-bit RGB with no alpha channel.
+        next.DrawText(static_cast<uint32_t>(cx), static_cast<uint32_t>(cy),
+                      s.data(), s.size(), static_cast<uint8_t>(fg[0] & 0xff),
+                      static_cast<uint8_t>(fg[1] & 0xff),
+                      static_cast<uint8_t>(fg[2] & 0xff),
+                      static_cast<uint8_t>(bg[0] & 0xff),
+                      static_cast<uint8_t>(bg[1] & 0xff),
+                      static_cast<uint8_t>(bg[2] & 0xff),
+                      static_cast<uint8_t>(attrs & 0xff));
+      },
+      def_fg, def_bg, x, y);
+}
+
 static void Initialize(Local<Object> target,
                        Local<Value> /* unused */,
                        Local<Context> context,
@@ -2948,6 +3157,26 @@ static void Initialize(Local<Object> target,
             TextBufferViewGetLineInfo);
   SetMethod(context, target, "textBufferViewGetLogicalLineInfo",
             TextBufferViewGetLogicalLineInfo);
+  SetMethod(context, target, "textBufferViewSetSelection",
+            TextBufferViewSetSelection);
+  SetMethod(context, target, "textBufferViewUpdateSelection",
+            TextBufferViewUpdateSelection);
+  SetMethod(context, target, "textBufferViewResetSelection",
+            TextBufferViewResetSelection);
+  SetMethod(context, target, "textBufferViewGetSelection",
+            TextBufferViewGetSelection);
+  SetMethod(context, target, "textBufferViewSetLocalSelection",
+            TextBufferViewSetLocalSelection);
+  SetMethod(context, target, "textBufferViewUpdateLocalSelection",
+            TextBufferViewUpdateLocalSelection);
+  SetMethod(context, target, "textBufferViewResetLocalSelection",
+            TextBufferViewResetLocalSelection);
+  SetMethod(context, target, "textBufferViewGetSelectedTextBytes",
+            TextBufferViewGetSelectedTextBytes);
+  SetMethod(context, target, "textBufferViewGetPlainTextBytes",
+            TextBufferViewGetPlainTextBytes);
+  SetMethod(context, target, "bufferDrawTextBufferView",
+            BufferDrawTextBufferView);
 
   SetFastMethodNoSideEffect(context, target, "yogaCalculateLayout",
                             YogaCalculateLayout,
@@ -3220,6 +3449,16 @@ static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(TextBufferViewMeasureForDimensions);
   registry->Register(TextBufferViewGetLineInfo);
   registry->Register(TextBufferViewGetLogicalLineInfo);
+  registry->Register(TextBufferViewSetSelection);
+  registry->Register(TextBufferViewUpdateSelection);
+  registry->Register(TextBufferViewResetSelection);
+  registry->Register(TextBufferViewGetSelection);
+  registry->Register(TextBufferViewSetLocalSelection);
+  registry->Register(TextBufferViewUpdateLocalSelection);
+  registry->Register(TextBufferViewResetLocalSelection);
+  registry->Register(TextBufferViewGetSelectedTextBytes);
+  registry->Register(TextBufferViewGetPlainTextBytes);
+  registry->Register(BufferDrawTextBufferView);
   registry->Register(RendererDrawBox);
   registry->Register(fast_renderer_draw_box);
   registry->Register(RendererDrawTextWrapped);

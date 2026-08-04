@@ -223,6 +223,16 @@ class TextBuffer {
     return default_attrs_;
   }
 
+  // Resolved default (fg, bg) as raw [u16;4] RGBA lanes for the draw path: an
+  // unset foreground falls back to opaque white ({255,255,255,255}), an unset
+  // background to transparent ({0,0,0,0}). text_buffer.rs:400-412 default_colors.
+  std::pair<std::array<uint16_t, 4>, std::array<uint16_t, 4>> DefaultColors()
+      const {
+    static constexpr std::array<uint16_t, 4> kDefFg{255, 255, 255, 255};
+    static constexpr std::array<uint16_t, 4> kDefBg{0, 0, 0, 0};
+    return {default_fg_.value_or(kDefFg), default_bg_.value_or(kDefBg)};
+  }
+
   // ── Content I/O: mem registry + ingestion + readout (S3) ──
 
   // Register a byte blob in the per-buffer mem registry, recycling the first
@@ -290,6 +300,21 @@ class TextBuffer {
                                 uint32_t end_col,
                                 uint8_t* out,
                                 uint32_t max_len) const;
+
+  // Slice content by newline-inclusive display-COLUMN offsets `[start, end)` and
+  // copy the sliced UTF-8 bytes into `out`; returns bytes written. Each grapheme
+  // cluster occupies its display width (wide/CJK/emoji = 2 cols, VS16-promoted)
+  // and a newline occupies one column, so a cluster whose start column falls in
+  // range is emitted WHOLE — the width-aware slice the view selection uses.
+  // An empty range (start >= end) returns 0. text_buffer.rs:542-575
+  // get_text_range_by_cols (walks crate::buffer::next_cluster over the
+  // from_utf8_lossy content). Uses stuie's own cluster-width model — the same
+  // one the S6 wrap kernel uses — NOT the Unicode-17 width.hpp tables, so
+  // selection extraction agrees byte-for-byte with the measurement/draw paths.
+  uint32_t GetTextRangeByCols(uint32_t start,
+                              uint32_t end,
+                              uint8_t* out,
+                              uint32_t max_len) const;
 
   // ── Highlights + styled text + syntax style (S4) ──
 

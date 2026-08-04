@@ -189,6 +189,82 @@ size_t CoordToCharOffset(const std::vector<uint32_t>& scalars,
   return offset + static_cast<size_t>(col);
 }
 
+// ── Cluster width model for the column-aware slice (get_text_range_by_cols) ──
+//
+// The TWIN of text_view.cc's IsWide / IsClusterExtender / NextCluster, working
+// in the lossy-decoded scalar space DecodeScalarsLossy already produces (rather
+// than raw bytes). Duplicated across the TU boundary on purpose: get_text_range
+// _by_cols is a text_buffer.rs function, and both copies port the SAME stuie
+// ranges (buffer.rs:50-70 is_wide, :95-106 is_cluster_extender, :115-146
+// next_cluster) so the column space here is byte-identical to the S6 wrap /
+// draw column space — NOT the Unicode-17 width.hpp model DisplayLength uses.
+
+// buffer.rs:84-88: ZWJ folds the FOLLOWING scalar in; VS16 folds in AND promotes
+// a width-1 base to width 2.
+constexpr uint32_t kClusterZwj = 0x200D;
+constexpr uint32_t kClusterVs16 = 0xFE0F;
+
+// buffer.rs:50-70 is_wide: two terminal columns.
+bool IsWideScalar(uint32_t cp) {
+  return (cp >= 0x1100 && cp <= 0x115F) || (cp >= 0x2329 && cp <= 0x232A) ||
+         (cp >= 0x2E80 && cp <= 0x303E) || (cp >= 0x3041 && cp <= 0x33FF) ||
+         (cp >= 0x3400 && cp <= 0x4DBF) || (cp >= 0x4E00 && cp <= 0x9FFF) ||
+         (cp >= 0xA000 && cp <= 0xA4CF) || (cp >= 0xAC00 && cp <= 0xD7A3) ||
+         (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFE10 && cp <= 0xFE19) ||
+         (cp >= 0xFE30 && cp <= 0xFE6F) || (cp >= 0xFF00 && cp <= 0xFF60) ||
+         (cp >= 0xFFE0 && cp <= 0xFFE6) || (cp >= 0x1F300 && cp <= 0x1FAFF) ||
+         (cp >= 0x1F000 && cp <= 0x1F2FF) || (cp >= 0x20000 && cp <= 0x3FFFD);
+}
+
+// buffer.rs:95-106 is_cluster_extender: zero-width folding scalars.
+bool IsClusterExtenderScalar(uint32_t c) {
+  return (c >= 0x0300 && c <= 0x036F) || (c >= 0x1AB0 && c <= 0x1AFF) ||
+         (c >= 0x1DC0 && c <= 0x1DFF) || (c >= 0x20D0 && c <= 0x20FF) ||
+         (c >= 0xFE00 && c <= 0xFE0F) || (c >= 0xFE20 && c <= 0xFE2F) ||
+         (c >= 0xE0100 && c <= 0xE01EF);
+}
+
+// buffer.rs:115-146 next_cluster in scalar space: fold the grapheme cluster
+// starting at `scalars[i]` — base plus trailing extenders (VS16/combining) and
+// ZWJ-joined scalars. Returns (scalar_count, width_cols) with the VS16
+// emoji-presentation width-1 -> 2 promotion.
+std::pair<size_t, uint32_t> NextClusterScalars(
+    const std::vector<uint32_t>& scalars, size_t i) {
+  const size_t n = scalars.size();
+  if (i >= n) {
+    return {0, 0};
+  }
+  uint32_t width = IsWideScalar(scalars[i]) ? 2u : 1u;
+  size_t cluster_end = i + 1;  // one past the last scalar folded into the cluster
+  size_t j = i + 1;
+  bool join_next = false;
+  while (j < n) {
+    const uint32_t c = scalars[j];
+    if (join_next) {
+      cluster_end = j + 1;
+      join_next = false;
+      j += 1;
+      continue;
+    }
+    if (c == kClusterZwj) {
+      cluster_end = j + 1;
+      join_next = true;
+      j += 1;
+      continue;
+    }
+    if (IsClusterExtenderScalar(c)) {
+      if (c == kClusterVs16 && width == 1) {
+        width = 2;
+      }
+      cluster_end = j + 1;
+      j += 1;
+      continue;
+    }
+    break;
+  }
+  return {cluster_end - i, width};
+}
+
 // text_buffer.rs:816-830 copy_slice_out: copy min(len, max_len) bytes into
 // `out`; returns bytes written. A null `out` or zero `max_len` writes nothing.
 uint32_t CopySliceOut(const uint8_t* src,
@@ -410,6 +486,43 @@ uint32_t TextBuffer::GetTextRangeByCoords(uint32_t start_row,
     return 0;
   }
   const std::vector<uint8_t> sliced = CharSlice(scalars, start, end);
+  return CopySliceOut(sliced.data(), sliced.size(), out, max_len);
+}
+
+uint32_t TextBuffer::GetTextRangeByCols(uint32_t start,
+                                        uint32_t end,
+                                        uint8_t* out,
+                                        uint32_t max_len) const {
+  // text_buffer.rs:542-575 get_text_range_by_cols: empty range -> 0; else walk
+  // the lossy-decoded content in grapheme-cluster space, emitting every cluster
+  // whose START column is in [start, end). A newline occupies one column (its
+  // '\n' scalar still emitted when in range); every other cluster occupies its
+  // display width. Column advances saturating; the loop stops once col >= end.
+  if (start >= end) {
+    return 0;
+  }
+  const std::vector<uint32_t> scalars =
+      DecodeScalarsLossy(content_.data(), content_.size());
+  std::vector<uint8_t> sliced;
+  uint32_t col = 0;
+  size_t i = 0;
+  const size_t n = scalars.size();
+  while (i < n) {
+    const std::pair<size_t, uint32_t> cluster = NextClusterScalars(scalars, i);
+    const uint32_t w =
+        (scalars[i] == static_cast<uint32_t>('\n')) ? 1u : cluster.second;
+    if (col >= start && col < end) {
+      for (size_t k = i; k < i + cluster.first; ++k) {
+        EncodeScalar(scalars[k], &sliced);
+      }
+    }
+    // Saturating add so a near-u32::MAX column can't wrap past `end`.
+    col = (col > UINT32_MAX - w) ? UINT32_MAX : col + w;
+    i += cluster.first;
+    if (col >= end) {
+      break;
+    }
+  }
   return CopySliceOut(sliced.data(), sliced.size(), out, max_len);
 }
 
