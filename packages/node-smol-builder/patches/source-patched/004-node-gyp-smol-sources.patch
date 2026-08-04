@@ -109,7 +109,7 @@
          # Thin LTO for node_main.cc and linker (scoped to node_exe)
          ['node_with_ltcg=="true"', {
            'msvs_settings': {
-@@ -971,16 +1020,459 @@
+@@ -971,16 +1020,460 @@
            ],
            'dependencies': [
              'deps/ncrypto/ncrypto.gyp:ncrypto',
@@ -383,6 +383,7 @@
 +                'src/socketsecurity/tui/renderables.cc',
 +                'src/socketsecurity/tui/renderer.cc',
 +                'src/socketsecurity/tui/text_buffer.cc',
++                'src/socketsecurity/tui/text_view.cc',
 +                'src/socketsecurity/tui/tui_binding.cc',
 +                'src/socketsecurity/tui/width.cc',
 +                'src/socketsecurity/tui/width_data.cc',

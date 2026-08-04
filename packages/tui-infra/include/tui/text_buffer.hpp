@@ -331,6 +331,26 @@ class TextBuffer {
     return syntax_style_;
   }
 
+  // ── Borrowed-buffer flag (S5) ──
+
+  // Mark this buffer as a BORROWED inner buffer (owned by an EditBuffer). A
+  // borrowed buffer may not own external TextBufferViews. text_buffer.rs:315
+  // mark_borrowed. (No EditBuffer path exists yet, so nothing marks a buffer
+  // borrowed in production; the flag + accessor land now so S5's
+  // createTextBufferView gate reads a real value and the view harness can
+  // exercise the rejection.)
+  void MarkBorrowed() {
+    borrowed_ = true;
+  }
+
+  // Whether this is a borrowed inner buffer. createTextBufferView rejects a
+  // view over a borrowed buffer (returns the 0 sentinel). text_buffer.rs:323
+  // is_borrowed (the binding maps a stale/missing handle to false before it
+  // ever reaches this accessor).
+  bool IsBorrowed() const {
+    return borrowed_;
+  }
+
   // Materialize styled chunks: clear (dropping styled highlights + content),
   // concatenate each chunk's normalized text into content, and add one Styled
   // highlight per colored line-segment carrying the chunk's inline colors and a
@@ -380,9 +400,8 @@ class TextBuffer {
 
   // True when this buffer is a BORROWED inner buffer owned by an EditBuffer.
   // A borrowed buffer cannot own external TextBufferViews — S5's
-  // createTextBufferView rejects it. Inert in the foundation, hence
-  // [[maybe_unused]]. text_buffer.rs:104.
-  [[maybe_unused]] bool borrowed_ = false;
+  // createTextBufferView rejects it (read via IsBorrowed()). text_buffer.rs:104.
+  bool borrowed_ = false;
 
   // Owning syntax-style handle (0 = none). Consumed by SetStyled (synthetic
   // chunk-id registration) and BuildLineSpans (User-highlight resolution).

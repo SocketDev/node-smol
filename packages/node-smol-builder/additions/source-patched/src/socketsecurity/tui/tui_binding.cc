@@ -93,6 +93,7 @@
 #include "tui/renderables.hpp"
 #include "tui/renderer.hpp"
 #include "tui/text_buffer.hpp"
+#include "tui/text_view.hpp"
 #include "tui/width.hpp"
 
 #include "yoga/Yoga.h"
@@ -1902,11 +1903,13 @@ static ti::TextBuffer* LookupTextBuffer(uint32_t handle) {
 
 // Owner-destroy cascade seam (stuie text_buffer.rs:327-333): destroy()
 // invalidates every TextBufferView this buffer owns BEFORE erasing it, so a
-// view whose owning buffer is gone reads as stale. The view registry arrives
-// in S5; until a buffer can own a view this is a faithful no-op over an empty
-// child set (stuie text_view::destroy_owned_children). Landing the call site
-// now keeps S5 to a body fill.
-static void DestroyOwnedTextBufferViews(uint32_t /* buffer_handle */) {}
+// view whose owning buffer is gone reads as stale. S5 fills the body: it
+// delegates to the view family's owned-child cascade (stuie
+// text_view::destroy_owned_children), which lives with the view registry in
+// tui-infra text_view.{hpp,cc}.
+static void DestroyOwnedTextBufferViews(uint32_t buffer_handle) {
+  ti::DestroyOwnedChildren(buffer_handle);
+}
 
 // createTextBuffer(widthMethod) -> u32
 // stuie cabi.rs:1057 createTextBuffer -> text_buffer.rs:305 create().
@@ -2503,6 +2506,142 @@ static void TextBufferSetStyledText(const FunctionCallbackInfo<Value>& args) {
   buffer->SetStyled(records, len, count);
 }
 
+// ─── Section 6b: Text buffer view (lifecycle + geometry config) ───────
+//
+// Native TextBufferView (packages/tui-infra text_view.{hpp,cc}), a port of the
+// lifecycle + config-setter subset of stuie crates/stuie-cabi/src/text_view.rs.
+// Unlike the TextBuffer store, the view registry + owned-child index live in
+// tui-infra (stuie TBV_REGISTRY / OWNED_CHILD_VIEWS), so these wrappers just
+// forward the kind-tagged u32 handle to the ti:: free functions — a stale OR
+// wrong-kind handle misses the view map and reads as a safe no-op. All cold
+// (lifecycle / rare config writes), so each is a plain SetMethod with no Fast
+// API sibling.
+
+// createTextBufferView(bufferHandle) -> u32
+// stuie cabi.rs:1391 createTextBufferView. Reject a view over a BORROWED buffer
+// (returns 0 -> the shim throws); a stale/missing buffer is not borrowed and
+// falls through to a view over an empty buffer. On success the view is
+// registered as an owned child so destroying the buffer cascades to it.
+static void CreateTextBufferView(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t buffer_handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(buffer_handle);
+  bool borrowed = buffer != nullptr && buffer->IsBorrowed();
+  uint32_t view = ti::TbvCreateOwned(buffer_handle, borrowed);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, view));
+}
+
+// textBufferViewIsValid(handle) -> bool
+// stuie cabi.rs:1412 textBufferViewIsValid; stale AND wrong-kind -> false.
+static void TextBufferViewIsValid(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  args.GetReturnValue().Set(Boolean::New(isolate, ti::TbvIsValid(handle)));
+}
+
+// destroyTextBufferView(handle)
+// stuie cabi.rs:1424 destroyTextBufferView; stale handle -> no-op.
+static void DestroyTextBufferView(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TbvDestroy(handle);
+}
+
+// textBufferViewSetWrapMode(handle, mode) — 0=none, 1=char, 2=word.
+// stuie cabi.rs:1429 -> text_view.rs:997 tbv_set_wrap_mode; stale -> no-op.
+static void TextBufferViewSetWrapMode(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t mode = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetWrapMode(handle, static_cast<uint8_t>(mode));
+}
+
+// textBufferViewSetWrapWidth(handle, width) — 0 clears wrapping.
+// stuie cabi.rs:1434 -> text_view.rs:1001 tbv_set_wrap_width; stale -> no-op.
+static void TextBufferViewSetWrapWidth(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t width = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetWrapWidth(handle, width);
+}
+
+// textBufferViewSetFirstLineOffset(handle, offset)
+// stuie cabi.rs:1439 -> text_view.rs:1007 tbv_set_first_line_offset;
+// stale -> no-op.
+static void TextBufferViewSetFirstLineOffset(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t offset = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetFirstLineOffset(handle, offset);
+}
+
+// textBufferViewSetViewport(handle, x, y, width, height) — also pins wrap_width.
+// stuie cabi.rs:1444 -> text_view.rs:1011 tbv_set_viewport; stale -> no-op.
+static void TextBufferViewSetViewport(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t x = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t y = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t width = args[3]->Uint32Value(context).FromMaybe(0);
+  uint32_t height = args[4]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetViewport(handle, x, y, width, height);
+}
+
+// textBufferViewSetViewportSize(handle, width, height) — keeps the offset,
+// pins wrap_width. stuie cabi.rs:1449 -> text_view.rs:1018
+// tbv_set_viewport_size; stale -> no-op.
+static void TextBufferViewSetViewportSize(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t width = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t height = args[2]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetViewportSize(handle, width, height);
+}
+
+// textBufferViewSetTruncate(handle, truncate)
+// stuie cabi.rs:1454 -> text_view.rs:1026 tbv_set_truncate; stale -> no-op.
+static void TextBufferViewSetTruncate(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  bool truncate = args[1]->BooleanValue(isolate);
+  ti::TbvSetTruncate(handle, truncate);
+}
+
+// textBufferViewSetTabIndicator(handle, codePoint)
+// stuie cabi.rs:1459 -> text_view.rs:1030 tbv_set_tab_indicator;
+// stale -> no-op.
+static void TextBufferViewSetTabIndicator(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t code_point = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetTabIndicator(handle, code_point);
+}
+
+// textBufferViewSetTabIndicatorColor(handle, rgbaOrNull) — a non-array argument
+// clears the color (draw falls back to the cell foreground).
+// stuie cabi.rs:1469 -> text_view.rs:1034 tbv_set_tab_indicator_color;
+// stale -> no-op.
+static void TextBufferViewSetTabIndicatorColor(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetTabIndicatorColor(handle, ReadOptionalRgba(args[1]));
+}
+
 static void Initialize(Local<Object> target,
                        Local<Value> /* unused */,
                        Local<Context> context,
@@ -2674,6 +2813,27 @@ static void Initialize(Local<Object> target,
             TextBufferFreeLineHighlights);
   SetMethod(context, target, "textBufferSetStyledText",
             TextBufferSetStyledText);
+
+  // Text buffer view (Section 6b). All cold -> SetMethod, no Fast API.
+  SetMethod(context, target, "createTextBufferView", CreateTextBufferView);
+  SetMethod(context, target, "textBufferViewIsValid", TextBufferViewIsValid);
+  SetMethod(context, target, "destroyTextBufferView", DestroyTextBufferView);
+  SetMethod(context, target, "textBufferViewSetWrapMode",
+            TextBufferViewSetWrapMode);
+  SetMethod(context, target, "textBufferViewSetWrapWidth",
+            TextBufferViewSetWrapWidth);
+  SetMethod(context, target, "textBufferViewSetFirstLineOffset",
+            TextBufferViewSetFirstLineOffset);
+  SetMethod(context, target, "textBufferViewSetViewport",
+            TextBufferViewSetViewport);
+  SetMethod(context, target, "textBufferViewSetViewportSize",
+            TextBufferViewSetViewportSize);
+  SetMethod(context, target, "textBufferViewSetTruncate",
+            TextBufferViewSetTruncate);
+  SetMethod(context, target, "textBufferViewSetTabIndicator",
+            TextBufferViewSetTabIndicator);
+  SetMethod(context, target, "textBufferViewSetTabIndicatorColor",
+            TextBufferViewSetTabIndicatorColor);
 
   SetFastMethodNoSideEffect(context, target, "yogaCalculateLayout",
                             YogaCalculateLayout,
@@ -2931,6 +3091,17 @@ static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(TextBufferGetLineHighlightsPtr);
   registry->Register(TextBufferFreeLineHighlights);
   registry->Register(TextBufferSetStyledText);
+  registry->Register(CreateTextBufferView);
+  registry->Register(TextBufferViewIsValid);
+  registry->Register(DestroyTextBufferView);
+  registry->Register(TextBufferViewSetWrapMode);
+  registry->Register(TextBufferViewSetWrapWidth);
+  registry->Register(TextBufferViewSetFirstLineOffset);
+  registry->Register(TextBufferViewSetViewport);
+  registry->Register(TextBufferViewSetViewportSize);
+  registry->Register(TextBufferViewSetTruncate);
+  registry->Register(TextBufferViewSetTabIndicator);
+  registry->Register(TextBufferViewSetTabIndicatorColor);
   registry->Register(RendererDrawBox);
   registry->Register(fast_renderer_draw_box);
   registry->Register(RendererDrawTextWrapped);
