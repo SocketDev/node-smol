@@ -19,7 +19,9 @@ try {
 }
 
 // Numeric enum values matching src/socketsecurity/manifest/manifest.h.
-// Kept in lockstep with test/smol-manifest-native.test.mts (ECO_*, FMT_*).
+// Kept in lockstep with the fixture rows in
+// test/smol-manifest-binding-live.mjs, which spell the same pairs as
+// (eco, fmt) numbers.
 const NATIVE_ECO_NPM = 0
 const NATIVE_ECO_CARGO = 1
 const NATIVE_ECO_PYPI = 2

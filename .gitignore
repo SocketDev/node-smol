@@ -129,7 +129,7 @@ pnpm-debug.log
 *.tgz
 # </fleet>
 # <repo>
-# uv.lock parser fixtures — hand-written goldens, tracked via the documented
+# uv.lock parser fixtures — harness-generated goldens, tracked via the documented
 # untracked-by-default escape hatch (!<dir>/ then <dir>/* then !<dir>/<sub>).
 !packages/node-smol-builder/test/fixtures/
 packages/node-smol-builder/test/fixtures/*

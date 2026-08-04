@@ -225,13 +225,13 @@ bool ParseUvLock(std::string_view content,
                  ParsedLockfile* out,
                  ParseError* err) {
   out->ecosystem = Ecosystem::kPypi;
-  // `version = N` at the top overrides below; every canonical
-  // uv.lock carries it (deserialize.rs requires it), so this
-  // pre-fill only shows for empty input.
   out->lockVersion = std::string_view{"1"};
 
   UvEntry cur;
   bool has_cur = false;
+  // deserialize.rs requires a top-level `version`; a file without one is
+  // not a uv lockfile and must fail loud rather than parse as empty.
+  bool saw_version = false;
   Section section = Section::kTop;
   bool group_is_dev = false;
 
@@ -262,6 +262,14 @@ bool ParseUvLock(std::string_view content,
     if (in_array) {
       array_depth += uvscan::NetBrackets(trimmed);
       if (array_depth <= 0) {
+        // A dep/group entry sharing the closing line (`{ name = "y" }]`)
+        // would be dropped silently; uv's own reader honors that shape, so
+        // it must fail loud here rather than false-green.
+        if (array_role != ArrayRole::kIgnore && trimmed != "]" &&
+            trimmed != "],") {
+          return FailUnrecognized(err, line_no, trimmed,
+                                  "a bare `]` closing the array");
+        }
         in_array = false;
         continue;
       }
@@ -349,6 +357,14 @@ bool ParseUvLock(std::string_view content,
       } else {
         array_role = ArrayRole::kIgnore;
       }
+      // An entry sharing the opening line (`dependencies = [ { name = "x"
+      // },`) would be dropped silently for the roles this parser reads;
+      // canonical uv output opens with a bare `[`, so anything else fails.
+      if (array_role != ArrayRole::kIgnore && !value.empty() &&
+          value != "[") {
+        return FailUnrecognized(err, line_no, trimmed,
+                                "a bare `[` opening the array");
+      }
       continue;
     }
 
@@ -361,6 +377,7 @@ bool ParseUvLock(std::string_view content,
               "revision, requires-python, resolution-markers, ...)");
         }
         if (key == "version") {
+          saw_version = true;
           out->lockVersion = ctx->intern.Intern(uvscan::StripQuotes(value));
         }
         break;
@@ -431,6 +448,11 @@ bool ParseUvLock(std::string_view content,
     }
   }
 
+  if (!saw_version) {
+    return FailUnrecognized(err, 0, std::string_view{""},
+                            "a top-level `version = N` line (required by "
+                            "uv's own reader)");
+  }
   return true;
 }
 
