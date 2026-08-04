@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -359,30 +359,42 @@ importers:
       { dir: 'cargo-patch-unused-no-leak' },
     ]
 
-    it('every fixture directory is wired into the table', () => {
-      const onDisk = readdirSync(FIXTURES_DIR, { withFileTypes: true })
-        .filter(e => e.isDirectory())
-        .map(e => e.name)
-        .toSorted()
-      const inTable = FIXTURES.map(f => f.dir).toSorted()
-      expect(onDisk).toEqual(inTable)
-    })
+    // The sdxgen-bug-regressions corpus is untracked by design
+    // (untracked-by-default), so a fresh checkout has no dirs to
+    // enumerate; the cross-checks only run where the corpus exists.
+    it.skipIf(!existsSync(FIXTURES_DIR))(
+      'every fixture directory is wired into the table',
+      () => {
+        const onDisk = readdirSync(FIXTURES_DIR, { withFileTypes: true })
+          .filter(e => e.isDirectory())
+          .map(e => e.name)
+          .toSorted()
+        const inTable = FIXTURES.map(f => f.dir).toSorted()
+        expect(onDisk).toEqual(inTable)
+      },
+    )
 
-    it('every fixture directory contains input.* + expected.json + README.md', () => {
-      for (let i = 0, { length } = FIXTURES; i < length; i += 1) {
-        const f = FIXTURES[i]
-        const dirEntries = readdirSync(path.join(FIXTURES_DIR, f.dir))
-        expect(dirEntries.some(e => e.startsWith('input.'))).toBe(true)
-        expect(dirEntries).toContain('expected.json')
-        expect(dirEntries).toContain('README.md')
-        const expected = JSON.parse(
-          readFileSync(path.join(FIXTURES_DIR, f.dir, 'expected.json'), 'utf8'),
-        )
-        expect(expected).toHaveProperty('type', 'lockfile')
-        expect(expected).toHaveProperty('packages')
-        expect(Array.isArray(expected.packages)).toBe(true)
-      }
-    })
+    it.skipIf(!existsSync(FIXTURES_DIR))(
+      'every fixture directory contains input.* + expected.json + README.md',
+      () => {
+        for (let i = 0, { length } = FIXTURES; i < length; i += 1) {
+          const f = FIXTURES[i]
+          const dirEntries = readdirSync(path.join(FIXTURES_DIR, f.dir))
+          expect(dirEntries.some(e => e.startsWith('input.'))).toBe(true)
+          expect(dirEntries).toContain('expected.json')
+          expect(dirEntries).toContain('README.md')
+          const expected = JSON.parse(
+            readFileSync(
+              path.join(FIXTURES_DIR, f.dir, 'expected.json'),
+              'utf8',
+            ),
+          )
+          expect(expected).toHaveProperty('type', 'lockfile')
+          expect(expected).toHaveProperty('packages')
+          expect(Array.isArray(expected.packages)).toBe(true)
+        }
+      },
+    )
 
     for (let i = 0, { length } = FIXTURES; i < length; i += 1) {
       const fixture = FIXTURES[i]

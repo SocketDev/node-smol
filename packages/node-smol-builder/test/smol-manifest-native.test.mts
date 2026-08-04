@@ -106,13 +106,18 @@ describe('smol_manifest_native binding — sdxgen-bug-regressions equivalence', 
   // binary — catches "added a fixture dir but forgot to wire it
   // into the live verifier" before the smol-only assertions
   // would fail with a less specific error.
-  it('every fixture directory is wired into EXPECTED_FIXTURE_NAMES', () => {
-    const onDisk = readdirSync(FIXTURES_DIR, { withFileTypes: true })
-      .filter(e => e.isDirectory())
-      .map(e => e.name)
-      .toSorted()
-    expect(onDisk).toEqual([...EXPECTED_FIXTURE_NAMES].toSorted())
-  })
+  // Untracked corpus: enumerate only where it exists (fresh checkouts
+  // have no sdxgen-bug-regressions dirs).
+  it.skipIf(!existsSync(FIXTURES_DIR))(
+    'every fixture directory is wired into EXPECTED_FIXTURE_NAMES',
+    () => {
+      const onDisk = readdirSync(FIXTURES_DIR, { withFileTypes: true })
+        .filter(e => e.isDirectory())
+        .map(e => e.name)
+        .toSorted()
+      expect(onDisk).toEqual([...EXPECTED_FIXTURE_NAMES].toSorted())
+    },
+  )
 
   it('every uv-lock fixture directory is wired into EXPECTED_UV_FIXTURE_NAMES', () => {
     const onDisk = readdirSync(UV_FIXTURES_DIR, { withFileTypes: true })
