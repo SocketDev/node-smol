@@ -2101,6 +2101,230 @@ static void TextBufferResetDefaults(const FunctionCallbackInfo<Value>& args) {
   }
 }
 
+// ── Content I/O: mem registry + ingestion + readout (S3) ──
+//
+// stuie routes these through raw (ptr, len) FFI (cabi.rs:1131-1253). Here the
+// JS side hands the same bytes as a Uint8Array (input) or a caller-owned
+// Uint8Array plus a max-length (readout, mirroring stuie's `out: *mut u8,
+// max_len` — see RendererFlush for the same output contract). A stale handle
+// resolves to the registry `with` default (0 / false / no-op), never a throw.
+
+// Read a JS Uint8Array as a (ptr, len) view; a non-array reads as (nullptr, 0),
+// mirroring stuie read_bytes on a null pointer.
+static const uint8_t* Uint8ArrayBytes(Local<Value> value, size_t* len) {
+  if (!value->IsUint8Array()) {
+    *len = 0;
+    return nullptr;
+  }
+  Local<Uint8Array> arr = value.As<Uint8Array>();
+  *len = arr->ByteLength();
+  auto store = arr->Buffer()->GetBackingStore();
+  return static_cast<const uint8_t*>(store->Data()) + arr->ByteOffset();
+}
+
+// textBufferRegisterMemBuffer(handle, bytes) -> memId
+// stuie cabi.rs:1136 -> text_buffer.rs:445 register_mem. A stale handle yields
+// the failure sentinel kMemRegisterFailed, matching the registry `with`
+// default. The `owned` FFI flag is inert (node-smol always copies the bytes).
+static void TextBufferRegisterMemBuffer(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    args.GetReturnValue().Set(
+        Integer::NewFromUnsigned(isolate, ti::kMemRegisterFailed));
+    return;
+  }
+  size_t len = 0;
+  const uint8_t* bytes = Uint8ArrayBytes(args[1], &len);
+  args.GetReturnValue().Set(
+      Integer::NewFromUnsigned(isolate, buffer->RegisterMem(bytes, len)));
+}
+
+// textBufferReplaceMemBuffer(handle, memId, bytes) -> ok
+// stuie cabi.rs:1151 -> text_buffer.rs:449 replace_mem. memId is a u8 at the
+// FFI boundary (cabi.rs:1153 `mem_id: u8`); a stale handle -> false.
+static void TextBufferReplaceMemBuffer(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint8_t mem_id =
+      static_cast<uint8_t>(args[1]->Uint32Value(context).FromMaybe(0));
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    args.GetReturnValue().Set(false);
+    return;
+  }
+  size_t len = 0;
+  const uint8_t* bytes = Uint8ArrayBytes(args[2], &len);
+  args.GetReturnValue().Set(buffer->ReplaceMem(mem_id, bytes, len));
+}
+
+// textBufferClearMemRegistry(handle)
+// stuie cabi.rs:1163 -> text_buffer.rs:453 clear_mem_registry; stale -> no-op.
+static void TextBufferClearMemRegistry(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->ClearMemRegistry();
+  }
+}
+
+// textBufferSetTextFromMem(handle, memId)
+// stuie cabi.rs:1168 -> text_buffer.rs:457 set_from_mem. memId is a u8 at the
+// FFI boundary (cabi.rs:1168 `mem_id: u8`); stale -> no-op.
+static void TextBufferSetTextFromMem(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint8_t mem_id =
+      static_cast<uint8_t>(args[1]->Uint32Value(context).FromMaybe(0));
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->SetFromMem(mem_id);
+  }
+}
+
+// textBufferAppend(handle, bytes)
+// stuie cabi.rs:1177 -> text_buffer.rs:490 append; stale -> no-op.
+static void TextBufferAppend(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    return;
+  }
+  size_t len = 0;
+  const uint8_t* bytes = Uint8ArrayBytes(args[1], &len);
+  buffer->Append(bytes, len);
+}
+
+// textBufferAppendFromMemId(handle, memId)
+// stuie cabi.rs:1183 -> text_buffer.rs:494 append_from_mem. memId is a u8 at
+// the FFI boundary (cabi.rs:1183 `mem_id: u8`); stale -> no-op.
+static void TextBufferAppendFromMemId(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint8_t mem_id =
+      static_cast<uint8_t>(args[1]->Uint32Value(context).FromMaybe(0));
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->AppendFromMem(mem_id);
+  }
+}
+
+// textBufferLoadFile(handle, pathBytes) -> ok
+// stuie cabi.rs:1192 -> text_buffer.rs:498 load_file. The path is a UTF-8
+// byte view (stuie read_str(path, path_len)); a stale handle or unreadable
+// file -> false.
+static void TextBufferLoadFile(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    args.GetReturnValue().Set(false);
+    return;
+  }
+  size_t len = 0;
+  const uint8_t* path = Uint8ArrayBytes(args[1], &len);
+  args.GetReturnValue().Set(
+      buffer->LoadFile(reinterpret_cast<const char*>(path), len));
+}
+
+// Copy up to `max_len` bytes from a readout into a caller-owned Uint8Array,
+// clamping `max_len` to the array's length (stuie's shim sizes the array to
+// max_len; the clamp is defensive). A stale handle or non-array out -> 0.
+static uint32_t WriteReadout(Local<Value> out_value,
+                             uint32_t max_len,
+                             ti::TextBuffer* buffer,
+                             uint32_t (ti::TextBuffer::*fn)(uint8_t*, uint32_t)
+                                 const) {
+  if (buffer == nullptr || !out_value->IsUint8Array()) {
+    return 0;
+  }
+  Local<Uint8Array> arr = out_value.As<Uint8Array>();
+  if (max_len > arr->ByteLength()) {
+    max_len = static_cast<uint32_t>(arr->ByteLength());
+  }
+  auto store = arr->Buffer()->GetBackingStore();
+  uint8_t* out =
+      static_cast<uint8_t*>(store->Data()) + arr->ByteOffset();
+  return (buffer->*fn)(out, max_len);
+}
+
+// textBufferGetPlainText(handle, out, maxLen) -> bytesWritten
+// stuie cabi.rs:1216 -> text_buffer.rs:520 get_plain_text; stale -> 0.
+static void TextBufferGetPlainText(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_len = args[2]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  uint32_t n =
+      WriteReadout(args[1], max_len, buffer, &ti::TextBuffer::GetPlainText);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// textBufferGetTextRange(handle, start, end, out, maxLen) -> bytesWritten
+// stuie cabi.rs:1225 -> text_buffer.rs:525 get_text_range; stale -> 0.
+static void TextBufferGetTextRange(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t start = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t end = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_len = args[4]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  uint32_t n = 0;
+  if (buffer != nullptr && args[3]->IsUint8Array()) {
+    Local<Uint8Array> arr = args[3].As<Uint8Array>();
+    if (max_len > arr->ByteLength()) {
+      max_len = static_cast<uint32_t>(arr->ByteLength());
+    }
+    auto store = arr->Buffer()->GetBackingStore();
+    uint8_t* out = static_cast<uint8_t*>(store->Data()) + arr->ByteOffset();
+    n = buffer->GetTextRange(start, end, out, max_len);
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// textBufferGetTextRangeByCoords(handle, sr, sc, er, ec, out, maxLen)
+//   -> bytesWritten
+// stuie cabi.rs:1241 -> text_buffer.rs:577 get_text_range_by_coords; stale -> 0.
+static void TextBufferGetTextRangeByCoords(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t start_row = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t start_col = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t end_row = args[3]->Uint32Value(context).FromMaybe(0);
+  uint32_t end_col = args[4]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_len = args[6]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  uint32_t n = 0;
+  if (buffer != nullptr && args[5]->IsUint8Array()) {
+    Local<Uint8Array> arr = args[5].As<Uint8Array>();
+    if (max_len > arr->ByteLength()) {
+      max_len = static_cast<uint32_t>(arr->ByteLength());
+    }
+    auto store = arr->Buffer()->GetBackingStore();
+    uint8_t* out = static_cast<uint8_t*>(store->Data()) + arr->ByteOffset();
+    n = buffer->GetTextRangeByCoords(start_row, start_col, end_row, end_col, out,
+                                     max_len);
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
 static void Initialize(Local<Object> target,
                        Local<Value> /* unused */,
                        Local<Context> context,
@@ -2237,6 +2461,22 @@ static void Initialize(Local<Object> target,
   SetMethod(context, target, "textBufferSetDefaultAttributes",
             TextBufferSetDefaultAttributes);
   SetMethod(context, target, "textBufferResetDefaults", TextBufferResetDefaults);
+  SetMethod(context, target, "textBufferRegisterMemBuffer",
+            TextBufferRegisterMemBuffer);
+  SetMethod(context, target, "textBufferReplaceMemBuffer",
+            TextBufferReplaceMemBuffer);
+  SetMethod(context, target, "textBufferClearMemRegistry",
+            TextBufferClearMemRegistry);
+  SetMethod(context, target, "textBufferSetTextFromMem",
+            TextBufferSetTextFromMem);
+  SetMethod(context, target, "textBufferAppend", TextBufferAppend);
+  SetMethod(context, target, "textBufferAppendFromMemId",
+            TextBufferAppendFromMemId);
+  SetMethod(context, target, "textBufferLoadFile", TextBufferLoadFile);
+  SetMethod(context, target, "textBufferGetPlainText", TextBufferGetPlainText);
+  SetMethod(context, target, "textBufferGetTextRange", TextBufferGetTextRange);
+  SetMethod(context, target, "textBufferGetTextRangeByCoords",
+            TextBufferGetTextRangeByCoords);
 
   SetFastMethodNoSideEffect(context, target, "yogaCalculateLayout",
                             YogaCalculateLayout,
@@ -2474,6 +2714,16 @@ static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(TextBufferSetDefaultBg);
   registry->Register(TextBufferSetDefaultAttributes);
   registry->Register(TextBufferResetDefaults);
+  registry->Register(TextBufferRegisterMemBuffer);
+  registry->Register(TextBufferReplaceMemBuffer);
+  registry->Register(TextBufferClearMemRegistry);
+  registry->Register(TextBufferSetTextFromMem);
+  registry->Register(TextBufferAppend);
+  registry->Register(TextBufferAppendFromMemId);
+  registry->Register(TextBufferLoadFile);
+  registry->Register(TextBufferGetPlainText);
+  registry->Register(TextBufferGetTextRange);
+  registry->Register(TextBufferGetTextRangeByCoords);
   registry->Register(RendererDrawBox);
   registry->Register(fast_renderer_draw_box);
   registry->Register(RendererDrawTextWrapped);

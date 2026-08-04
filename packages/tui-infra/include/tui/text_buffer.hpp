@@ -31,6 +31,17 @@ namespace tui {
 // (text_buffer.rs:22-23 DEFAULT_TAB_WIDTH).
 inline constexpr uint8_t kDefaultTabWidth = 2;
 
+// Failure sentinel for RegisterMem (the shim throws on it). Also the ceiling:
+// a registry that already holds this many slots refuses to grow.
+// text_buffer.rs:24-25 MEM_REGISTER_FAILED.
+inline constexpr uint16_t kMemRegisterFailed = 0xffff;
+
+// Normalize CRLF (`\r\n`) to LF (`\n`) at the byte level, preserving malformed
+// UTF-8 verbatim (a lone `\r` or `\n` is kept). Faithful port of
+// text_buffer.rs:833-846 normalize_crlf; exposed as the testable kernel behind
+// SetContent / Append (both normalize before storing).
+std::vector<uint8_t> NormalizeCrlf(const uint8_t* bytes, size_t len);
+
 // Display-column count of `[bytes, bytes + len)`: the sum of CodepointWidth
 // over the well-formed UTF-8 scalars, newlines excluded (CodepointWidth of a
 // control char is 0). Bytes that are not part of a well-formed scalar
@@ -126,6 +137,74 @@ class TextBuffer {
     return default_attrs_;
   }
 
+  // ── Content I/O: mem registry + ingestion + readout (S3) ──
+
+  // Register a byte blob in the per-buffer mem registry, recycling the first
+  // freed slot when one exists, otherwise appending. Returns the slot id, never
+  // kMemRegisterFailed unless the registry is already full (>= 0xffff slots).
+  // text_buffer.rs:156-170 register_mem.
+  uint16_t RegisterMem(const uint8_t* bytes, size_t len);
+
+  // Replace the blob in an OCCUPIED slot. A missing slot id or a freed (empty)
+  // slot returns false without mutating anything. text_buffer.rs:172-180
+  // replace_mem.
+  bool ReplaceMem(uint16_t id, const uint8_t* bytes, size_t len);
+
+  // Drop every mem slot (frees the registry, so prior ids no longer resolve).
+  // text_buffer.rs:453-455 clear_mem_registry.
+  void ClearMemRegistry() {
+    mem_.clear();
+  }
+
+  // Replace content from raw bytes, CRLF-normalized on the way in (styled
+  // highlights would be dropped here from S4; user highlights kept). Used by
+  // SetFromMem and LoadFile. text_buffer.rs:139-143 set_content ->
+  // text_buffer.rs:833 normalize_crlf.
+  void SetContent(const uint8_t* bytes, size_t len);
+
+  // Re-materialize content from a registered mem slot (no-op for a missing or
+  // freed slot). text_buffer.rs:182-187 set_from_mem.
+  void SetFromMem(uint16_t id);
+
+  // Append raw bytes (CRLF-normalized) to the existing content.
+  // text_buffer.rs:189-192 append.
+  void Append(const uint8_t* bytes, size_t len);
+
+  // Append the content of a registered mem slot (no-op for a missing or freed
+  // slot). text_buffer.rs:194-199 append_from_mem.
+  void AppendFromMem(uint16_t id);
+
+  // Read `[path, path + path_len)` as a UTF-8 filesystem path, load its bytes as
+  // content (CRLF-normalized, malformed UTF-8 preserved verbatim). Returns false
+  // when the file cannot be read. text_buffer.rs:498-506 load_file.
+  bool LoadFile(const char* path, size_t path_len);
+
+  // Copy the raw content bytes (clamped to `max_len`) into `out`; returns bytes
+  // written. A null `out` or zero `max_len` writes nothing and returns 0.
+  // text_buffer.rs:520-522 get_plain_text -> text_buffer.rs:817 copy_slice_out.
+  uint32_t GetPlainText(uint8_t* out, uint32_t max_len) const;
+
+  // Slice content by CHARACTER (Unicode scalar) offsets `[start, end)` — the
+  // content is decoded lossily (malformed bytes -> U+FFFD, matching Rust's
+  // from_utf8_lossy) — and copy the sliced UTF-8 bytes into `out`; returns bytes
+  // written. An empty range (start >= end) returns 0. text_buffer.rs:525-534
+  // get_text_range -> text_buffer.rs:916 char_slice.
+  uint32_t GetTextRange(uint32_t start,
+                        uint32_t end,
+                        uint8_t* out,
+                        uint32_t max_len) const;
+
+  // Slice content by (row, col) coordinates, where `col` is a scalar count into
+  // the row, and copy the sliced UTF-8 bytes into `out`; returns bytes written.
+  // An empty range returns 0. text_buffer.rs:577-596 get_text_range_by_coords ->
+  // text_buffer.rs:924 coord_to_char_offset + char_slice.
+  uint32_t GetTextRangeByCoords(uint32_t start_row,
+                                uint32_t start_col,
+                                uint32_t end_row,
+                                uint32_t end_col,
+                                uint8_t* out,
+                                uint32_t max_len) const;
+
  private:
   // Raw content bytes (malformed UTF-8 preserved verbatim). text_buffer.rs:92.
   std::vector<uint8_t> content_;
@@ -141,13 +220,18 @@ class TextBuffer {
   std::optional<std::array<uint16_t, 4>> default_bg_;
   std::optional<uint32_t> default_attrs_;
 
+  // Per-buffer in-memory blob registry. A slot is nullopt when freed, so
+  // RegisterMem recycles the first free slot before growing (thousands of
+  // setText calls don't leak). text_buffer.rs:98 mem.
+  std::vector<std::optional<std::vector<uint8_t>>> mem_;
+
   // True when this buffer is a BORROWED inner buffer owned by an EditBuffer.
   // A borrowed buffer cannot own external TextBufferViews — S5's
   // createTextBufferView rejects it. Inert in the foundation, hence
   // [[maybe_unused]]. text_buffer.rs:104.
   [[maybe_unused]] bool borrowed_ = false;
 
-  // S3 adds mem; S4 adds highlights/syntax_style.
+  // S4 adds highlights/syntax_style.
 };
 
 }  // namespace tui

@@ -1,5 +1,5 @@
 {
-  "pendingCeiling": 167,
+  "pendingCeiling": 157,
   "rows": [
     {
       "symbol": "attachNativeSpanFeed",
@@ -782,13 +782,19 @@
     },
     {
       "symbol": "textBufferAppend",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferAppend"
+      }
     },
     {
       "symbol": "textBufferAppendFromMemId",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferAppendFromMemId"
+      }
     },
     {
       "symbol": "textBufferClear",
@@ -810,8 +816,11 @@
     },
     {
       "symbol": "textBufferClearMemRegistry",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferClearMemRegistry"
+      }
     },
     {
       "symbol": "textBufferFreeLineHighlights",
@@ -854,8 +863,11 @@
     },
     {
       "symbol": "textBufferGetPlainText",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferGetPlainText"
+      }
     },
     {
       "symbol": "textBufferGetTabWidth",
@@ -867,23 +879,35 @@
     },
     {
       "symbol": "textBufferGetTextRange",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferGetTextRange"
+      }
     },
     {
       "symbol": "textBufferGetTextRangeByCoords",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferGetTextRangeByCoords"
+      }
     },
     {
       "symbol": "textBufferLoadFile",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferLoadFile"
+      }
     },
     {
       "symbol": "textBufferRegisterMemBuffer",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferRegisterMemBuffer"
+      }
     },
     {
       "symbol": "textBufferRemoveHighlightsByRef",
@@ -892,8 +916,11 @@
     },
     {
       "symbol": "textBufferReplaceMemBuffer",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferReplaceMemBuffer"
+      }
     },
     {
       "symbol": "textBufferReset",
@@ -955,8 +982,11 @@
     },
     {
       "symbol": "textBufferSetTextFromMem",
-      "status": "pending",
-      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "TextBufferSetTextFromMem"
+      }
     },
     {
       "symbol": "textBufferViewGetLineInfo",
