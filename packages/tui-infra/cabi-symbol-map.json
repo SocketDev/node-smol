@@ -1,0 +1,1043 @@
+{
+  "pendingCeiling": 180,
+  "rows": [
+    {
+      "symbol": "attachNativeSpanFeed",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ exists yet in packages/tui-infra; same higher-tier gap as createNativeSpanFeed per docs/ports/smol-tui-lockstep.md (snapshot table lines 47-53 covers only Tiers 1-3)."
+    },
+    {
+      "symbol": "audioDecoderClose",
+      "status": "out-of-scope",
+      "reason": "The audio rule: node:smol-tui ships no audio surface at all."
+    },
+    {
+      "symbol": "audioDecoderDecode",
+      "status": "out-of-scope",
+      "reason": "The audio rule: node:smol-tui ships no audio surface at all."
+    },
+    {
+      "symbol": "audioDecoderEnd",
+      "status": "out-of-scope",
+      "reason": "The audio rule: node:smol-tui ships no audio surface at all."
+    },
+    {
+      "symbol": "audioDecoderOpen",
+      "status": "out-of-scope",
+      "reason": "The audio rule: node:smol-tui ships no audio surface at all."
+    },
+    {
+      "symbol": "audioDecoderReset",
+      "status": "out-of-scope",
+      "reason": "The audio rule: node:smol-tui ships no audio surface at all."
+    },
+    {
+      "symbol": "bufferClear",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererClear"
+      },
+      "reason": "Narrower, same capability. Rust's clear also forces fg to white and writes RGBA lanes verbatim so a transparent (alpha 0) background survives (buffer.rs:516-519 `self.chars.fill(SPACE);` / `self.attrs.fill(0);` / `fill_rgba_lanes(&mut self.fg, &WHITE);` / `fill_rgba_lanes(&mut self.bg, &bg);`); node-smol's Clear takes one caller-supplied full Cell with no alpha channel. Also renderer-scoped (clears `Next()`) rather than taking an arbitrary buffer handle."
+    },
+    {
+      "symbol": "bufferClearScissorRects",
+      "status": "pending",
+      "reason": "Same deferred-scissor-stack root cause as bufferPushScissorRect \u2014 there is no scissor state to clear."
+    },
+    {
+      "symbol": "bufferDrawBox",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererDrawBox"
+      },
+      "reason": "Narrower than Rust. `bufferDrawBox` takes an arbitrary 11-entry custom border-glyph array plus top/bottom title text, title alignment bits and title color (buffer.rs:766-775 doc; `chars: &[u32]`, `title: Option<&str>`, `bottom_title: Option<&str>` params); node-smol picks from 4 fixed enum values (packages/tui-infra/include/tui/renderables.hpp:30-35 `enum class BorderStyle : uint8_t { kSingle = 0, kDouble = 1, kRounded = 2, kHeavy = 3, };`) and its `BoxStyle` (renderables.hpp:47-58) has no title field at all \u2014 title rendering is a genuine sub-gap inside a ported symbol."
+    },
+    {
+      "symbol": "bufferDrawChar",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererSet"
+      },
+      "reason": "Narrower than Rust. Rust routes through `draw_glyph` which emits a CONT_FLAG continuation cell to the right for width-2 glyphs and alpha-blends over the destination (buffer.rs:637-641 `let width = glyph_width(ch);` / `self.write_cell(x, y, ch, src_fg, src_bg, attrs);` / `if width == 2 && x + 1 < self.width {` / `self.write_cell(x + 1, y, CONT_FLAG, src_fg, src_bg, attrs);`); node-smol's `Set` is a plain bounds-checked overwrite (buffer.cc:28-33) with no continuation cell and no blending."
+    },
+    {
+      "symbol": "bufferDrawEditorView",
+      "status": "pending",
+      "reason": "Same text/edit-stack root cause as bufferDrawTextBufferView \u2014 no EditBuffer/EditorView C++ construct exists either, and no shipped lockstep tier covers the text/edit stack (docs/ports/smol-tui-lockstep.md:49-51 stop at Yoga + mouse parser)."
+    },
+    {
+      "symbol": "bufferDrawGrid",
+      "status": "pending",
+      "reason": "No table/grid border-drawing routine exists \u2014 tui-infra's renderables tier implements exactly two primitives, and neither draws grid intersections."
+    },
+    {
+      "symbol": "bufferDrawText",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererDrawText"
+      },
+      "reason": "Narrower than Rust. node-smol advances exactly one cell per codepoint (buffer.cc:85-89 `while (p < end && col < col_end) { c.codepoint = DecodeUtf8(p, end); row[col] = c; ++col; }`), so no CJK/emoji double-width and no cluster handling; Rust's shared `draw_str` (buffer.rs:663) advances by real display width via `next_cluster` and interns multi-scalar clusters. Rust also alpha-blends and is scissor-clipped; node-smol overwrites."
+    },
+    {
+      "symbol": "bufferDrawTextBufferView",
+      "status": "pending",
+      "reason": "Belongs to the text/edit stack \u2014 no TextBuffer/TextBufferView C++ construct exists anywhere in the port, so there is no view model to draw. The lockstep tier table's shipped tiers stop at ANSI emit / cell-buffer diff loop / Yoga+mouse (docs/ports/smol-tui-lockstep.md:49-51); no tier covers text/edit and it has not been started. (Correcting the prior audit: line 52's `Higher-level surfaces` row lists `react`, `keymap`, `qrcode`, `solid` JS siblings \u2014 it is not the text/edit tier and cannot be cited as this blocker.)"
+    },
+    {
+      "symbol": "bufferFillRect",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererFillRect"
+      },
+      "reason": "Signature is actually wider on the C++ side (fills with an arbitrary Cell; Rust fills a space cell over `bg`), narrower on blending/scissor. Same capability."
+    },
+    {
+      "symbol": "bufferGetAttributesPtr",
+      "status": "pending",
+      "reason": "Same root cause as bufferGetCharPtr \u2014 no SoA attrs-lane pointer accessor exists."
+    },
+    {
+      "symbol": "bufferGetBgPtr",
+      "status": "pending",
+      "reason": "Same root cause as bufferGetCharPtr \u2014 no SoA bg-lane pointer accessor exists."
+    },
+    {
+      "symbol": "bufferGetCharPtr",
+      "status": "pending",
+      "reason": "No raw cell-lane pointer accessor is exposed to JS at all: node-smol stores cells as a private AoS `std::vector<Cell>` rather than stuie's four SoA lanes, so there is no char lane to hand out, and neither pointer accessor nor cell readback is bound. This is real production capability, not a bun:ffi-only helper \u2014 opentui's own buffer.ts builds live TypedArray views over these pointers (packages/core/upstream/opentui/packages/core/src/buffer.ts:86 `char: new Uint32Array(toArrayBuffer(charPtr, 0, size * 4)),`) through its platform-agnostic `platform/ffi.js` shim, and N-API has an analogue (external backing store), so out-of-scope would be wrong."
+    },
+    {
+      "symbol": "bufferGetFgPtr",
+      "status": "pending",
+      "reason": "Same root cause as bufferGetCharPtr \u2014 no SoA fg-lane pointer accessor exists; node-smol's Cell stores fg inline as three uint8_t members inside a private AoS vector, with nothing bound to JS."
+    },
+    {
+      "symbol": "bufferGetId",
+      "status": "pending",
+      "reason": "Ties to the same root cause as createOptimizedBuffer: there is no standalone, independently-identified buffer handle for an id string to hang on, and CellBuffer carries no id/name field."
+    },
+    {
+      "symbol": "bufferGetRealCharSize",
+      "status": "pending",
+      "reason": "No grapheme-cluster interning and no text readback exist in node:smol-tui, so there is no resolved-size to compute: each Cell stores exactly one raw codepoint. Low-priority pending (upstream drives this pair only from tests), but still a real gap \u2014 it is on opentui's public RenderLib surface (packages/core/upstream/opentui/packages/core/src/zig.ts:2991 `public bufferGetRealCharSize(buffer: Pointer): number {`), so none of the sanctioned out-of-scope categories fit."
+    },
+    {
+      "symbol": "bufferPopScissorRect",
+      "status": "pending",
+      "reason": "Same deferred-scissor-stack root cause as bufferPushScissorRect \u2014 there is no clip stack to pop."
+    },
+    {
+      "symbol": "bufferPushScissorRect",
+      "status": "pending",
+      "reason": "Scissor/clip-rect stacks are an explicitly-deferred trimmed feature of this port ('a follow-up port'), and no clip state exists on CellBuffer for draw primitives to test against."
+    },
+    {
+      "symbol": "bufferResize",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererResize"
+      },
+      "reason": "Behavior diverges (documented, not accidental): Rust preserves the overlapping top-left content (buffer.rs:1065-1079 allocates a new Buffer then copies the `min(w,width)` \u00d7 `min(h,height)` region cell-by-cell), while node-smol discards all content \u2014 packages/tui-infra/src/socketsecurity/tui/buffer.cc:21 `  cells_.assign(static_cast<size_t>(width) * height, Cell{});`, documented at buffer.hpp:57-58 `// Resize the grid. Existing content is discarded \u2014 callers redraw` / `// after resize.` and renderer.hpp:60 `// Resize both buffers and force a full redraw on next Flush.` The resize capability itself exists, so this is a behavioral gap to file, not a missing symbol."
+    },
+    {
+      "symbol": "bufferSetCell",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererSet"
+      },
+      "reason": "Inherits bufferDrawChar's narrowing: node-smol's `Set` is a plain overwrite with no alpha blend and no width-2 CONT_FLAG continuation cell, and it is renderer-scoped rather than taking an arbitrary buffer handle."
+    },
+    {
+      "symbol": "bufferSetRespectAlpha",
+      "status": "pending",
+      "reason": "node-smol's Cell has no alpha channel, so there is nothing to toggle \u2014 but the port documents alpha blending as trimmed-for-now, explicitly 'a follow-up port', which is pending, not never."
+    },
+    {
+      "symbol": "bufferWriteResolvedChars",
+      "status": "pending",
+      "reason": "Same root cause as bufferGetRealCharSize \u2014 no resolved-grapheme text serialization exists because clusters are never interned and no cell readback is bound to JS."
+    },
+    {
+      "symbol": "createEditBuffer",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no EditBuffer type exists in the C++ port at all; the only buffer abstraction is buffer.hpp:39 `class CellBuffer`, a fixed-grid std::vector<Cell>. Higher-tier work per docs/ports/smol-tui-lockstep.md, whose Snapshot table lists the Rust<->C++ symbol audit as the open row."
+    },
+    {
+      "symbol": "createEditorView",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 constructs an EditorView over an EditBuffer handle; neither type is ported. Blocked on the lockstep doc's 'Higher-level surfaces ... planned' row."
+    },
+    {
+      "symbol": "createNativeSpanFeed",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed (and no textBuffer) C++ exists anywhere in packages/tui-infra; higher-tier work per docs/ports/smol-tui-lockstep.md, whose snapshot table (lines 47-53) marks only Tier 1 (ANSI emit), Tier 2 (cell-buffer diff render) and Tier 3 (Yoga + mouse parser) as ported and lists nothing for streaming."
+    },
+    {
+      "symbol": "createOptimizedBuffer",
+      "status": "pending",
+      "reason": "No standalone, independently-addressable buffer handle exists in node:smol-tui \u2014 CellBuffer is only ever a private member pair owned by a Renderer, never separately constructed or handle-registered, and the only registry in the binding is RendererRegistry. Waits on a standalone-buffer / multi-surface tier that no shipped tier covers: the lockstep tier table stops at renderer-scoped work (docs/ports/smol-tui-lockstep.md:50 `| Tier 2 \u2014 cell-buffer diff render loop | ported, live in `node:smol-tui` |`) and the one open row is this very audit (line 53, `| Rust\u2194C++ symbol audit against stuie-cabi | not yet run ... |`). NOTE: line 52's `Higher-level surfaces` row is NOT about buffers \u2014 it enumerates `react`, `keymap`, `qrcode`, `solid` JS siblings, so it cannot be cited as this symbol's blocker."
+    },
+    {
+      "symbol": "createRenderer",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "CreateRenderer"
+      }
+    },
+    {
+      "symbol": "createSyntaxStyle",
+      "status": "pending",
+      "reason": "The syntax-highlighting name->id style table belongs to the text/edit stack, which the port tracker flags as unstarted higher-tier work: docs/ports/smol-tui-lockstep.md's Snapshot table lists only Tier 1 (ANSI emit), Tier 2 (cell-buffer diff render loop) and Tier 3 (Yoga + mouse parser) as 'ported, live in node:smol-tui'. No textBuffer/syntax C++ exists to hang a style table off."
+    },
+    {
+      "symbol": "createTextBuffer",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md (Snapshot table lists only Tiers 1-3 as ported: ANSI emit, cell-buffer diff render loop, Yoga+mouse parser)"
+    },
+    {
+      "symbol": "createTextBufferView",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "destroyEditBuffer",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 lifecycle pair for a type that does not exist yet in the C++ port; blocked on the same EditBuffer port as createEditBuffer. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "destroyEditorView",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 EditorView teardown; same missing type as createEditorView."
+    },
+    {
+      "symbol": "destroyNativeSpanFeed",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ exists yet; same higher-tier gap as createNativeSpanFeed per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "destroyOptimizedBuffer",
+      "status": "pending",
+      "reason": "Same root cause as createOptimizedBuffer: there is no standalone buffer lifecycle to tear down \u2014 the only destroy verb erases a whole Renderer (both internal buffers at once)."
+    },
+    {
+      "symbol": "destroyRenderer",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "DestroyRenderer"
+      }
+    },
+    {
+      "symbol": "destroySyntaxStyle",
+      "status": "pending",
+      "reason": "Same text/edit-stack gap as createSyntaxStyle (docs/ports/smol-tui-lockstep.md: only Tiers 1-3 are ported/live) \u2014 there is no style table to destroy."
+    },
+    {
+      "symbol": "destroyTextBuffer",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "destroyTextBufferView",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "drawFrameBuffer",
+      "status": "pending",
+      "reason": "No buffer-to-buffer region blit exists, and there is no second independently-addressable buffer to blit from (same root cause as createOptimizedBuffer). The only two-buffer operation in the port is the O(1) whole-grid swap the diff loop uses to commit a frame \u2014 not a clipped region copy."
+    },
+    {
+      "symbol": "editBufferCanRedo",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 history-depth predicate over an unported journal. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferCanUndo",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 history-depth predicate over an unported journal. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferClear",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 the same-sounding C++ Clear is a framebuffer fill, not a document clear; the document type itself is unported. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferClearHistory",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 drops the undo/redo journal; the similarly named C++ Clear is a framebuffer fill. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferDebugLogRope",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 I deliberately did NOT call this out-of-scope: it is a rope diagnostic hook, and none of the three sanctioned out-of-scope categories (audio, bun:ffi-specific helper, conformance-harness-only) covers it. It is part of the EditBuffer ABI surface and lands or is consciously dropped when the rope is ported. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferDeleteChar",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 forward-delete needs cursor + rope + undo, all unported. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferDeleteCharBackward",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 backspace semantics need grapheme-aware cursor retreat over a rope; no EditBuffer C++ exists yet. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferDeleteLine",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 whole-line removal over a rope with line index and undo entry; unported. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferDeleteRange",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 line/col range deletion over a rope; the superficially similar FillRect is a raster op on cells. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferGetCursorPosition",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 read-back of document caret state the C++ port does not keep. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferGetEOL",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 end-of-line query against the rope's line index; unported. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferGetId",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 accessor on the absent EditBuffer handle registry (stuie's handles.rs equivalent for editors is unported). Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferGetLineStartOffset",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 line-start lookup into the rope's line index; unported. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferGetNextWordBoundary",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 word segmentation over a rope; the C++ port's only text analysis is UAX#11 width and UTF-8 decode. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferGetPrevWordBoundary",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 backward word segmentation; unported alongside the rest of the EditBuffer. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferGetTextBuffer",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 doubly blocked: no EditBuffer C++ type AND no textBuffer C++ type exists yet, so there is no handle to hand back. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferGetTextRange",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 text extraction from a document the C++ port does not store (cells hold rendered glyphs, not source text). Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferGetTextRangeByCoords",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 coordinate-addressed text extraction; needs both the rope and its line index. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferGotoLine",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 line addressing into a document that the C++ port does not model. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferInsertChar",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 requires a cursor and a rope, neither of which exists in the C++ port. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferInsertText",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 cursor-relative document insertion with undo recording; no EditBuffer C++ exists yet. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferMoveCursorDown",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 vertical document motion over an unported rope line index. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferMoveCursorLeft",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 checked the C++ cursor family directly: it is ANSI terminal cursor addressing, semantically unrelated to an edit-buffer caret. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferMoveCursorRight",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 needs grapheme-aware forward motion over a rope; the ANSI cursor helpers are a different concept. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferMoveCursorUp",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 vertical motion depends on the rope's line index and a retained goal column; unported. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferNewLine",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 line splitting requires the rope's line index; the lookalike ANSI `nextLine` moves the terminal cursor instead. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferOffsetToPosition",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 offset<->position mapping is a rope-index capability with no C++ counterpart. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferPositionToOffset",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 the one C++ coordinate-to-index helper is a private cell-grid stride computation, not a rope offset. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferRedo",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 redo half of the absent history journal. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferReplaceText",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no rope and no undo journal in the C++ port to replace into. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferReplaceTextFromMem",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 depends on the unported EditBuffer plus the unported mem-buffer registry, and on the undo history that records the replace. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferSetCursor",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 sets a document caret by line/col; the ANSI lookalike emits terminal escapes. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferSetCursorByOffset",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 requires the rope's offset<->position mapping, which is unported. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferSetCursorToLineCol",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 an ABI alias of an unported entry point; lands with the EditBuffer port. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferSetText",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no rope/document to set; CellBuffer stores Cell structs, not text. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferSetTextFromMem",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 needs both the EditBuffer port and the textBuffer mem-registry (`textBufferRegisterMemBuffer` family), neither of which exists in C++. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editBufferUndo",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 undo requires an edit-history journal that does not exist in C++ yet. Higher-tier work per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "editorViewDeleteSelectedText",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 mutates the edit buffer by removing the selected range; needs both the unported selection and the unported edit-mutation surface."
+    },
+    {
+      "symbol": "editorViewGetCursor",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 reads the primary editor cursor's logical row/col. node-smol's only 'cursor' is the ANSI terminal-cursor escape emitter, which holds no document position."
+    },
+    {
+      "symbol": "editorViewGetEOL",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 returns the end-of-logical-line VisualCursor; requires the unported line/text model."
+    },
+    {
+      "symbol": "editorViewGetLineInfo",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 serializes viewport-sliced virtual-line arrays into a caller buffer for rendering; depends on the unported TextBufferView line-info machinery."
+    },
+    {
+      "symbol": "editorViewGetLogicalLineInfo",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 the un-sliced (full-document) variant of GetLineInfo; same missing dependency."
+    },
+    {
+      "symbol": "editorViewGetNextWordBoundary",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 returns the VisualCursor at the next word boundary for Ctrl/Option+Right navigation; requires stored document text and a cursor to move, neither of which the port has."
+    },
+    {
+      "symbol": "editorViewGetPrevWordBoundary",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 backward word-boundary navigation; same missing dependency as GetNextWordBoundary, and the port's word scanner is forward-only by construction."
+    },
+    {
+      "symbol": "editorViewGetSelectedTextBytes",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 copies the selected range out as UTF-8 bytes; needs both the unported selection and the unported EditBuffer text storage."
+    },
+    {
+      "symbol": "editorViewGetSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 returns a packed selection info word; node-smol has no selection model whatsoever."
+    },
+    {
+      "symbol": "editorViewGetText",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 reads the whole edit-buffer text through the view; the EditBuffer rope/text storage is unported."
+    },
+    {
+      "symbol": "editorViewGetTextBufferView",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 returns the EditorView's inner TextBufferView handle; TextBufferView is itself unported, so the accessor has neither a source nor a return type."
+    },
+    {
+      "symbol": "editorViewGetTotalVirtualLineCount",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 the full un-sliced virtual line count; same missing wrap engine as GetVirtualLineCount."
+    },
+    {
+      "symbol": "editorViewGetViewport",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 writes [offsetX, offsetY, width, height] after running cursor-driven auto-scroll (`updateBeforeRender`); node-smol has no editor viewport and no auto-scroll pass."
+    },
+    {
+      "symbol": "editorViewGetVirtualLineCount",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 reads the wrapped (virtual) line count sliced to the viewport; requires the unported TextBufferView wrap engine that maintains a persistent virtual-line index over document content."
+    },
+    {
+      "symbol": "editorViewGetVisualCursor",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 writes a 5x u32 VisualCursor ([visualRow, visualCol, logicalRow, logicalCol, offset]); the visual-vs-logical position model does not exist in the port."
+    },
+    {
+      "symbol": "editorViewGetVisualEOL",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 end-of-visual-line VisualCursor; same missing wrap-aware position model."
+    },
+    {
+      "symbol": "editorViewGetVisualSOL",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 start-of-visual-line VisualCursor (differs from logical SOL under wrap); needs the unported wrap-aware position model."
+    },
+    {
+      "symbol": "editorViewIsValid",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 node-smol has no editorView, editBuffer, or textBufferView type at all, so there is no handle kind to validate. Per docs/ports/smol-tui-lockstep.md only Tiers 1-3 (ANSI emit, cell-buffer diff render, Yoga+mouse parser) are ported; the doc's own snapshot marks the Rust<->C++ symbol audit 'not yet run'."
+    },
+    {
+      "symbol": "editorViewMoveDownVisual",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 moves the cursor down one visual (wrapped) line; same missing cursor state as MoveUpVisual, and the lockstep doc still lists this whole tier as unbuilt."
+    },
+    {
+      "symbol": "editorViewMoveUpVisual",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 moves the cursor up one visual (wrapped) line; the port has no cursor state to move."
+    },
+    {
+      "symbol": "editorViewResetLocalSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 clears a screen-coordinate selection; unported."
+    },
+    {
+      "symbol": "editorViewResetSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 clears the selection; unported with the rest of the selection surface."
+    },
+    {
+      "symbol": "editorViewSetCursorByOffset",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 places the editor cursor at an absolute byte/char offset in the document; requires the unported cursor + text model."
+    },
+    {
+      "symbol": "editorViewSetLocalSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 resolves screen (x,y) drag anchors into a document selection with cursor-update/follow flags; needs the unported selection + cursor model. node-smol's mouse parser decodes the input but nothing consumes it into a selection."
+    },
+    {
+      "symbol": "editorViewSetPlaceholderStyledText",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 needs both the EditorView and the styled-chunk record format (`records: *const u8, count`); node-smol ports neither styled-chunk decoding nor an empty-editor placeholder."
+    },
+    {
+      "symbol": "editorViewSetScrollMargin",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 sets the auto-scroll margin used by cursor-driven viewport tracking; depends on the unported EditorView and its cursor model."
+    },
+    {
+      "symbol": "editorViewSetSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 sets an explicit [start, end) offset selection with optional bg/fg RGBA; no selection concept and no optional-RGBA convention in the port."
+    },
+    {
+      "symbol": "editorViewSetTabIndicator",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 sets the glyph rendered in place of tab characters inside an editor view; no editor render path exists."
+    },
+    {
+      "symbol": "editorViewSetTabIndicatorColor",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 sets the tab-indicator's optional RGBA; same missing EditorView, plus the `read_optional_rgba` Uint16Array(4) convention has no binding-side analogue."
+    },
+    {
+      "symbol": "editorViewSetViewport",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 sets the EditorView viewport with an optional cursor move (mirrors editor-view.zig setViewport); no viewport or cursor to move."
+    },
+    {
+      "symbol": "editorViewSetViewportSize",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 resizes an EditorView's viewport over a document; the exported `rendererResize` is the terminal cell-grid resize, a different subject."
+    },
+    {
+      "symbol": "editorViewSetWrapMode",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 sets a persistent per-view wrap mode (none/char/word) on an EditorView; no EditorView exists to carry the mode. Explicitly NOT laundered into `rendererDrawTextWrapped` (a one-shot draw call, see evidence) nor into the exported `wrap` enum (Yoga flex-wrap, an unrelated name collision)."
+    },
+    {
+      "symbol": "editorViewUpdateLocalSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 the drag-update variant of SetLocalSelection; same missing dependency."
+    },
+    {
+      "symbol": "editorViewUpdateSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 extends the selection's end offset during a drag; same missing selection model."
+    },
+    {
+      "symbol": "encodeUnicode",
+      "status": "pending",
+      "reason": "Unicode pre-encoding (per-codepoint width + grapheme interning) has no C++ counterpart. node-smol DOES have the width primitives (tui/width.hpp StringWidth/CodepointWidth, bound as stringWidth/codepointWidth), but nothing that encodes a string into a (width, char) array and nothing resembling the global grapheme pool, so wide/combining text still draws one cell per codepoint. Pending on the buffer/unicode tier: needs an EncodedChar-equivalent plus a grapheme pool before Buffer::DrawText can advance by display width."
+    },
+    {
+      "symbol": "freeUnicode",
+      "status": "pending",
+      "reason": "Paired deallocator for encodeUnicode's leaked EncodedChar[]; since the encode step was never ported there is nothing to release. Deliberately NOT out-of-scope-as-bun:ffi: node-smol's binding does use paired create/destroy handle registries elsewhere (yogaCreateNode/yogaFreeNode, createRenderer/destroyRenderer), so a free-side symbol is a plausible shape here. Whether one is owed depends on which idiom the port picks \u2014 handle registry (needs a free) vs caller-allocated output buffer like rendererFlush (needs none) \u2014 and that design call has not been made, so \"will never be ported\" is not substantiable."
+    },
+    {
+      "symbol": "getAllocatorStats",
+      "status": "pending",
+      "reason": "No counterpart for the packed 33-byte allocator-stats struct; same diagnostics tier. Scope note: every field is zeroed in the Rust reference (no Zig GPA behind it), so the pending work is a 33-byte constant surface that satisfies the activeAllocations == small + large invariant trivially."
+    },
+    {
+      "symbol": "getArenaAllocatedBytes",
+      "status": "pending",
+      "reason": "Diagnostics-tier symbol with no C++ counterpart; does not meet the audio / bun:ffi-no-N-API-analogue / harness-only bar (stuie's docs/interop-and-performance.md:276 names it as the example of a real 'Diagnostics' FFI category, and a plain u64 return is trivially N-API-expressible). Scope note: it is a hardcoded `0` in the Rust reference because stuie has no Zig GeneralPurposeAllocator either, so the pending work is a one-line monotonic-safe stub, not allocator instrumentation."
+    },
+    {
+      "symbol": "getBufferHeight",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererSize"
+      },
+      "reason": "Same bundling caveat as getBufferWidth \u2014 returned together from one `rendererSize` call and coupled to the renderer's own buffer rather than a standalone handle."
+    },
+    {
+      "symbol": "getBufferWidth",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererSize"
+      },
+      "reason": "Bundled rather than a standalone getter: node-smol returns `{ width, height }` as one object (tui_binding.cc:972-977) and queries the renderer's own buffer, since no independently-addressable buffer handle exists (see createOptimizedBuffer row)."
+    },
+    {
+      "symbol": "getBuildOptions",
+      "status": "pending",
+      "reason": "No counterpart for the two build-flag bytes (gpaSafeStats, gpaMemoryLimitTracking); same diagnostics tier as the rest of this cluster, and a 2-byte out-param matches node-smol's existing caller-allocated-buffer idiom so there is no bun:ffi-shape objection. Scope note: both flags are hardcoded false in the Rust reference, so the pending work is a 2-byte constant surface."
+    },
+    {
+      "symbol": "getCurrentBuffer",
+      "status": "pending",
+      "reason": "Same buffer-handle-tier gap as getNextBuffer, and strictly worse: the front/'current' buffer is exposed in C++ only as a const reference, so it could not satisfy this symbol's contract (stuie hands back a fully usable handle that the mutating buffer* symbols accept) even if the reference were surfaced."
+    },
+    {
+      "symbol": "getNextBuffer",
+      "status": "pending",
+      "reason": "node-smol has no JS-addressable buffer-handle concept \u2014 the back buffer is a C++-internal reference consumed in-process by the renderer* draw methods, never handed to JS as its own handle the way stuie's buffer registry does. Pending on the buffer-handle tier (createOptimizedBuffer and the buffer* family), without which there is no handle for this to return."
+    },
+    {
+      "symbol": "getRenderStats",
+      "status": "pending",
+      "reason": "node-smol's Renderer tracks no timing, frame-count, or cells-updated statistics, and there is no packed-stats readback of any kind. Pending on a diagnostics tier: stuie's own docs list Diagnostics as a first-class FFI category (docs/interop-and-performance.md:276), and these are real production numbers (OpenTUI's CliRenderer stats overlay), so no sanctioned out-of-scope reason applies \u2014 not audio, not bun:ffi-shaped (a packed Uint8Array out-param is exactly node-smol's existing idiom, cf. rendererFlush's caller-supplied dst), not harness-only."
+    },
+    {
+      "symbol": "render",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererFlush"
+      }
+    },
+    {
+      "symbol": "resizeRenderer",
+      "status": "ported",
+      "counterpart": {
+        "file": "packages/node-smol-builder/additions/source-patched/src/socketsecurity/tui/tui_binding.cc",
+        "identifier": "RendererResize"
+      }
+    },
+    {
+      "symbol": "setBackgroundColor",
+      "status": "pending",
+      "reason": "stuie's Renderer persists a `background: [u16;4]` that auto-clears both buffers on create, resize, and after every render; node-smol's Renderer stores no background at all \u2014 rendererClear takes an explicit color on every call, so the \"implicit renderer background\" capability does not exist. Pending on the renderer-state tier alongside setRenderOffset/setUseThread."
+    },
+    {
+      "symbol": "setNativeEventCallback",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 installs the one process-global JS trampoline the EditBuffer emits `eb_*` events through; node-smol ports no EditBuffer and exposes no callback-installation API of any kind, so there is nothing to install a trampoline on."
+    },
+    {
+      "symbol": "setRenderOffset",
+      "status": "pending",
+      "reason": "stuie's Renderer stores a render_offset field (ABI parity with upstream's remote/feed render offset); node-smol's ti::Renderer has no such field and no binding setter. Pending on the renderer-state tier; it becomes load-bearing only once the remote/span-feed surface is ported."
+    },
+    {
+      "symbol": "setUseThread",
+      "status": "pending",
+      "reason": "stuie's Renderer carries a persistent use_thread flag (state-only there too, mirroring upstream's threaded-flush option); node-smol's ti::Renderer has no such field and the binding exposes no setter. Pending on the renderer-state tier \u2014 the flag is cheap to add but there is no threaded-flush path for it to gate yet."
+    },
+    {
+      "symbol": "streamClose",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ exists yet; same higher-tier gap as createNativeSpanFeed per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "streamCommit",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ exists yet; same higher-tier gap as createNativeSpanFeed per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "streamCommitReserved",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ exists yet; same higher-tier gap as createNativeSpanFeed per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "streamDrainSpans",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ exists yet; same higher-tier gap as createNativeSpanFeed per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "streamGetStats",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ exists yet; same higher-tier gap as createNativeSpanFeed per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "streamReserve",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ exists yet; same higher-tier gap as createNativeSpanFeed per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "streamSetCallback",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ and no native->JS event trampoline exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md. Explicitly NOT out-of-scope as a bun:ffi-only helper: the capability (native->JS event delivery) has a direct N-API analogue via a persistent Function reference / threadsafe function, so it is portable, just unported."
+    },
+    {
+      "symbol": "streamSetOptions",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ exists yet; same higher-tier gap as createNativeSpanFeed per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "streamWrite",
+      "status": "pending",
+      "reason": "SpanFeed/streaming stack \u2014 no SpanFeed C++ exists yet; same higher-tier gap as createNativeSpanFeed per docs/ports/smol-tui-lockstep.md."
+    },
+    {
+      "symbol": "syntaxStyleGetStyleCount",
+      "status": "pending",
+      "reason": "Same text/edit-stack gap \u2014 no style-table introspection API exists because no style table exists (docs/ports/smol-tui-lockstep.md: text/edit surfaces are beyond the ported Tiers 1-3)."
+    },
+    {
+      "symbol": "syntaxStyleRegister",
+      "status": "pending",
+      "reason": "Same text/edit-stack gap \u2014 no syntax-style registration API exists, and no C++ style-table type to register into (docs/ports/smol-tui-lockstep.md lists text/edit above the ported Tiers 1-3)."
+    },
+    {
+      "symbol": "syntaxStyleResolveByName",
+      "status": "pending",
+      "reason": "Same text/edit-stack gap \u2014 no name->id resolution API exists (nothing in node-smol maps style names to ids; the binding's only name-keyed tables are ANSI constants and Yoga enum mirrors)."
+    },
+    {
+      "symbol": "textBufferAddHighlight",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferAddHighlightByCharRange",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferAppend",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferAppendFromMemId",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferClear",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferClearAllHighlights",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferClearLineHighlights",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferClearMemRegistry",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferFreeLineHighlights",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferGetByteSize",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferGetHighlightCount",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferGetLength",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferGetLineCount",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferGetLineHighlightsPtr",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferGetPlainText",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferGetTabWidth",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferGetTextRange",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferGetTextRangeByCoords",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferLoadFile",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferRegisterMemBuffer",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferRemoveHighlightsByRef",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferReplaceMemBuffer",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferReset",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferResetDefaults",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferSetDefaultAttributes",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferSetDefaultBg",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferSetDefaultFg",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferSetStyledText",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferSetSyntaxStyle",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferSetTabWidth",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferSetTextFromMem",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewGetLineInfo",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewGetLogicalLineInfo",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewGetPlainTextBytes",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewGetSelectedTextBytes",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewGetSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewGetVirtualLineCount",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewIsValid",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewMeasureForDimensions",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewResetLocalSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewResetSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewSetFirstLineOffset",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewSetLocalSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewSetSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewSetTabIndicator",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewSetTabIndicatorColor",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewSetTruncate",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewSetViewport",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewSetViewportSize",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewSetWrapMode",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewSetWrapWidth",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewUpdateLocalSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "textBufferViewUpdateSelection",
+      "status": "pending",
+      "reason": "text/edit stack \u2014 no textBuffer C++ exists yet; higher-tier work per docs/ports/smol-tui-lockstep.md"
+    },
+    {
+      "symbol": "updateMemoryStats",
+      "status": "pending",
+      "reason": "Same diagnostics tier \u2014 no memory-stats surface (heapUsed/heapTotal/arrayBuffers) exists in node-smol, state-only or otherwise. Scope note for the tracker: this is a pure no-op even in the Rust reference (empty body, all params underscore-prefixed), so the pending work is an accepted-and-discarded signature, not real instrumentation."
+    },
+    {
+      "symbol": "updateStats",
+      "status": "pending",
+      "reason": "Paired with getRenderStats: the JS-side loop-timing feed-in has nothing to write to because node-smol's Renderer stores no stats. Same diagnostics tier; blocked on getRenderStats landing a stats struct first."
+    }
+  ]
+}
