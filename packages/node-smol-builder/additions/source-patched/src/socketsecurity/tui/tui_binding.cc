@@ -88,9 +88,11 @@
 
 #include "tui/ansi.hpp"
 #include "tui/cell.hpp"
+#include "tui/handles.hpp"
 #include "tui/mouse.hpp"
 #include "tui/renderables.hpp"
 #include "tui/renderer.hpp"
+#include "tui/text_buffer.hpp"
 #include "tui/width.hpp"
 
 #include "yoga/Yoga.h"
@@ -1863,6 +1865,131 @@ void FastYogaSetPosition(Local<Value> receiver, uint32_t id, int32_t edge,
 
 static CFunction fast_yoga_set_position(CFunction::Make(FastYogaSetPosition));
 
+// ─── Section 6: Text buffer store ─────────────────────────────────────
+//
+// Native TextBuffer store (packages/tui-infra text_buffer.{hpp,cc}), a port
+// of stuie crates/stuie-cabi/src/text_buffer.rs. Same handle-registry shape
+// as the Renderer registry, but handles are kind-tagged u32 ids
+// (KIND_TEXT_BUFFER, tui/handles.hpp <- stuie handles.rs) so a stale OR
+// wrong-kind handle misses the map and reads as a safe no-op — the contract
+// the lifecycle suite needs (text_buffer.rs:14-15).
+//
+// Foundation slice (S1): lifecycle + core content metrics. All seven
+// wrappers are cold (rare lifecycle / metric reads), so each is a plain
+// SetMethod with no Fast API sibling — the shape the shipped
+// CreateRenderer / DestroyRenderer / RendererSize wrappers use.
+struct TextBufferRegistry {
+  std::mutex mu;
+  uint32_t next_index = 1;
+  std::unordered_map<uint32_t, std::unique_ptr<ti::TextBuffer>> buffers;
+};
+
+static TextBufferRegistry& TextBuffers() {
+  static TextBufferRegistry r;
+  return r;
+}
+
+static ti::TextBuffer* LookupTextBuffer(uint32_t handle) {
+  TextBufferRegistry& r = TextBuffers();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.buffers.find(handle);
+  return it == r.buffers.end() ? nullptr : it->second.get();
+}
+
+// Owner-destroy cascade seam (stuie text_buffer.rs:327-333): destroy()
+// invalidates every TextBufferView this buffer owns BEFORE erasing it, so a
+// view whose owning buffer is gone reads as stale. The view registry arrives
+// in S5; until a buffer can own a view this is a faithful no-op over an empty
+// child set (stuie text_view::destroy_owned_children). Landing the call site
+// now keeps S5 to a body fill.
+static void DestroyOwnedTextBufferViews(uint32_t /* buffer_handle */) {}
+
+// createTextBuffer(widthMethod) -> u32
+// stuie cabi.rs:1057 createTextBuffer -> text_buffer.rs:305 create().
+static void CreateTextBuffer(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  // args[0] widthMethod is accepted and ignored for ABI parity: stuie's
+  // createTextBuffer(_width_method: u8) takes the arg but never reads it.
+  TextBufferRegistry& r = TextBuffers();
+  std::lock_guard<std::mutex> lock(r.mu);
+  uint32_t index = r.next_index++;
+  uint32_t handle = ti::handles::Tag(ti::handles::kKindTextBuffer, index);
+  r.buffers.emplace(handle, std::make_unique<ti::TextBuffer>());
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, handle));
+}
+
+// destroyTextBuffer(handle)
+// stuie cabi.rs:1062 destroyTextBuffer -> text_buffer.rs:327 destroy().
+static void DestroyTextBuffer(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  // Cascade FIRST, exactly as stuie destroy() calls destroy_owned_children
+  // before removing the buffer (text_buffer.rs:331-332).
+  DestroyOwnedTextBufferViews(handle);
+  TextBufferRegistry& r = TextBuffers();
+  std::lock_guard<std::mutex> lock(r.mu);
+  r.buffers.erase(handle);
+}
+
+// textBufferGetLength(handle) -> u32
+// stuie cabi.rs:1067 -> text_buffer.rs:343 get_length(); stale handle -> 0.
+static void TextBufferGetLength(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, buffer == nullptr ? 0 : buffer->Length()));
+}
+
+// textBufferGetByteSize(handle) -> u32
+// stuie cabi.rs:1072 -> text_buffer.rs:347 get_byte_size(); stale handle -> 0.
+static void TextBufferGetByteSize(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, buffer == nullptr ? 0 : buffer->ByteSize()));
+}
+
+// textBufferGetLineCount(handle) -> u32
+// stuie cabi.rs:1077 -> text_buffer.rs:351 get_line_count(); stale handle -> 0
+// (NOT 1 — the stale default is the registry `with` default, not line_count).
+static void TextBufferGetLineCount(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, buffer == nullptr ? 0 : buffer->LineCount()));
+}
+
+// textBufferReset(handle)
+// stuie cabi.rs:1082 -> text_buffer.rs:355 reset(); stale handle -> no-op.
+static void TextBufferReset(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->Reset();
+  }
+}
+
+// textBufferClear(handle)
+// stuie cabi.rs:1087 -> text_buffer.rs:359 clear(); stale handle -> no-op.
+static void TextBufferClear(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->Clear();
+  }
+}
+
 static void Initialize(Local<Object> target,
                        Local<Value> /* unused */,
                        Local<Context> context,
@@ -1983,6 +2110,15 @@ static void Initialize(Local<Object> target,
                             &fast_string_width_from_bytes);
   SetFastMethodNoSideEffect(context, target, "codepointWidth",
                             CodepointWidthBinding, &fast_codepoint_width);
+
+  // Text buffer store (Section 6). All cold -> SetMethod, no Fast API.
+  SetMethod(context, target, "createTextBuffer", CreateTextBuffer);
+  SetMethod(context, target, "destroyTextBuffer", DestroyTextBuffer);
+  SetMethod(context, target, "textBufferGetLength", TextBufferGetLength);
+  SetMethod(context, target, "textBufferGetByteSize", TextBufferGetByteSize);
+  SetMethod(context, target, "textBufferGetLineCount", TextBufferGetLineCount);
+  SetMethod(context, target, "textBufferReset", TextBufferReset);
+  SetMethod(context, target, "textBufferClear", TextBufferClear);
 
   SetFastMethodNoSideEffect(context, target, "yogaCalculateLayout",
                             YogaCalculateLayout,
@@ -2207,6 +2343,13 @@ static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(RendererFlush);
   registry->Register(fast_renderer_flush);
   registry->Register(RendererSize);
+  registry->Register(CreateTextBuffer);
+  registry->Register(DestroyTextBuffer);
+  registry->Register(TextBufferGetLength);
+  registry->Register(TextBufferGetByteSize);
+  registry->Register(TextBufferGetLineCount);
+  registry->Register(TextBufferReset);
+  registry->Register(TextBufferClear);
   registry->Register(RendererDrawBox);
   registry->Register(fast_renderer_draw_box);
   registry->Register(RendererDrawTextWrapped);
