@@ -19,8 +19,10 @@
 #ifndef TUI_INFRA_TEXT_BUFFER_HPP_
 #define TUI_INFRA_TEXT_BUFFER_HPP_
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace tui {
@@ -70,14 +72,74 @@ class TextBuffer {
   // Newline-delimited logical line count. text_buffer.rs:129-132 line_count().
   uint32_t LineCount() const;
 
+  // ── Presentation defaults + tab width (S2) ──
+
+  // Presentation tab width (display columns a '\t' expands to). A stale handle
+  // in the binding falls back to kDefaultTabWidth, matching the registry `with`
+  // default, NOT 0. text_buffer.rs:363-365 get_tab_width().
+  uint8_t TabWidth() const {
+    return tab_width_;
+  }
+
+  // Set the presentation tab width. text_buffer.rs:383-385 set_tab_width().
+  void SetTabWidth(uint8_t width) {
+    tab_width_ = width;
+  }
+
+  // Set the default foreground as raw [u16;4] RGBA lanes, or clear it (nullopt).
+  // Faithful Option semantics: Some(rgba) sets, None clears.
+  // text_buffer.rs:425-427 set_default_fg().
+  void SetDefaultFg(std::optional<std::array<uint16_t, 4>> rgba) {
+    default_fg_ = rgba;
+  }
+
+  // Set the default background, or clear it. text_buffer.rs:429-431
+  // set_default_bg().
+  void SetDefaultBg(std::optional<std::array<uint16_t, 4>> rgba) {
+    default_bg_ = rgba;
+  }
+
+  // Set the default attributes bitset, or clear it (null clears).
+  // text_buffer.rs:433-435 set_default_attributes().
+  void SetDefaultAttributes(std::optional<uint32_t> attrs) {
+    default_attrs_ = attrs;
+  }
+
+  // Clear all three presentation defaults back to nullopt.
+  // text_buffer.rs:437-443 reset_defaults().
+  void ResetDefaults() {
+    default_fg_ = std::nullopt;
+    default_bg_ = std::nullopt;
+    default_attrs_ = std::nullopt;
+  }
+
+  // Read accessors for the presentation defaults. The S6 draw path resolves
+  // these (unset fg -> opaque white, unset bg -> transparent, unset attrs -> 0);
+  // exposed now so the Option semantics are checkable. text_buffer.rs:94-96.
+  const std::optional<std::array<uint16_t, 4>>& DefaultFg() const {
+    return default_fg_;
+  }
+  const std::optional<std::array<uint16_t, 4>>& DefaultBg() const {
+    return default_bg_;
+  }
+  const std::optional<uint32_t>& DefaultAttributes() const {
+    return default_attrs_;
+  }
+
  private:
   // Raw content bytes (malformed UTF-8 preserved verbatim). text_buffer.rs:92.
   std::vector<uint8_t> content_;
 
-  // Presentation tab width. Consumed by S2 (get/setTabWidth) and the S6
-  // measurement path; unused in the foundation, hence [[maybe_unused]].
-  // text_buffer.rs:93.
-  [[maybe_unused]] uint8_t tab_width_ = kDefaultTabWidth;
+  // Presentation tab width. Read/written by S2's get/setTabWidth (above) and
+  // consumed by the S6 measurement path. text_buffer.rs:93.
+  uint8_t tab_width_ = kDefaultTabWidth;
+
+  // Presentation defaults (nullopt = unset). The S6 draw path resolves an unset
+  // fg to opaque white and an unset bg to transparent; here they hold the raw
+  // color/attribute intent. text_buffer.rs:94-96.
+  std::optional<std::array<uint16_t, 4>> default_fg_;
+  std::optional<std::array<uint16_t, 4>> default_bg_;
+  std::optional<uint32_t> default_attrs_;
 
   // True when this buffer is a BORROWED inner buffer owned by an EditBuffer.
   // A borrowed buffer cannot own external TextBufferViews — S5's
@@ -85,7 +147,7 @@ class TextBuffer {
   // [[maybe_unused]]. text_buffer.rs:104.
   [[maybe_unused]] bool borrowed_ = false;
 
-  // S2 adds default_fg/bg/attrs; S3 adds mem; S4 adds highlights/syntax_style.
+  // S3 adds mem; S4 adds highlights/syntax_style.
 };
 
 }  // namespace tui

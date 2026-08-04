@@ -105,9 +105,11 @@
 #include "v8.h"
 #include "v8-fast-api-calls.h"
 
+#include <array>
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -131,6 +133,8 @@ using v8::Number;
 using v8::Object;
 using v8::String;
 using v8::Uint8Array;
+using v8::Uint16Array;
+using v8::Uint32Array;
 using v8::Value;
 
 namespace ti = ::tui;
@@ -1990,6 +1994,113 @@ static void TextBufferClear(const FunctionCallbackInfo<Value>& args) {
   }
 }
 
+// textBufferGetTabWidth(handle) -> u8
+// stuie cabi.rs:1092 -> text_buffer.rs:363 get_tab_width(). A stale handle
+// returns ti::kDefaultTabWidth (the registry `with` default = 2), NOT 0 —
+// this is the one TextBuffer getter whose stale fallback is not zero.
+static void TextBufferGetTabWidth(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, buffer == nullptr ? ti::kDefaultTabWidth : buffer->TabWidth()));
+}
+
+// textBufferSetTabWidth(handle, width)
+// stuie cabi.rs:1096 -> text_buffer.rs:383 set_tab_width(); stale -> no-op.
+static void TextBufferSetTabWidth(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint8_t width =
+      static_cast<uint8_t>(args[1]->Uint32Value(context).FromMaybe(0));
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->SetTabWidth(width);
+  }
+}
+
+// Read an optional RGBA quadruple from a JS Uint16Array(>=4). Any non-array
+// argument (null / undefined) reads as nullopt, which clears the default —
+// mirroring stuie cabi.rs:1039 read_optional_rgba (a null pointer -> None).
+static std::optional<std::array<uint16_t, 4>> ReadOptionalRgba(
+    Local<Value> value) {
+  if (!value->IsUint16Array()) {
+    return std::nullopt;
+  }
+  Local<Uint16Array> arr = value.As<Uint16Array>();
+  if (arr->Length() < 4) {
+    return std::nullopt;
+  }
+  auto store = arr->Buffer()->GetBackingStore();
+  const uint16_t* data = reinterpret_cast<const uint16_t*>(
+      static_cast<const uint8_t*>(store->Data()) + arr->ByteOffset());
+  return std::array<uint16_t, 4>{data[0], data[1], data[2], data[3]};
+}
+
+// textBufferSetDefaultFg(handle, rgbaOrNull)
+// stuie cabi.rs:1102 -> text_buffer.rs:425 set_default_fg(); stale -> no-op.
+static void TextBufferSetDefaultFg(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->SetDefaultFg(ReadOptionalRgba(args[1]));
+  }
+}
+
+// textBufferSetDefaultBg(handle, rgbaOrNull)
+// stuie cabi.rs:1107 -> text_buffer.rs:429 set_default_bg(); stale -> no-op.
+static void TextBufferSetDefaultBg(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->SetDefaultBg(ReadOptionalRgba(args[1]));
+  }
+}
+
+// textBufferSetDefaultAttributes(handle, attrsOrNull)
+// stuie cabi.rs:1116 -> text_buffer.rs:433 set_default_attributes(). A
+// Uint32Array(>=1) sets the bitset; any non-array argument clears it (null ->
+// None). Stale handle -> no-op.
+static void TextBufferSetDefaultAttributes(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    return;
+  }
+  std::optional<uint32_t> attrs;
+  if (args[1]->IsUint32Array()) {
+    Local<Uint32Array> arr = args[1].As<Uint32Array>();
+    if (arr->Length() >= 1) {
+      auto store = arr->Buffer()->GetBackingStore();
+      const uint32_t* data = reinterpret_cast<const uint32_t*>(
+          static_cast<const uint8_t*>(store->Data()) + arr->ByteOffset());
+      attrs = data[0];
+    }
+  }
+  buffer->SetDefaultAttributes(attrs);
+}
+
+// textBufferResetDefaults(handle)
+// stuie cabi.rs:1127 -> text_buffer.rs:437 reset_defaults(); stale -> no-op.
+static void TextBufferResetDefaults(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->ResetDefaults();
+  }
+}
+
 static void Initialize(Local<Object> target,
                        Local<Value> /* unused */,
                        Local<Context> context,
@@ -2119,6 +2230,13 @@ static void Initialize(Local<Object> target,
   SetMethod(context, target, "textBufferGetLineCount", TextBufferGetLineCount);
   SetMethod(context, target, "textBufferReset", TextBufferReset);
   SetMethod(context, target, "textBufferClear", TextBufferClear);
+  SetMethod(context, target, "textBufferGetTabWidth", TextBufferGetTabWidth);
+  SetMethod(context, target, "textBufferSetTabWidth", TextBufferSetTabWidth);
+  SetMethod(context, target, "textBufferSetDefaultFg", TextBufferSetDefaultFg);
+  SetMethod(context, target, "textBufferSetDefaultBg", TextBufferSetDefaultBg);
+  SetMethod(context, target, "textBufferSetDefaultAttributes",
+            TextBufferSetDefaultAttributes);
+  SetMethod(context, target, "textBufferResetDefaults", TextBufferResetDefaults);
 
   SetFastMethodNoSideEffect(context, target, "yogaCalculateLayout",
                             YogaCalculateLayout,
@@ -2350,6 +2468,12 @@ static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(TextBufferGetLineCount);
   registry->Register(TextBufferReset);
   registry->Register(TextBufferClear);
+  registry->Register(TextBufferGetTabWidth);
+  registry->Register(TextBufferSetTabWidth);
+  registry->Register(TextBufferSetDefaultFg);
+  registry->Register(TextBufferSetDefaultBg);
+  registry->Register(TextBufferSetDefaultAttributes);
+  registry->Register(TextBufferResetDefaults);
   registry->Register(RendererDrawBox);
   registry->Register(fast_renderer_draw_box);
   registry->Register(RendererDrawTextWrapped);

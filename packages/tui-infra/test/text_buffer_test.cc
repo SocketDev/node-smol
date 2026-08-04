@@ -19,9 +19,11 @@
 #include "tui/handles.hpp"
 #include "tui/text_buffer.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 
 namespace {
 
@@ -121,6 +123,55 @@ int main() {
     ExpectEq(buf.Length(), 0, "after Clear/Reset Length() == 0");
     ExpectEq(buf.ByteSize(), 0, "after Clear/Reset ByteSize() == 0");
     ExpectEq(buf.LineCount(), 1, "after Clear/Reset LineCount() == 1");
+  }
+
+  // ── S2: tab width + presentation defaults (Option semantics) ──
+  // Fixtures are stuie's own constants: DEFAULT_TAB_WIDTH == 2
+  // (text_buffer.rs:23), default_fg/bg/attrs start None (text_buffer.rs:112-114)
+  // and reset_defaults() returns all three to None (text_buffer.rs:437-443).
+  {
+    TextBuffer buf;
+    // A fresh buffer starts at the default tab width and mirrors kDefaultTabWidth.
+    ExpectEq(buf.TabWidth(), 2, "fresh TabWidth() == DEFAULT_TAB_WIDTH (2)");
+    ExpectEq(buf.TabWidth(), kDefaultTabWidth, "TabWidth() == kDefaultTabWidth");
+    buf.SetTabWidth(8);
+    ExpectEq(buf.TabWidth(), 8, "SetTabWidth(8) round-trips");
+    buf.SetTabWidth(0);
+    ExpectEq(buf.TabWidth(), 0, "SetTabWidth(0) round-trips");
+
+    // Defaults start unset (None).
+    Expect(!buf.DefaultFg().has_value(), "fresh DefaultFg() is None");
+    Expect(!buf.DefaultBg().has_value(), "fresh DefaultBg() is None");
+    Expect(!buf.DefaultAttributes().has_value(), "fresh DefaultAttributes None");
+
+    // Some(rgba) sets, and the lanes round-trip verbatim.
+    buf.SetDefaultFg(std::array<uint16_t, 4>{255, 255, 255, 255});
+    buf.SetDefaultBg(std::array<uint16_t, 4>{10, 20, 30, 255});
+    buf.SetDefaultAttributes(uint32_t{7});
+    Expect(buf.DefaultFg().has_value() &&
+               *buf.DefaultFg() ==
+                   (std::array<uint16_t, 4>{255, 255, 255, 255}),
+           "SetDefaultFg round-trips lanes");
+    Expect(buf.DefaultBg().has_value() &&
+               *buf.DefaultBg() == (std::array<uint16_t, 4>{10, 20, 30, 255}),
+           "SetDefaultBg round-trips lanes");
+    Expect(buf.DefaultAttributes().has_value() &&
+               *buf.DefaultAttributes() == 7u,
+           "SetDefaultAttributes round-trips");
+
+    // None clears an individual default (null -> None).
+    buf.SetDefaultFg(std::nullopt);
+    Expect(!buf.DefaultFg().has_value(), "SetDefaultFg(None) clears");
+    Expect(buf.DefaultBg().has_value(), "clearing fg leaves bg set");
+
+    // reset_defaults() returns ALL three to None in one shot.
+    buf.SetDefaultFg(std::array<uint16_t, 4>{1, 2, 3, 4});
+    buf.ResetDefaults();
+    Expect(!buf.DefaultFg().has_value(), "ResetDefaults clears fg");
+    Expect(!buf.DefaultBg().has_value(), "ResetDefaults clears bg");
+    Expect(!buf.DefaultAttributes().has_value(), "ResetDefaults clears attrs");
+    // reset_defaults() does NOT touch tab width.
+    ExpectEq(buf.TabWidth(), 0, "ResetDefaults leaves tab width untouched");
   }
 
   // ── handles::Tag: kind-disjoint, nonzero, renderer-transparent ──
