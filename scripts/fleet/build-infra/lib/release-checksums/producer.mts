@@ -2,7 +2,7 @@
  * Release-checksum producer: write `checksums.txt` for a directory of
  * artifacts; update a `release-assets.json` block.
  *
- * Use this when your repo _produces_ releases (e.g. socket-btm builds `.node`
+ * Use this when your repo _produces_ releases (e.g. node-smol builds native
  * binaries and ships them to GH Releases). The output of `writeChecksumsFile()`
  * is what consumers download and verify against via `consumer.mts`.
  *

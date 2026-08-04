@@ -140,6 +140,11 @@ export function buildHookAndDocSteps(forwardedArgs: string[]): CheckStep[] {
       run('node', [
         'scripts/fleet/check/prose-parenthetical-asides-are-absent.mts',
       ]),
+    // Prose in tracked markdown must not chain spaced em-dashes. Two dashes make
+    // an X - aside - rest sentence, which reads AI-generated. Gate-time twin of
+    // the anti-prose-guard em-dash-chain pattern.
+    () =>
+      run('node', ['scripts/fleet/check/prose-em-dash-chains-are-absent.mts']),
     // No commit message carries an AI-attribution trailer and no branch uses an
     // AI-agent tool prefix. Both are fleet commit-format policy, and both are
     // scored as automation signals by the public @unveil/identity engine.
@@ -159,6 +164,17 @@ export function buildHookAndDocSteps(forwardedArgs: string[]): CheckStep[] {
     // the single root .gitignore — no tracked nested per-dir .gitignore. Reuses
     // the guard's isNestedGitignore predicate.
     () => run('node', ['scripts/fleet/check/gitignore-is-single-file.mts']),
+    // Defence-in-depth under no-self-referential-symlink-guard: `node_modules/`
+    // with a trailing slash matches a DIRECTORY, so a node_modules SYMLINK is
+    // stageable and one shipped. Report-only until the six trailing-slash
+    // members are fixed (MODE inside the check).
+    () =>
+      run('node', ['scripts/fleet/check/node-modules-symlink-is-ignored.mts']),
+    // A `github-action` channel member ships the repo itself at a git tag —
+    // the runner executes the committed dist/, not src/. Flags a repo whose
+    // dist/ was last rebuilt before its src/ last changed, report-only until
+    // the first github-action member onboards (ENFORCING inside the check).
+    () => run('node', ['scripts/fleet/check/committed-dist-is-current.mts']),
     // DRY bypass-phrase gate: a defineHook hook that references an `Allow <slug>
     // bypass` phrase must declare it as `bypass:` metadata (single source →
     // detector + footer), never hand-write it. Catches drift regressions.

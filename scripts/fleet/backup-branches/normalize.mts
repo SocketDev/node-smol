@@ -1,6 +1,13 @@
 /*
- * @file Normalizes fleet recovery refs to backup-YYYYMMDD-HHMMSS.
- *   Usage: node scripts/fleet/normalize-backup-branches.mts --repo <name> [--fix]
+ * @file The `normalize` subcommand of `../backup-branches.mts`: rename a repo's
+ *   legacy recovery refs to the canonical `backup-YYYYMMDD-HHMMSS`.
+ *   Usage: node scripts/fleet/backup-branches.mts normalize --repo <name> [--fix]
+ *
+ * This is a MIGRATION tool, not an ongoing corrector. Every destructive fleet
+ * flow now names its safety net through `formatBackupBranch`, so nothing new
+ * arrives in a legacy shape. What remains is the backlog: roster repos still
+ * carrying pre-canonical names from before the namer existed. Run it per repo
+ * until each is clean; it stays for as long as that backlog does.
  *
  * Backup refs are deliberately human-readable recovery points. Git does not
  * store branch-creation time, so --fix derives the timestamp from the pointed
@@ -9,20 +16,10 @@
 
 import process from 'node:process'
 
-import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import {
-  formatBackupBranch,
-  isCanonicalBackupBranch,
-} from './lib/backup-branch.mts'
-
-export {
-  BACKUP_BRANCH_RE,
-  formatBackupBranch,
-  isCanonicalBackupBranch,
-} from './lib/backup-branch.mts'
+import { formatBackupBranch, isCanonicalBackupBranch } from './naming.mts'
 
 const logger = getDefaultLogger()
 
@@ -45,12 +42,20 @@ export async function backupBranches(repo: string): Promise<string[]> {
     .toSorted()
 }
 
-export async function main(): Promise<void> {
-  const repoIndex = process.argv.indexOf('--repo')
-  const repo = process.argv[repoIndex + 1]
-  const fix = process.argv.includes('--fix')
+/**
+ * Run the `normalize` subcommand over `argv` — the arguments AFTER the
+ * subcommand word, so the router owns the word and this owns the flags.
+ */
+export async function runNormalize(argv: readonly string[]): Promise<void> {
+  const repoIndex = argv.indexOf('--repo')
+  const repo = repoIndex === -1 ? undefined : argv[repoIndex + 1]
+  const fix = argv.includes('--fix')
   if (!repo) {
-    throw new Error('Missing --repo <name>.')
+    throw new Error(
+      'Missing --repo <name>. Where: scripts/fleet/backup-branches.mts ' +
+        'normalize. Saw: no --repo argument. Fix: run ' +
+        '`node scripts/fleet/backup-branches.mts normalize --repo <name>`.',
+    )
   }
   const branches = await backupBranches(repo)
   const legacy = branches.filter(branch => !isCanonicalBackupBranch(branch))
@@ -101,11 +106,4 @@ export async function main(): Promise<void> {
     ])
     logger.success(`${repo}: ${branch} → ${target}`)
   }
-}
-
-if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  main().catch((error: unknown) => {
-    logger.error(errorMessage(error))
-    process.exitCode = 1
-  })
 }

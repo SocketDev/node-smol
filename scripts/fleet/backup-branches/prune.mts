@@ -1,20 +1,19 @@
-#!/usr/bin/env node
 /*
- * @file Prune spent backup branches — the rewrite safety nets nothing else
- *   cleans up. `clean.mts` scrubs build output (`target/`, `dist/`); this
- *   scrubs the ref namespace, which grows the same way and is just as invisible
- *   until someone counts.
+ * @file The `prune` subcommand of `../backup-branches.mts`: retire spent backup
+ *   branches, the rewrite safety nets nothing else cleans up. `clean.mts`
+ *   scrubs build output (`target/`, `dist/`); this scrubs the ref namespace,
+ *   which grows the same way and is just as invisible until someone counts.
  *
  *   A ref is deleted only when BOTH gates agree:
  *
- *   1. RETENTION (backup-branches/policy.mts) — outside the newest `--keep N`
- *      AND older than `--days N`. Newest-N covers the fresh net an operator may
- *      still want; the age window stops a rewrite-heavy repo keeping a wall of
- *      same-day nets.
- *   2. SAFETY (backup-branches/unique-content.mts) — the backup holds no file
- *      the default branch is missing. This is a VETO: a ref carrying unique
- *      content is reported loudly and never deleted, whatever its age, because
- *      a rewrite that lost work leaves the backup as the only copy.
+ *   1. RETENTION (`policy.mts`) — outside the newest `--keep N` AND older than
+ *      `--days N`. Newest-N covers the fresh net an operator may still want;
+ *      the age window stops a rewrite-heavy repo keeping a wall of same-day
+ *      nets.
+ *   2. SAFETY (`unique-content.mts`) — the backup holds no file the default
+ *      branch is missing. This is a VETO: a ref carrying unique content is
+ *      reported loudly and never deleted, whatever its age, because a rewrite
+ *      that lost work leaves the backup as the only copy.
  *
  *   Local `backup/<slug>` heads are skipped by default and swept with
  *   `--local`; they are cheap to keep and are often a live worktree's parked
@@ -24,7 +23,7 @@
  *   the full verdict table — prunable, kept-and-why, vetoed-and-why — and the
  *   default `--keep`/`--days` are deliberately generous.
  *
- *   Usage: node scripts/fleet/prune-backup-branches.mts
+ *   Usage: node scripts/fleet/backup-branches.mts prune
  *     [--all | --repo owner/name] [--keep N] [--days N] [--local] [--dry-run]
  *     [--allow-pre-root]
  *
@@ -47,26 +46,26 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import {
   fleetReposPath,
   parseFleetRepos,
-} from './check/member-ci-fires-on-push.mts'
-import { REPO_ROOT } from './paths.mts'
-import { runCapture } from './publish-infra/shared.mts'
-import { isMainModule } from './_shared/is-main-module.mts'
-import { runMain } from './_shared/run-main.mts'
-import { applyRetention, isBackupBranch } from './backup-branches/policy.mts'
-import type { BackupRef, RetentionVerdict } from './backup-branches/policy.mts'
+} from '../check/member-ci-fires-on-push.mts'
+import { REPO_ROOT } from '../paths.mts'
+import { runCapture } from '../publish-infra/shared.mts'
+import { isBackupBranch } from './naming.mts'
+import { applyRetention } from './policy.mts'
+import type { BackupRef, RetentionVerdict } from './policy.mts'
+import { reportOutcome } from './report.mts'
 import {
   parseUniqueContentPaths,
   precedesHistoryRoot,
   uniqueContentDiffArgs,
-} from './backup-branches/unique-content.mts'
+} from './unique-content.mts'
 
 const logger = getDefaultLogger()
 
 /**
  * A git runner, injected so every function below is testable without a fixture
  * repo or a network remote. Same shape as `BackupBranchGitExec` in
- * `lib/backup-branch.mts`, which the release scan already uses — one seam
- * convention for git-touching fleet code, not two.
+ * `naming.mts`, which the release scan already uses — one seam convention for
+ * git-touching fleet code, not two.
  */
 export type GitExec = (
   args: string[],
@@ -83,8 +82,6 @@ export function gitExecFor(repoDir: string): GitExec {
 // `git push --delete a b c` fails the whole batch on one bad ref, so serial
 // keeps a single failure from stranding the rest.
 const REMOTE = 'origin'
-// Vetoed refs can name a long file list; print enough to judge, not a wall.
-const MAX_VETO_PATHS_SHOWN = 10
 
 export interface PruneOptions {
   readonly keep?: number | undefined
@@ -349,93 +346,6 @@ export async function pruneRepo(
   return { deleted, kept, repoDir, vetoed }
 }
 
-export interface ReportOptions {
-  readonly dryRun?: boolean | undefined
-}
-
-/**
- * One report line plus the stream it belongs on. A vetoed ref is a FINDING, so
- * it goes to warn; everything else is informational.
- */
-export interface ReportLine {
-  readonly level: 'info' | 'warn'
-  readonly text: string
-}
-
-/**
- * Build the report for one repo's outcome.
- *
- * Split from the logging so the wording is testable directly — the veto text in
- * particular has to say different things for a pre-root ref than for one inside
- * current history, and getting that backwards is how an operator learns to
- * ignore a real finding.
- */
-export function formatOutcomeLines(
-  outcome: PruneOutcome,
-  options?: ReportOptions | undefined,
-): ReportLine[] {
-  const opts = { __proto__: null, ...options } as ReportOptions
-  const verb = opts.dryRun === true ? 'would delete' : 'deleted'
-  const lines: ReportLine[] = [{ level: 'info', text: outcome.repoDir }]
-  if (outcome.deleted.length > 0) {
-    lines.push({
-      level: 'info',
-      text: `  ${verb} ${String(outcome.deleted.length)}:`,
-    })
-    for (const name of outcome.deleted) {
-      lines.push({ level: 'info', text: `    - ${name}` })
-    }
-  }
-  for (const verdict of outcome.kept) {
-    lines.push({
-      level: 'info',
-      text: `  kept ${verdict.ref.name} — ${verdict.keptBecause ?? ''}`,
-    })
-  }
-  // Loud, never a silent skip: a vetoed ref means a rewrite may have lost work,
-  // which is a finding in its own right, not merely a ref that stayed.
-  for (const veto of outcome.vetoed) {
-    lines.push({
-      level: 'warn',
-      text: veto.preRoot
-        ? `  HELD ${veto.name} — predates the default branch's root commit, ` +
-          `so its ${String(veto.onlyOnBackup.length)} extra file(s) cannot ` +
-          `be told apart from ordinary removals the squash erased. Review ` +
-          `by hand before deleting:`
-        : `  HELD ${veto.name} — carries ` +
-          `${String(veto.onlyOnBackup.length)} file(s) the default branch ` +
-          `lacks; a rewrite may have lost work:`,
-    })
-    const shown = veto.onlyOnBackup.slice(0, MAX_VETO_PATHS_SHOWN)
-    for (let i = 0, { length } = shown; i < length; i += 1) {
-      lines.push({ level: 'warn', text: `      ${shown[i]!}` })
-    }
-  }
-  if (
-    outcome.deleted.length === 0 &&
-    outcome.kept.length === 0 &&
-    outcome.vetoed.length === 0
-  ) {
-    lines.push({ level: 'info', text: '  no backup branches' })
-  }
-  return lines
-}
-
-export function reportOutcome(
-  outcome: PruneOutcome,
-  options?: ReportOptions | undefined,
-): void {
-  const lines = formatOutcomeLines(outcome, options)
-  for (let i = 0, { length } = lines; i < length; i += 1) {
-    const line = lines[i]!
-    if (line.level === 'warn') {
-      logger.warn(line.text)
-    } else {
-      logger.info(line.text)
-    }
-  }
-}
-
 export interface TargetOptions {
   readonly all?: boolean | undefined
 }
@@ -464,8 +374,13 @@ export function resolveTargetDirs(
   return dirs
 }
 
-export async function main(): Promise<void> {
+/**
+ * Run the `prune` subcommand over `argv` — the arguments AFTER the subcommand
+ * word, so the router owns the word and this owns the flags.
+ */
+export async function runPrune(argv: readonly string[]): Promise<void> {
   const { values } = parseArgs({
+    args: argv,
     options: {
       all: { type: 'boolean' },
       days: { type: 'string' },
@@ -524,10 +439,4 @@ export async function main(): Promise<void> {
           : ''),
     )
   }
-}
-
-if (isMainModule(import.meta.url)) {
-  // runMain, not a bare async IIFE: a rejection here would otherwise surface as
-  // a raw unhandled-rejection stack instead of a logged message + exit code.
-  runMain(main)
 }
