@@ -11,7 +11,7 @@ skill for invocation specifics.
 ```text
 packages/<pkg>/
   test/
-    fixtures/<corpus>/                # 1. Sparse-checkout submodule
+    fixtures → ../../upstream/<corpus>  # 1. Repo-root sparse submodule
     scripts/<corpus>-<scope>-runner.mts  # 2. Thin CLI entry
     scripts/<corpus>/                 #    Modular guts:
       types.mts                       #      Result / Test / Summary
@@ -29,10 +29,11 @@ packages/<pkg>/
 
 ### 1. Sparse submodule
 
-External corpora live at `test/fixtures/<corpus>/`, NOT `upstream/`.
-Build-time submodules use `upstream/`; test-time corpora use
-`test/fixtures/<corpus>/`. The distinction signals whether bumping the
-submodule affects shipped artifacts. See related
+External corpora live at the repo-root `upstream/<corpus>/` — the ONLY
+submodule home (`upstream-references.md`). Whether a reference is
+build-time (a ported implementation source) or test-time (a spec corpus)
+is recorded in its `.gitmodules` header comment, never encoded in its
+path. See related
 [`../fleet/untracked-by-default.md`](untracked-by-default.md) for
 adjacent rules on vendored trees.
 
@@ -46,13 +47,13 @@ Examples:
 
 ```ini
 # .gitmodules
-[submodule "packages/node-smol-builder/test/fixtures/wpt/streams"]
-    path = packages/node-smol-builder/test/fixtures/wpt/streams
+[submodule "upstream/wpt"]
+    path = upstream/wpt
     url = https://github.com/web-platform-tests/wpt.git
     sparse-checkout = streams/
 
-[submodule "packages/temporal-infra/test/fixtures/test262"]
-    path = packages/temporal-infra/test/fixtures/test262
+[submodule "upstream/test262"]
+    path = upstream/test262
     url = https://github.com/tc39/test262.git
     sparse-checkout = test/built-ins/Temporal/ test/intl402/Temporal/ harness/
 ```
