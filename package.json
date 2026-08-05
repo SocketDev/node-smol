@@ -112,6 +112,7 @@
   },
   "allowScripts": {
     "cpu-features": false,
+    "onnxruntime-node": false,
     "protobufjs": false,
     "puppeteer": false,
     "ssh2": false

@@ -48,6 +48,9 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { REPO_ROOT } from './paths.mts'
 import { gitShortSha, runInherit } from './publish-infra/shared.mts'
 import { isMainModule } from './_shared/is-main-module.mts'
+import { runMain } from './_shared/run-main.mts'
+
+import type { ScriptMeta } from './_shared/run-main.mts'
 
 const logger = getDefaultLogger()
 const rootPath = REPO_ROOT
@@ -200,20 +203,11 @@ function parseCli(): CliArgs {
     options: {
       'dry-run': { default: false, type: 'boolean' },
       'no-pin': { default: false, type: 'boolean' },
-      help: { default: false, type: 'boolean' },
       tag: { type: 'string' },
     },
     allowPositionals: false,
     strict: false,
   })
-  if (values['help']) {
-    logger.log('Usage: node scripts/fleet/create-release.mts [options]')
-    logger.log('')
-    logger.log('  --dry-run        hash + simulate; no gh release create')
-    logger.log('  --no-pin         skip source-tree release-assets.json update')
-    logger.log('  --tag <tag>      override the tag from config.tag()')
-    process.exit(0)
-  }
   return {
     dryRun: !!values['dry-run'],
     noPin: !!values['no-pin'],
@@ -316,11 +310,18 @@ async function collectAssetPaths(
   return result
 }
 
+const SCRIPT_META: ScriptMeta = {
+  describe:
+    'hashes release artifacts, writes a signed checksums manifest, and cuts the GitHub release',
+  help: `Usage: node scripts/fleet/create-release.mts [flags]
+
+  --dry-run    hash + simulate; no gh release create
+  --no-pin     skip source-tree release-assets.json update
+  --tag <tag>  override the tag from config.tag()`,
+}
+
 // Entrypoint-guarded: importing this module (unit tests of its exported
 // helpers) must not execute the script.
 if (isMainModule(import.meta.url)) {
-  main().catch((e: unknown) => {
-    logger.error(e)
-    process.exitCode = 1
-  })
+  runMain(main, SCRIPT_META)
 }
