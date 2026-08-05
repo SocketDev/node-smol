@@ -518,6 +518,10 @@ export function buildPathsAndSupplyChainSteps(): CheckStep[] {
     // pre-contract scripts ride the script-owned bornTested ratchet.
     () =>
       run('node', ['scripts/fleet/check/entry-scripts-are-born-tested.mts']),
+    // A hook composes its severity glyph via _shared/verdict.mts (typed
+    // 🚨/⚠️/ℹ️/💡, never hand-typed); pre-law hooks ride the typedVerdicts
+    // ratchet.
+    () => run('node', ['scripts/fleet/check/hook-verdicts-are-typed.mts']),
     // No committed dependency spec resolves through a local filesystem path
     // the repo does not carry: a hand-written `link:`/`file:` spec in a
     // package.json dependency block, or a pnpm-GENERATED lockfile `link:`
