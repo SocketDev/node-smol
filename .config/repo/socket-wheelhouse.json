@@ -33,5 +33,35 @@
   "fuzz": {
     "exempt": true,
     "reason": "No first-party parser/decoder surface to fuzz yet: repo is fleet tooling plus vendored upstream/ native trees (stuie, decmpfs) that carry their own test tiers upstream. Revisit when node-smol grows first-party parsing code."
+  },
+  "submoduleRoots": {
+    "grandfathered": [
+      "packages/ai-infra/upstream/llama.cpp",
+      "packages/bin-infra/upstream/zstd",
+      "packages/binject/upstream/cJSON",
+      "packages/binject/upstream/libdeflate",
+      "packages/boringssl-builder/upstream/boringssl",
+      "packages/curl-builder/upstream/curl",
+      "packages/curl-builder/upstream/mbedtls",
+      "packages/dawn-builder/upstream/dawn",
+      "packages/libpq-builder/upstream/postgres",
+      "packages/lief-builder/upstream/lief",
+      "packages/lsquic-infra/upstream/ls-qpack",
+      "packages/lsquic-infra/upstream/lsquic",
+      "packages/node-smol-builder/test/fixtures/wpt/streams",
+      "packages/node-smol-builder/upstream/libqrencode",
+      "packages/node-smol-builder/upstream/liburing",
+      "packages/node-smol-builder/upstream/md4c",
+      "packages/node-smol-builder/upstream/node",
+      "packages/node-smol-builder/upstream/semver",
+      "packages/node-smol-builder/upstream/tree-sitter",
+      "packages/node-smol-builder/upstream/uSockets",
+      "packages/node-smol-builder/upstream/uWebSockets",
+      "packages/onnxruntime-builder/upstream/onnxruntime",
+      "packages/temporal-infra/test/fixtures/test262",
+      "packages/temporal-infra/upstream/icu4x",
+      "packages/temporal-infra/upstream/temporal",
+      "packages/yoga-layout-builder/upstream/yoga"
+    ]
   }
 }
