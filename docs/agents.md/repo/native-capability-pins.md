@@ -9,7 +9,7 @@ contract.
 
 `.gitmodules` carries `branch = main` plus `shallow = true` only for the stuie
 reference: stuie publishes no release tags, so there is no `ref` and no
-`sha256:` yet. Do not describe those pins as content-addressed — they are not,
+`sha256:` yet. Do not describe those pins as content-addressed - they are not,
 and a doc that says otherwise teaches the wrong trust model.
 
 ## The intended contract

@@ -1,6 +1,6 @@
 # smol-purl Implementation Plan
 
-> **Status: Shipped as JS-only** — The implementation lives at `packages/node-smol-builder/additions/source-patched/lib/internal/socketsecurity/purl.js`. The C++ binding proposed here (`smol_purl_binding.{h,cc}`) was not implemented. The JS path meets the performance target for the workload. Treat the C++/SIMD sections below as historical design only.
+> **Status: Shipped as JS-only** - The implementation lives at `packages/node-smol-builder/additions/source-patched/lib/internal/socketsecurity/purl.js`. The C++ binding proposed here (`smol_purl_binding.{h,cc}`) was not implemented. The JS path meets the performance target for the workload. Treat the C++/SIMD sections below as historical design only.
 
 ## Overview
 
@@ -30,6 +30,8 @@ Based on `socket-packageurl-js`:
 ## C++ Architecture
 
 ### Header: `smol_purl_binding.h`
+
+<details><summary>Header: `smol_purl_binding.h`</summary>
 
 ```cpp
 #ifndef SRC_SMOL_PURL_BINDING_H_
@@ -182,7 +184,11 @@ class PurlCache {
 #endif  // SRC_SMOL_PURL_BINDING_H_
 ```
 
+</details>
+
 ### V8 Binding: `smol_purl_v8_binding.cc`
+
+<details><summary>V8 Binding: `smol_purl_v8_binding.cc`</summary>
 
 ```cpp
 #include "smol_purl_binding.h"
@@ -267,9 +273,13 @@ NODE_MODULE_CONTEXT_AWARE_INTERNAL(smol_purl, Initialize)
 }  // namespace node
 ```
 
+</details>
+
 ## Cross-Platform SIMD Architecture
 
 ### Platform Detection Header: `smol_simd.h`
+
+<details><summary>Platform Detection Header: `smol_simd.h`</summary>
 
 ```cpp
 #ifndef SRC_SMOL_SIMD_H_
@@ -579,7 +589,11 @@ SMOL_FORCE_INLINE bool NeedsUrlDecode(const char* data, size_t len) {
 #endif  // SRC_SMOL_SIMD_H_
 ```
 
+</details>
+
 ### Perfect Hash for Ecosystem Types
+
+<details><summary>Perfect Hash for Ecosystem Types</summary>
 
 ```cpp
 // Compile-time perfect hash for ecosystem strings
@@ -624,7 +638,11 @@ PurlType TypeFromString(std::string_view type) {
 }
 ```
 
+</details>
+
 ### Arena Allocator for Zero-Alloc Parsing
+
+<details><summary>Arena Allocator for Zero-Alloc Parsing</summary>
 
 ```cpp
 // Thread-local arena for zero-allocation parsing
@@ -652,7 +670,11 @@ class ParseArena {
 thread_local ParseArena g_arena;
 ```
 
+</details>
+
 ### Branch-Free Hex Decode
+
+<details><summary>Branch-Free Hex Decode</summary>
 
 ```cpp
 // Lookup table for hex decode (256 entries)
@@ -677,9 +699,13 @@ SMOL_FORCE_INLINE int DecodeHexPair(char hi, char lo) {
 }
 ```
 
+</details>
+
 ## TypeScript Interface
 
 ### `lib/internal/smol_purl.d.ts`
+
+<details><summary>`lib/internal/smol_purl.d.ts`</summary>
 
 ```typescript
 declare module 'node:smol-purl' {
@@ -804,9 +830,13 @@ declare module 'node:smol-purl' {
 }
 ```
 
+</details>
+
 ## JavaScript Wrapper
 
 ### `lib/internal/smol_purl.js`
+
+<details><summary>`lib/internal/smol_purl.js`</summary>
 
 ```javascript
 'use strict'
@@ -906,9 +936,13 @@ module.exports = {
 }
 ```
 
+</details>
+
 ## Test Cases
 
 ### `test/parallel/test-smol-purl.js`
+
+<details><summary>`test/parallel/test-smol-purl.js`</summary>
 
 ```javascript
 'use strict'
@@ -1006,6 +1040,8 @@ const purl = require('node:smol-purl')
 console.log('All smol-purl tests passed')
 ```
 
+</details>
+
 ## Performance Targets (50-100x)
 
 | Operation             | Target | JS Baseline | Speedup  |
@@ -1046,6 +1082,8 @@ console.log(parsed.name) // 'lodash'
 ## Build Configuration
 
 ### `smol_purl.gypi`
+
+<details><summary>`smol_purl.gypi`</summary>
 
 ```python
 {
@@ -1135,6 +1173,8 @@ console.log(parsed.name) // 'lodash'
   ],
 }
 ```
+
+</details>
 
 ## Implementation Phases
 

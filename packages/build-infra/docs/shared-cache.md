@@ -94,7 +94,7 @@ Where the JSON is:
 ```
 
 - **key**: The full cache key (with prefix)
-- **integrity**: `sha512-{base64(sha512(data))}` — links to content file
+- **integrity**: `sha512-{base64(sha512(data))}` - links to content file
 - **time**: Unix milliseconds when the entry was written
 - **size**: Data size in bytes
 - **metadata**: Always present. Can be `{}` or contain TTL/expiry info
@@ -127,7 +127,7 @@ Deletion is a **soft delete**. We append a new index entry with `"integrity": nu
 
 This shadows all previous entries for the same key. The content file stays on
 disk (it's content-addressed and might be shared by other keys). This is the
-same behavior as npm's cacache — no data loss, no race conditions.
+same behavior as npm's cacache - no data loss, no race conditions.
 
 ## Key Namespace Convention
 
@@ -169,7 +169,7 @@ All implementations follow the same priority order
 **Don't use it for:**
 
 - Performance-critical parser data (tokens, AST). The SHA-512 integrity
-  check adds ~40ms per read — that's fine for a 10KB HTTP response, but
+  check adds ~40ms per read - that's fine for a 10KB HTTP response, but
   unacceptable for a 9MB token array on a hot path.
 - Ephemeral runtime state (use the daemon socket instead)
 
@@ -238,8 +238,8 @@ All write operations go through a staging directory (`~/.socket/_tmp/`)
 before atomic rename into the cache. This prevents:
 
 - **Cross-device rename failures** (EXDEV) when system tmpdir is a different mount
-- **Partial content** from interrupted writes — readers never see incomplete files
-- **Data loss** on power failure — content is either fully written or not at all
+- **Partial content** from interrupted writes - readers never see incomplete files
+- **Data loss** on power failure - content is either fully written or not at all
 
 ```text
 Write flow:
@@ -276,7 +276,7 @@ All implementations use consistent error message patterns:
 | **put**    | Create dirs     | Return error      | Return error | N/A                                     |
 | **remove** | Create dirs     | Return error      | Return error | N/A                                     |
 
-All errors are **non-fatal** — callers should handle gracefully:
+All errors are **non-fatal** - callers should handle gracefully:
 
 - **get** failures: proceed without cache (cold path)
 - **put** failures: log warning, continue without caching

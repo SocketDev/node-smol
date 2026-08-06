@@ -26,6 +26,8 @@ const { serve } = require('node:smol-https')
 
 ## `serve(options)`
 
+<details><summary>`serve(options)`</summary>
+
 <!-- YAML
 added: v23.0.0
 -->
@@ -59,6 +61,8 @@ const server = serve({
 
 console.log(`HTTPS server running at https://localhost:${server.port}`)
 ```
+
+</details>
 
 ### Using a TLS options object
 

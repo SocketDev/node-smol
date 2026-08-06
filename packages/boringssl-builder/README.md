@@ -6,7 +6,7 @@ public symbol (`SSL_CTX_new` → `smol_SSL_CTX_new`, etc.) so the
 resulting `libsmol_crypto.a` / `libsmol_ssl.a` link cleanly alongside
 Node's bundled OpenSSL with zero collisions.
 
-## Retention — do not garbage-collect
+## Retention - do not garbage-collect
 
 **No package.json declares this package, and that is not evidence it is
 unused.** `node-smol-builder` consumes it through a _dynamic_ import in
@@ -30,7 +30,7 @@ re-deriving a symbol-prefixed BoringSSL build. `libpq-builder` (for
 the same retention decision.
 
 Related: code-sign's C++ signing port needs BoringSSL too, but **not this
-one** — the `BORINGSSL_PREFIX=smol` renaming exists to let it sit beside
+one** - the `BORINGSSL_PREFIX=smol` renaming exists to let it sit beside
 Node's OpenSSL inside the Node binary. That port needs its own unprefixed
 provisioning; see its lockstep tracker.
 
@@ -51,7 +51,7 @@ same SHA Bun ships in `bun-v1.3.14`:
 - SHA: `0c5fce43b7ed5eb6001487ee48ac65766f5ddcd1`
 
 The fork tracks BoringSSL `master` with Electron's compat patches
-already applied — keeps us aligned with two heavily-tested downstream
+already applied - keeps us aligned with two heavily-tested downstream
 consumers (Bun + Electron) instead of rolling our own patches.
 
 ## Bumping the pin

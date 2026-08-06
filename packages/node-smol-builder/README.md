@@ -13,7 +13,7 @@ pnpm --filter node-smol-builder run clean && \
   pnpm --filter node-smol-builder run build --prod # production build with LTO
 ```
 
-Always `clean` before `build` — stale checkpoints are the #1 source of "my patch isn't landing" confusion. See the root `CLAUDE.md` for the full development guidelines.
+Always `clean` before `build` - stale checkpoints are the #1 source of "my patch isn't landing" confusion. See the root `CLAUDE.md` for the full development guidelines.
 
 First-time init (clones ~1GB of upstream Node.js):
 
@@ -21,9 +21,9 @@ First-time init (clones ~1GB of upstream Node.js):
 git submodule update --init --recursive packages/node-smol-builder/upstream
 ```
 
-Builds from source — no prebuilt path for this one. Depends on `lief-builder` (optional, enabled with `--with-lief`), `curl-builder` (for stub integration), and the `binject` / `binpress` / `binflate` / `bin-infra` / `build-infra` source packages, which are auto-mirrored into `additions/source-patched/src/socketsecurity/` during the prepare-external-sources step.
+Builds from source - no prebuilt path for this one. Depends on `lief-builder` (optional, enabled with `--with-lief`), `curl-builder` (for stub integration), and the `binject` / `binpress` / `binflate` / `bin-infra` / `build-infra` source packages, which are auto-mirrored into `additions/source-patched/src/socketsecurity/` during the prepare-external-sources step.
 
-Prereqs: `cmake`, `ninja`, `python3` (≥ 3.11), a working C++17 toolchain (Xcode CLT on macOS, `build-essential` on Linux, MSVC on Windows), plus whatever each submodule build needs. (Temporal is provided by the `temporal-infra` C++ port — no Rust toolchain required.)
+Prereqs: `cmake`, `ninja`, `python3` (≥ 3.11), a working C++17 toolchain (Xcode CLT on macOS, `build-essential` on Linux, MSVC on Windows), plus whatever each submodule build needs. (Temporal is provided by the `temporal-infra` C++ port - no Rust toolchain required.)
 
 Output: `build/<mode>/<platform-arch>/out/Final/node` (stripped + signed on macOS). For the compressed self-extracting variant, feed this binary into `binpress`.
 

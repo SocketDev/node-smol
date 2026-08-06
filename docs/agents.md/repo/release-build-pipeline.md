@@ -6,6 +6,8 @@ where the compression tools come from, and how binject is driven in tests.
 
 ## buildRelease config reference
 
+<details><summary>buildRelease config reference</summary>
+
 `packages/node-smol-builder/scripts/binary-released/shared/build-released.mts`
 exports `buildRelease(config, buildOptions)`. The `config` object carries the
 whole build context for the phase. Required properties are validated at
@@ -48,6 +50,8 @@ undefined path.
 | `extraConfigureFlags`     | Extra `./configure` flags appended verbatim after the standard set. The bundle-driven compile in detect-bundle-features.mts and compile-for-bundle.mts passes the detector's `--without-smol-*` and `--without-sqlite` flags here to drop subsystems a given SEA bundle does not use. Optional, defaults to none. |
 
 `buildOptions.skipCheckpoint` skips checkpoint creation after the build.
+
+</details>
 
 ## Monorepo-package source mappings
 

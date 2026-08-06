@@ -355,6 +355,8 @@ Constants for error codes.
 
 ## Example: High-throughput ingestion
 
+<details><summary>Example: High-throughput ingestion</summary>
+
 ```mjs
 import { Sender, TimeUnit } from 'node:smol-ilp'
 
@@ -383,3 +385,5 @@ for (let i = 0; i < 100000; i++) {
 await sender.flush()
 await sender.close()
 ```
+
+</details>

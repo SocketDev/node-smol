@@ -465,6 +465,8 @@ added: v23.0.0
 
 ## Example: SEA application
 
+<details><summary>Example: SEA application</summary>
+
 ```mjs
 import { hasVFS, readFileSync, mount, listFiles } from 'node:smol-vfs'
 
@@ -491,6 +493,8 @@ console.log(`Assets extracted to: ${assetsDir}`)
 import { handleNativeAddon } from 'node:smol-vfs'
 const binding = require(handleNativeAddon('/snapshot/native/crypto.node'))
 ```
+
+</details>
 
 ## Comparison with `node:sea`
 

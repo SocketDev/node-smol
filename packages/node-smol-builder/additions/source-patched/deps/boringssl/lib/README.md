@@ -8,7 +8,7 @@ stack (lsquic + uWebSockets).
 The libs are produced by `packages/boringssl-builder/` with
 `-DBORINGSSL_PREFIX=smol`. `prepare-external-sources.mts` copies them
 here at build-prepare time via `copyBoringsslArtifacts()`. The dir is
-otherwise empty in version control — this README is the placeholder.
+otherwise empty in version control - this README is the placeholder.
 
 Do not commit the `.a` / `.lib` files; they're build artifacts and
 regenerate on every CI run.

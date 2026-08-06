@@ -14,7 +14,7 @@ deps) reaches for. Each shim:
 - Falls back to an equivalent implementation (syscall, pthread primitives,
   or an explicit no-op) on systems where it doesn't.
 
-The shims are activated at link time via `-Wl,--wrap=<symbol>` flags — the
+The shims are activated at link time via `-Wl,--wrap=<symbol>` flags - the
 linker rewrites every `<symbol>` call to `__wrap_<symbol>`, which lives in
 this package. On glibc >= 2.34 the dlsym path runs unchanged; on glibc 2.17
 the fallback path runs. Same binary works everywhere.
@@ -45,7 +45,7 @@ import { GLIBC_SHIMS_LINK_FLAGS } from 'glibc-shims-infra/lib/link-flags'
 // pass as ldflags array entries
 ```
 
-Per fleet rule **1 path, 1 reference** — every consumer reads the canonical
+Per fleet rule **1 path, 1 reference** - every consumer reads the canonical
 link-flag list from `lib/link-flags.mts`. No string-typed `-Wl,--wrap=` in
 downstream gyp files.
 
@@ -68,25 +68,25 @@ Per-symbol detail + fallback semantics: [`docs/shim-contract.md`](docs/shim-cont
 4. Document the contract in `docs/shim-contract.md`.
 5. Add a behavior test under `test/<symbol>.test.mts`.
 
-One shim, one file. Splits scale linearly — adding the 8th shim is as
+One shim, one file. Splits scale linearly - adding the 8th shim is as
 contained as adding the 1st.
 
 ## Consumers
 
 Every Linux build feeding into the smol-Node binary inherits the glibc
-floor of its inputs — so the shim layer applies to all of them. Listed
+floor of its inputs - so the shim layer applies to all of them. Listed
 alphabetically:
 
-- `packages/binsuite/` — fleet binsuite Linux artifacts.
-- `packages/boringssl-builder/` — prefixed BoringSSL static libs.
-- `packages/curl-builder/` — curl CLI Linux binaries.
-- `packages/lief-builder/` — LIEF static lib.
-- `packages/lsquic-infra/` — lsquic + ls-qpack vendor patches.
-- `packages/node-smol-builder/` — smol Node binary (primary consumer).
-- `packages/onnxruntime-builder/` — ONNX runtime WASM/native.
-- `packages/postgres-builder/` — libpq static lib.
-- `packages/bin-stub-builder/` — fleet stub binaries.
-- `packages/yoga-layout-builder/` — yoga layout static lib.
+- `packages/binsuite/` - fleet binsuite Linux artifacts.
+- `packages/boringssl-builder/` - prefixed BoringSSL static libs.
+- `packages/curl-builder/` - curl CLI Linux binaries.
+- `packages/lief-builder/` - LIEF static lib.
+- `packages/lsquic-infra/` - lsquic + ls-qpack vendor patches.
+- `packages/node-smol-builder/` - smol Node binary (primary consumer).
+- `packages/onnxruntime-builder/` - ONNX runtime WASM/native.
+- `packages/postgres-builder/` - libpq static lib.
+- `packages/bin-stub-builder/` - fleet stub binaries.
+- `packages/yoga-layout-builder/` - yoga layout static lib.
 
 A consumer adopting glibc-shims-infra needs ONLY a `workspace:*` dep + a
-gypi include — no source changes to the shim package itself.
+gypi include - no source changes to the shim package itself.

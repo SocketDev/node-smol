@@ -1,4 +1,4 @@
-# Lowering the Linux glibc floor — staged plan
+# Lowering the Linux glibc floor - staged plan
 
 **Status**: groundwork delivered. No behavior change on current builds.
 
@@ -6,9 +6,9 @@
 
 ---
 
-## Why — who this unblocks
+## Why - who this unblocks
 
-Our `node-smol` SEA binaries ship to users as a single self-contained executable. Today we link against **glibc 2.28** (AlmaLinux 8 / RHEL 8), which means the binary refuses to run on older enterprise Linux hosts — the user sees a hard `GLIBC_2.28 not found` loader error before their JS ever executes.
+Our `node-smol` SEA binaries ship to users as a single self-contained executable. Today we link against **glibc 2.28** (AlmaLinux 8 / RHEL 8), which means the binary refuses to run on older enterprise Linux hosts - the user sees a hard `GLIBC_2.28 not found` loader error before their JS ever executes.
 
 Lowering to **glibc 2.17** directly unblocks these deployment targets:
 
@@ -23,13 +23,13 @@ Lowering to **glibc 2.17** directly unblocks these deployment targets:
 | **Debian 11**                  | 2.31  | EOL 2026-08-31 (freexian extended)                                    | ✗ fails to load | ✓ works          |
 | **Debian 12**                  | 2.36  | EOL mid-2028                                                          | ✓ works         | ✓ works          |
 
-**The wins that matter most to our users**: RHEL 7 (Extended Lifecycle customers still running it in production), Amazon Linux 1 (pre-2023 Lambda deployments and long-lived EC2 AMIs), Amazon Linux 2 — the Lambda `nodejs18.x` default runtime through at least mid-2026 —, and Ubuntu 20.04 LTS (still the default in many enterprise CI systems).
+**The wins that matter most to our users**: RHEL 7 (Extended Lifecycle customers still running it in production), Amazon Linux 1 (pre-2023 Lambda deployments and long-lived EC2 AMIs), Amazon Linux 2 - the Lambda `nodejs18.x` default runtime through at least mid-2026 -, and Ubuntu 20.04 LTS (still the default in many enterprise CI systems).
 
-This mirrors exactly the motivation [Bun's PR 29461](https://github.com/oven-sh/bun/pull/29461) used when they made the same move — "unblocks companies running Red Hat Enterprise Linux 7 & Amazon Linux 1 from using Bun." For us it's node-smol SEA binaries instead of Bun, but the deployment constraint is identical.
+This mirrors exactly the motivation [Bun's PR 29461](https://github.com/oven-sh/bun/pull/29461) used when they made the same move - "unblocks companies running Red Hat Enterprise Linux 7 & Amazon Linux 1 from using Bun." For us it's node-smol SEA binaries instead of Bun, but the deployment constraint is identical.
 
 ### Sources
 
-- [Amazon Linux 2 FAQs — EOL and glibc](https://aws.amazon.com/amazon-linux-2/faqs/)
+- [Amazon Linux 2 FAQs - EOL and glibc](https://aws.amazon.com/amazon-linux-2/faqs/)
 - [AL1 EOL announcement](https://aws.amazon.com/blogs/aws/update-on-amazon-linux-ami-end-of-life/)
 - [AL2023 release cadence](https://docs.aws.amazon.com/linux/al2023/ug/release-cadence.html)
 - [RHEL 7 Extended Lifecycle Support](https://access.redhat.com/support/policy/updates/errata)
@@ -42,11 +42,11 @@ This mirrors exactly the motivation [Bun's PR 29461](https://github.com/oven-sh/
 
 Lower our Linux glibc floor from **2.28** (AlmaLinux 8 / RHEL 8, today's default) to **2.17** (CentOS 7 / Amazon Linux 1 / aarch64 baseline). Once done, our `node-smol` SEA binary will run on every distribution in the table above without requiring users to upgrade their OS.
 
-Why 2.17 and not lower? Because **2.17 is the ultimate aarch64 glibc floor**. Going lower on x64 alone has no value — users who want the same binary for arm64 are already stuck at 2.17. And going lower than 2.17 on x64 only unblocks CentOS 6 (EOL 2020-11-30, functionally dead) and older AL1 AMIs that will no longer boot on modern hypervisors. The 2.17 floor gets ~every commercially relevant host.
+Why 2.17 and not lower? Because **2.17 is the ultimate aarch64 glibc floor**. Going lower on x64 alone has no value - users who want the same binary for arm64 are already stuck at 2.17. And going lower than 2.17 on x64 only unblocks CentOS 6 (EOL 2020-11-30, functionally dead) and older AL1 AMIs that will no longer boot on modern hypervisors. The 2.17 floor gets ~every commercially relevant host.
 
 ---
 
-## Strategy — `--wrap` + `dlsym` + fallback
+## Strategy - `--wrap` + `dlsym` + fallback
 
 Adopted verbatim from Bun's [oven-sh/bun#29461](https://github.com/oven-sh/bun/pull/29461).
 
@@ -58,7 +58,7 @@ For every glibc symbol that arrived after 2.17, we:
    - If it exists (i.e. running on glibc ≥ the introduction version): forward to it. **Behavior identical to unwrapped.**
    - If it doesn't exist (i.e. running on glibc 2.17): run a compatibility fallback that stays within the 2.17 ABI.
 
-On today's build hosts (glibc 2.28) the wrap is inert — dlsym always finds the real impl and we always forward. **You can land the wrap code today and nothing changes.** That's exactly what patch `021-glibc-compat-layer.patch` already does.
+On today's build hosts (glibc 2.28) the wrap is inert - dlsym always finds the real impl and we always forward. **You can land the wrap code today and nothing changes.** That's exactly what patch `021-glibc-compat-layer.patch` already does.
 
 ---
 
@@ -101,9 +101,9 @@ Vitest integration test. Skipped when `GLIBC_FLOOR` env is unset (today). When s
 
 ### Build-infra plumbing
 
-`build-infra/lib/platform-mappings.mts` exports `getRequestedGlibcFloor()` which returns `undefined` | `"2.17"` | `"2.28"` from the `GLIBC_FLOOR` env var. No callers today — ready to thread through cache keys and Docker image selection when we actually lower.
+`build-infra/lib/platform-mappings.mts` exports `getRequestedGlibcFloor()` which returns `undefined` | `"2.17"` | `"2.28"` from the `GLIBC_FLOOR` env var. No callers today - ready to thread through cache keys and Docker image selection when we actually lower.
 
-### Build image — `Dockerfile.glibc-2.17`
+### Build image - `Dockerfile.glibc-2.17`
 
 **File**: `packages/node-smol-builder/docker/Dockerfile.glibc-2.17`
 
@@ -112,7 +112,7 @@ Opt-in Dockerfile, **not wired into any workflow**. Multi-arch via `${TARGETARCH
 - Docker sets `TARGETARCH=amd64` for `linux/amd64` and `arm64` for `linux/arm64`.
 - The `FROM` line rewrites `amd64 → x86_64` so `quay.io/pypa/manylinux2014_${TARGETARCH/amd64/x86_64}` selects the correct per-arch repository (`manylinux2014_x86_64` or `manylinux2014_aarch64`).
 - Both arches pinned to the `2026.04.17-1` tag. Per-arch digests are documented inline in the Dockerfile for audit.
-- C++20 via SCL `devtoolset-11` (GCC 11) — highest toolset available on CentOS 7 vault. `devtoolset-12/13/14` are AlmaLinux 8+ only.
+- C++20 via SCL `devtoolset-11` (GCC 11) - highest toolset available on CentOS 7 vault. `devtoolset-12/13/14` are AlmaLinux 8+ only.
 - Build-time tripwire: `ldd --version` check fails the build if the base image ever drifts off glibc 2.17.
 
 To invoke directly via Depot (same project as every other Linux build):
@@ -126,7 +126,7 @@ pnpm exec depot build \
   .
 ```
 
-Depot's BuildKit is FROM-agnostic — the same cloud cache hosts our 2.28 and 2.17 images without collision. No new Depot project needed.
+Depot's BuildKit is FROM-agnostic - the same cloud cache hosts our 2.28 and 2.17 images without collision. No new Depot project needed.
 
 ### Weekly audit workflow
 
@@ -140,7 +140,9 @@ Runs `pnpm --filter node-smol-builder run glibc:audit --fallback-report` weekly 
 
 **Do not start these until the groundwork above has soaked on main for at least one release cycle and no regressions have been reported.**
 
-### Phase 1 — enumerate today's `> 2.17` symbols
+### Phase 1 - enumerate today's `> 2.17` symbols
+
+<details><summary>Phase 1 - enumerate today's `> 2.17` symbols</summary>
 
 **What**: Get the authoritative list of symbols we'd need to handle to actually lower the floor. Right now we wrap 4 symbols based on Bun's observations for a Zig/WebKit binary; our V8/ICU/libuv/openssl/ngtcp2 combo may pull in more.
 
@@ -178,7 +180,7 @@ pnpm --filter node-smol-builder run glibc:audit --floor=2.17
 - **Violations are all already handled by 021 + 022**: skip to Phase 2.
 - **Violations include new symbols not in 021**: extend `glibc_2_17_compat.cc` with one wrap per new symbol, following the existing pattern (dlsym + fallback). Rebuild, re-audit. Loop until zero.
 
-**Rollback**: none needed — this phase is read-only.
+**Rollback**: none needed - this phase is read-only.
 
 **Known tricky cases**:
 
@@ -189,7 +191,11 @@ pnpm --filter node-smol-builder run glibc:audit --floor=2.17
 
 ---
 
-### Phase 2 — build-image migration
+</details>
+
+### Phase 2 - build-image migration
+
+<details><summary>Phase 2 - build-image migration</summary>
 
 **What**: Swap the CI Docker base from AlmaLinux 8 (glibc 2.28) to the glibc 2.17 image we've already built.
 
@@ -199,12 +205,12 @@ pnpm --filter node-smol-builder run glibc:audit --floor=2.17
 
 Why manylinux2014 and not AlmaLinux 7: pypa maintains this image actively (EOL 2027-05-04), the CentOS 7 vault fallback is already configured, and the dual-arch split (`manylinux2014_x86_64` vs `manylinux2014_aarch64`) matches our matrix. AlmaLinux 7 + SCL was the first-pass recommendation, but manylinux2014 ships SCL preconfigured, which skips a brittle `yum install centos-release-scl` step.
 
-Why devtoolset-11 not 14: **CentOS 7 SCL vault caps at devtoolset-11**. Versions 12/13/14 exist only on AlmaLinux 8+ as `gcc-toolset-*`. GCC 11 has enough C++20 for Node.js v25.x; if a future Node version needs C++23 features not in GCC 11, move to `manylinux_2_28` (AlmaLinux 8, glibc 2.28) — but that defeats the glibc 2.17 floor.
+Why devtoolset-11 not 14: **CentOS 7 SCL vault caps at devtoolset-11**. Versions 12/13/14 exist only on AlmaLinux 8+ as `gcc-toolset-*`. GCC 11 has enough C++20 for Node.js v25.x; if a future Node version needs C++23 features not in GCC 11, move to `manylinux_2_28` (AlmaLinux 8, glibc 2.28) - but that defeats the glibc 2.17 floor.
 
 **What's already done** (the Dockerfile exists; nothing to write):
 
-- `packages/node-smol-builder/docker/Dockerfile.glibc-2.17` — multi-arch via `${TARGETARCH}`, pinned base tag, build-time `ldd` tripwire, uses `/opt/rh/devtoolset-11/enable`.
-- Depot project `8fpj9495vw` already supports the FROM swap with zero config change — confirmed via [Depot container-builds docs](https://depot.dev/docs/container-builds/overview). BuildKit is FROM-agnostic.
+- `packages/node-smol-builder/docker/Dockerfile.glibc-2.17` - multi-arch via `${TARGETARCH}`, pinned base tag, build-time `ldd` tripwire, uses `/opt/rh/devtoolset-11/enable`.
+- Depot project `8fpj9495vw` already supports the FROM swap with zero config change - confirmed via [Depot container-builds docs](https://depot.dev/docs/container-builds/overview). BuildKit is FROM-agnostic.
 
 **Verify before flipping**:
 
@@ -235,7 +241,7 @@ done
 
 If step 2 shows `✗ NO` rows (unwrapped symbols), extend `glibc_2_17_compat.cc` following the Phase 1 decision tree and re-run from step 1.
 
-If step 3 prints the Node version on both arches without crashes, the binary works on glibc 2.17 — proceed to Phase 3.
+If step 3 prints the Node version on both arches without crashes, the binary works on glibc 2.17 - proceed to Phase 3.
 
 **Decision tree**:
 
@@ -246,7 +252,9 @@ If step 3 prints the Node version on both arches without crashes, the binary wor
 
 ---
 
-### Phase 3 — CI matrix
+</details>
+
+### Phase 3 - CI matrix
 
 **What**: Add a `glibc_floor` dimension to the build matrix so both 2.17 and 2.28 binaries are produced during the rollout, with 2.17 becoming the default once stable.
 
@@ -276,7 +284,7 @@ If step 3 prints the Node version on both arches without crashes, the binary wor
 
 ---
 
-### Phase 4 — enforcement test activation
+### Phase 4 - enforcement test activation
 
 **What**: Turn on the `glibc-floor.test.mts` that already exists (dormant today).
 
@@ -290,7 +298,7 @@ If step 3 prints the Node version on both arches without crashes, the binary wor
 
 ---
 
-### Phase 5 — runtime smoke test on CentOS 7
+### Phase 5 - runtime smoke test on CentOS 7
 
 **What**: Run the actually-built 2.17 binary inside a CentOS 7 container and execute our smoke-test suite. This catches runtime issues (e.g. `thread_local` destructor behavior) that the link-time check cannot.
 
@@ -313,7 +321,7 @@ If step 3 prints the Node version on both arches without crashes, the binary wor
 
 ## Testing the compat layer locally (without touching main CI)
 
-You don't need to run the full phase plan to exercise the `glibc_2_17_compat.cc` fallback paths — you can do it today on any host that has Docker.
+You don't need to run the full phase plan to exercise the `glibc_2_17_compat.cc` fallback paths - you can do it today on any host that has Docker.
 
 ### Quick smoke test: build with the glibc-2.17 Dockerfile
 
@@ -356,9 +364,11 @@ Expected output on a 2.28-built binary with `--floor=2.17`: a table of violation
 
 ### Exercise the fallback path directly
 
+<details><summary>Exercise the fallback path directly</summary>
+
 The C++ fallbacks are only reachable when `dlsym(RTLD_NEXT, "<symbol>")` returns `nullptr`. On any glibc ≥ 2.18 host the dlsym call finds the real impl and the fallback never runs. Three ways to hit it:
 
-1. **Actually run on glibc 2.17** (most realistic — CentOS 7 or Amazon Linux 1 container):
+1. **Actually run on glibc 2.17** (most realistic - CentOS 7 or Amazon Linux 1 container):
 
    ```bash
    docker run --rm -v "$PWD/glibc-2.17-out:/out" quay.io/centos/centos:7 \
@@ -388,11 +398,13 @@ The C++ fallbacks are only reachable when `dlsym(RTLD_NEXT, "<symbol>")` returns
 
    Then `LD_PRELOAD=./force_null_dlsym.so ./node`. Confirms the fallback code actually runs.
 
-3. **Audit-only dry run**: `pnpm run glibc:audit -- --floor=2.17 --fallback-report` against a built 2.28 binary — shows you exactly which fallbacks WOULD activate if you moved to 2.17 today.
+3. **Audit-only dry run**: `pnpm run glibc:audit --floor=2.17 --fallback-report` against a built 2.28 binary - shows you exactly which fallbacks WOULD activate if you moved to 2.17 today.
+
+</details>
 
 ### When you're done
 
-If the compat layer ever activates on a real user system (crash reports mentioning `__wrap_getrandom` or similar), treat it as P0 — it means either:
+If the compat layer ever activates on a real user system (crash reports mentioning `__wrap_getrandom` or similar), treat it as P0 - it means either:
 
 - the host glibc is below our intended floor (check deployment/base-image drift), or
 - the dlsym lookup failed for a non-version reason (sandboxing? SELinux?).
@@ -422,9 +434,9 @@ Inherited from our `quick_exit` fallback:
 
 ## References
 
-- [Bun PR 29461](https://github.com/oven-sh/bun/pull/29461) — the recipe; sourced all three Bun wraps from this.
-- [libc++abi 19.1.0 `cxa_thread_atexit.cpp`](https://github.com/llvm/llvm-project/blob/llvmorg-19.1.0/libcxxabi/src/cxa_thread_atexit.cpp) — source of our `__cxa_thread_atexit_impl` fallback, Apache-2.0 WITH LLVM-exception.
-- [pypa/manylinux](https://github.com/pypa/manylinux) — candidate base image, EOL 2027-05-04.
-- [nodejs/node#52223](https://github.com/nodejs/node/issues/52223) — c-ares `<sys/random.h>` breakage on old glibc (addressed by patch 022).
-- [glibc#20198](https://sourceware.org/bugzilla/show_bug.cgi?id=20198) — why `quick_exit@2.24` differs semantically from `@2.10`.
-- [C11 §7.22.4.3](https://port70.net/~nsz/c/c11/n1570.html#7.22.4.3) — `at_quick_exit` spec, 32-handler minimum.
+- [Bun PR 29461](https://github.com/oven-sh/bun/pull/29461) - the recipe; sourced all three Bun wraps from this.
+- [libc++abi 19.1.0 `cxa_thread_atexit.cpp`](https://github.com/llvm/llvm-project/blob/llvmorg-19.1.0/libcxxabi/src/cxa_thread_atexit.cpp) - source of our `__cxa_thread_atexit_impl` fallback, Apache-2.0 WITH LLVM-exception.
+- [pypa/manylinux](https://github.com/pypa/manylinux) - candidate base image, EOL 2027-05-04.
+- [nodejs/node#52223](https://github.com/nodejs/node/issues/52223) - c-ares `<sys/random.h>` breakage on old glibc (addressed by patch 022).
+- [glibc#20198](https://sourceware.org/bugzilla/show_bug.cgi?id=20198) - why `quick_exit@2.24` differs semantically from `@2.10`.
+- [C11 §7.22.4.3](https://port70.net/~nsz/c/c11/n1570.html#7.22.4.3) - `at_quick_exit` spec, 32-handler minimum.

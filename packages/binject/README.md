@@ -11,4 +11,4 @@ pnpm --filter binject run build --prod # production build (LTO/strip)
 
 Output: `build/<mode>/<platform-arch>/out/Final/binject`.
 
-Depends on `lief-builder` — run it first, or let the cache-miss path download a prebuilt LIEF from our GitHub releases.
+Depends on `lief-builder` - run it first, or let the cache-miss path download a prebuilt LIEF from our GitHub releases.

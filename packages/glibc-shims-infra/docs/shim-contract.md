@@ -11,7 +11,7 @@ functions are dead code.
 
 ---
 
-## `__cxa_thread_atexit_impl` — glibc 2.18
+## `__cxa_thread_atexit_impl` - glibc 2.18
 
 **Caller surface.** libstdc++, libc++abi, and Rust std emit references to
 this symbol for every `thread_local` object with a non-trivial destructor.
@@ -29,7 +29,7 @@ invoke `RunDtors()` at thread exit, which drains the list LIFO.
 **Limitations of the fallback.**
 
 - `dso_symbol` is ignored. On glibc 2.17 no DSO unload path exists for
-  `thread_local` dtors — `dlclose` after thread exit is unsafe. Acceptable
+  `thread_local` dtors - `dlclose` after thread exit is unsafe. Acceptable
   because the fleet binaries are static-linked + don't `dlclose` C++ DSOs.
 - Dtors registered on the **main thread** run at static-destruction time
   (`DtorsManager`'s dtor), not on `pthread_exit`. Matches libc++abi behavior.
@@ -39,7 +39,7 @@ Attribution in repo root `LICENSE`.
 
 ---
 
-## `getrandom` — glibc 2.25
+## `getrandom` - glibc 2.25
 
 **Caller surface.** OpenSSL's RAND_priv_bytes path, c-ares' DNS query ID
 generation, V8's highway RNG. Most callers already have a `/dev/urandom`
@@ -58,7 +58,7 @@ batches at startup, not in hot paths.
 
 ---
 
-## `quick_exit` — glibc 2.24
+## `quick_exit` - glibc 2.24
 
 **Caller surface.** C11 `<stdlib.h>` and C++11 `<cstdlib>`. Used when a
 program wants to bypass `atexit` handlers + buffered stream flushes (i.e.
@@ -68,7 +68,7 @@ in this fleet; libstdc++ calls it from `std::quick_exit`.
 **dlsym path.** Forward `(code)` to the real implementation. The real glibc
 2.24+ implementation is C11-correct (does **not** run `thread_local`
 destructors). The pre-2.24 `@GLIBC_2.10` symbol erroneously ran them, see
-[glibc#20198](https://sourceware.org/bugzilla/show_bug.cgi?id=20198) — but
+[glibc#20198](https://sourceware.org/bugzilla/show_bug.cgi?id=20198) - but
 that symbol is also absent on glibc 2.17, so we don't reach it.
 
 **Fallback path.**
@@ -81,7 +81,7 @@ that symbol is also absent on glibc 2.17, so we don't reach it.
 
 ---
 
-## `at_quick_exit` — glibc 2.24
+## `at_quick_exit` - glibc 2.24
 
 **Caller surface.** Companion to `quick_exit`. Same callers as above.
 
@@ -110,7 +110,7 @@ array sizing is the only knob).
 5. Add `test/<symbol>.test.mts` that exercises both the dlsym path and the
    fallback path.
 
-Per fleet rule "1 path, 1 reference" — the `--wrap` symbol list MUST be
+Per fleet rule "1 path, 1 reference" - the `--wrap` symbol list MUST be
 consistent across `lib/link-flags.mts` and `gyp/glibc-shims-infra.gypi`.
 A `node scripts/check-link-flag-parity.mts` script (TODO) will assert that
 on commit.

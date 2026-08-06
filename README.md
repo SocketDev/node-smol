@@ -3,7 +3,7 @@
 [![Follow @SocketSecurity](https://img.shields.io/twitter/follow/SocketSecurity?style=social)](https://twitter.com/SocketSecurity)
 [![Follow @socket.dev on Bluesky](https://img.shields.io/badge/Follow-@socket.dev-1DA1F2?style=social&logo=bluesky)](https://bsky.app/profile/socket.dev)
 
-Socket's customized Node.js distribution — source patches, builtins, SEA packaging, platform artifacts, and release assembly.
+Socket's customized Node.js distribution - source patches, builtins, SEA packaging, platform artifacts, and release assembly.
 
 node-smol owns the Node source patches, builtins, SEA packaging, platform
 artifacts, and release assembly for Socket's customized Node.js distribution.
@@ -13,7 +13,7 @@ references through a `.node` addon or a narrow `node:smol-*` builtin contract.
 
 ## Install
 
-**There are no releases yet** — this repo has published zero GitHub releases,
+**There are no releases yet** - this repo has published zero GitHub releases,
 so there is nothing to download today. Once the first release is cut, binaries
 will ship as GitHub release assets:
 
@@ -43,7 +43,7 @@ Run the downloaded binary in place of `node`:
 
 ### Upstream contracts
 
-- `upstream/stuie` — terminal UI and ANSI mouse parsing. The Rust crate is the
+- `upstream/stuie` - terminal UI and ANSI mouse parsing. The Rust crate is the
   canonical implementation; future `node:smol-tui` integration must run its
   shared fixture corpus before a pin advances.
 

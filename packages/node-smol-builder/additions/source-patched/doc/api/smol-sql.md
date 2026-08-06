@@ -123,6 +123,8 @@ const products = await db`SELECT * FROM products WHERE price >= ${minPrice}`
 
 ### `sql.begin(callback)`
 
+<details><summary>`sql.begin(callback)`</summary>
+
 <!-- YAML
 added: v23.0.0
 -->
@@ -156,6 +158,8 @@ try {
   // Transaction was rolled back
 }
 ```
+
+</details>
 
 ### `sql.reserve()`
 
@@ -308,6 +312,8 @@ SQLite-specific error.
 
 ## Example: Full application
 
+<details><summary>Example: Full application</summary>
+
 ```mjs
 import { SQL } from 'node:smol-sql'
 
@@ -377,3 +383,5 @@ console.log(posts)
 
 await db.end()
 ```
+
+</details>

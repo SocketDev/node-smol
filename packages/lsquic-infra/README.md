@@ -2,7 +2,7 @@
 
 Source-only lsquic + ls-qpack package, vendored as the QUIC engine for
 node-smol's `node:smol-quic` and `node:smol-http3` builtins. Mirrors
-the [`temporal-infra`](../temporal-infra/) pattern — no binary release,
+the [`temporal-infra`](../temporal-infra/) pattern - no binary release,
 no Docker, no workflow. Consumers compile the upstream `.c` / `.h`
 files inline via `additions/source-patched`.
 
@@ -15,7 +15,7 @@ configure.py 3-flag plumbing lands as part of the same task (#334).
 
 Upstream Node 26 vendors `deps/ngtcp2/` + `deps/nghttp3/` and ships an
 experimental `node:quic` module gated behind `--experimental-quic`.
-We side with bun on the engine choice — lsquic powers bun's 283k
+We side with bun on the engine choice - lsquic powers bun's 283k
 req/s fetch-handler HTTP/3 benchmark. Upstream's QUIC files stay on
 disk in the patched source tree but are excluded from the build via
 the `use_node_quic` configure flag (default `false`).
@@ -24,7 +24,7 @@ the `use_node_quic` configure flag (default `false`).
 
 lsquic upstream's README documents BoringSSL as the TLS backend. We
 deviate: node-smol's vendored OpenSSL 3.5.6 exposes the QUIC
-handshake API (`SSL_set_quic_tls_cbs` — verified in
+handshake API (`SSL_set_quic_tls_cbs` - verified in
 `packages/node-smol-builder/upstream/node/deps/openssl/openssl/include/openssl/ssl.h.in`).
 lsquic v4.6.2's cmake auto-detects this via
 `LSQUIC_LIBSSL=OPENSSL`. We save ~30k LOC of BoringSSL vendoring and
@@ -44,14 +44,14 @@ Implication rules:
 - `use_smol_http3=true` ⇒ forces `use_smol_quic=true` (configure error on conflict).
 - `use_smol_quic=false` ⇒ auto-disables `use_smol_http3`.
 - `--without-ssl` forces all three off.
-- `use_node_quic` is independent — can coexist with smol stack (two QUIC builtins side-by-side, useful for migration / A/B perf comparison).
+- `use_node_quic` is independent - can coexist with smol stack (two QUIC builtins side-by-side, useful for migration / A/B perf comparison).
 
 ## Vendor plan
 
 | Submodule           | Pin                                                                  | Match         |
 | ------------------- | -------------------------------------------------------------------- | ------------- |
-| `upstream/lsquic`   | v4.6.2 — SHA `3181911301b1aa4f54c1ed690901abc674ee08fb` (2026-04-20) | bun PR #29768 |
-| `upstream/ls-qpack` | v2.6.2 — SHA `1e9c5b8e59f8161c54f168a570c8bfdc59ded0c3` (2025-06-16) | bun PR #29768 |
+| `upstream/lsquic`   | v4.6.2 - SHA `3181911301b1aa4f54c1ed690901abc674ee08fb` (2026-04-20) | bun PR #29768 |
+| `upstream/ls-qpack` | v2.6.2 - SHA `1e9c5b8e59f8161c54f168a570c8bfdc59ded0c3` (2025-06-16) | bun PR #29768 |
 
 All SHAs verified against bun's HTTP/3 PR (`oven-sh/bun#29768` @
 `3addffd8c…`) so we inherit a known-working combination.
@@ -65,7 +65,7 @@ Three bun patches mirrored verbatim from `oven-sh/bun#29768`
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `versions-to-string.patch` | Ship pre-generated `lsquic_versions_to_string.c` so CI doesn't need Perl (lsquic's normal build generates it via `gen-verstrs.pl`).          |
 | `allow-no-sni.patch`       | Allow HTTP/3 connections without SNI in `lsquic_enc_sess_ietf.c` (e.g. IP-literal connections). Removes the spec-strict early-return.        |
-| `skip-priority-walk.patch` | Adds `CP_HAVE_PRIO` flag — short-circuits `find_lowest_prio` hash-table walk on the send-control hot path for the common single-stream case. |
+| `skip-priority-walk.patch` | Adds `CP_HAVE_PRIO` flag - short-circuits `find_lowest_prio` hash-table walk on the send-control hot path for the common single-stream case. |
 
 ## Lockstep
 
@@ -99,6 +99,8 @@ source via `apply-patches.mts`.
 
 ## node.gyp source-list (under `use_smol_quic` condition)
 
+<details><summary>node.gyp source-list (under `use_smol_quic` condition)</summary>
+
 ```python
 ['node_use_smol_quic=="true"', {
   'sources': [
@@ -130,11 +132,13 @@ source via `apply-patches.mts`.
 The four `LSQUIC_*=0` defines match bun's PR `scripts/build/deps/
 lsquic.ts` defines list.
 
+</details>
+
 ## Forward edges
 
 - Tier 2 (WebTransport): flip `LSQUIC_WEBTRANSPORT` from OFF to ON in
   the gyp defines. Filed as task #329-equivalent for QUIC stack.
 - Future: if benchmarks show ngtcp2 keeps pace with lsquic on
   workloads we care about, revisit by flipping default to
-  `use_node_quic=true` and dropping the lsquic stack — but that's a
+  `use_node_quic=true` and dropping the lsquic stack - but that's a
   larger architecture change.

@@ -4,14 +4,14 @@ A junior-dev introduction to how socket-btm caches build progress.
 
 ## Why checkpoints exist
 
-Building node-smol or one of the binsuite tools can take tens of minutes. We don't want to redo work that's already done — locally or in CI. Checkpoints are the mechanism that lets a build resume from the latest successfully completed stage instead of starting over.
+Building node-smol or one of the binsuite tools can take tens of minutes. We don't want to redo work that's already done - locally or in CI. Checkpoints are the mechanism that lets a build resume from the latest successfully completed stage instead of starting over.
 
 ## What a checkpoint is
 
 A checkpoint is a named snapshot of build progress at one stage. It lives on disk as two files:
 
-- `<checkpoint>.json` — metadata (platform, arch, source-file hash, artifact path, binary size)
-- `<checkpoint>.tar.gz` — the actual built artifact, tarballed
+- `<checkpoint>.json` - metadata (platform, arch, source-file hash, artifact path, binary size)
+- `<checkpoint>.tar.gz` - the actual built artifact, tarballed
 
 Plus a `.tar.gz.lock` lockfile during concurrent writes.
 
@@ -28,7 +28,7 @@ packages/<pkg>/build/<mode>/<platform-arch>/checkpoints/<pkg>/<checkpoint>.tar.g
 
 Some packages also have `build/shared/checkpoints/<pkg>/...` for stages that are truly platform-independent (e.g. node-smol's `source-copied` stage). Everything else should be platform-scoped.
 
-**Use `getPlatformBuildDir(packageDir, platformArch)`** from `build-infra/lib/constants` to compute `build/<mode>/<platform-arch>`. Do not hand-roll `path.join(BUILD_ROOT, mode)` — it drops the platform segment.
+**Use `getPlatformBuildDir(packageDir, platformArch)`** from `build-infra/lib/constants` to compute `build/<mode>/<platform-arch>`. Do not hand-roll `path.join(BUILD_ROOT, mode)` - it drops the platform segment.
 
 ## What a checkpoint chain is
 
@@ -56,8 +56,8 @@ Put `finalized` **last** and you'd always rebuild from scratch. The order is loa
 
 Two places:
 
-1. **Centralized registry** — `CHECKPOINT_CHAINS` in `packages/build-infra/lib/constants.mts`. Named generators like `simple()`, `nodeSmol()`, `curl()`, `yoga(mode)`, `onnxruntime(mode)`. Use these when a package's chain is one of the standard shapes.
-2. **Per-package entry point** — `packages/<pkg>/scripts/get-checkpoint-chain.mts`. This is what CI calls. It prints the chain to stdout as a comma-separated string. The contract between the script and the workflow is exactly that: comma-separated names on stdout.
+1. **Centralized registry** - `CHECKPOINT_CHAINS` in `packages/build-infra/lib/constants.mts`. Named generators like `simple()`, `nodeSmol()`, `curl()`, `yoga(mode)`, `onnxruntime(mode)`. Use these when a package's chain is one of the standard shapes.
+2. **Per-package entry point** - `packages/<pkg>/scripts/get-checkpoint-chain.mts`. This is what CI calls. It prints the chain to stdout as a comma-separated string. The contract between the script and the workflow is exactly that: comma-separated names on stdout.
 
 Packages with simple `['finalized']` chains (binsuite tools, stubs, lief, libpq) delegate to the shared `build-infra/scripts/get-checkpoint-chain.mts` to avoid duplication. Packages with multi-stage chains (curl, node-smol, yoga, onnx, models, minilm, codet5, iocraft) implement their chain inline.
 
@@ -76,7 +76,7 @@ Currently defined:
 
 Two patterns in use, both acceptable:
 
-### Pattern A — composite action (binsuite.yml)
+### Pattern A - composite action (binsuite.yml)
 
 ```yaml
 - uses: ./.github/actions/setup-checkpoints
@@ -88,9 +88,9 @@ Two patterns in use, both acceptable:
     libc: ${{ matrix.libc || '' }}
 ```
 
-The composite action loads the cache version, computes a cache key, restores from cache, calls `get-checkpoint-chain.mts`, and validates — all as one unit.
+The composite action loads the cache version, computes a cache key, restores from cache, calls `get-checkpoint-chain.mts`, and validates - all as one unit.
 
-### Pattern B — hand-rolled (node-smol.yml, lief.yml, yoga-layout.yml, onnxruntime.yml, models.yml)
+### Pattern B - hand-rolled (node-smol.yml, lief.yml, yoga-layout.yml, onnxruntime.yml, models.yml)
 
 ```yaml
 - name: Set checkpoint chain
@@ -147,7 +147,7 @@ Bump when:
 
 - The checkpoint format changes (e.g. we add a new metadata field that old restores would miss).
 - We need to flush stale caches after a fix.
-- The cascade in `CLAUDE.md` says to — e.g. a change in `build-infra` bumps stubs, binflate, binject, binpress, and node-smol together.
+- The cascade in `CLAUDE.md` says to - e.g. a change in `build-infra` bumps stubs, binflate, binject, binpress, and node-smol together.
 
 The chain script does not read or care about cache versions. Only the workflow does.
 
@@ -155,7 +155,7 @@ The chain script does not read or care about cache versions. Only the workflow d
 
 1. Add its chain shape to `CHECKPOINT_CHAINS` in `build-infra/lib/constants.mts` (or reuse an existing shape like `simple()`).
 2. Add new checkpoint names, if any, to `CHECKPOINTS` in the same file.
-3. Create `packages/<pkg>/scripts/get-checkpoint-chain.mts`. For simple chains, copy the bin-stub-builder wrapper verbatim — it delegates to the shared script. For multi-stage chains, implement inline using the `CHECKPOINT_CHAINS.<name>()` generator.
+3. Create `packages/<pkg>/scripts/get-checkpoint-chain.mts`. For simple chains, copy the bin-stub-builder wrapper verbatim - it delegates to the shared script. For multi-stage chains, implement inline using the `CHECKPOINT_CHAINS.<name>()` generator.
 4. In the package's `build.mts`, call `createCheckpoint(getPlatformBuildDir(packageRoot, platformArch), CHECKPOINTS.X, smokeTest, opts)` at the end of each stage.
 5. Add the package to `.github/cache-versions.json` with an initial version.
 6. In the package's workflow, use Pattern A (`setup-checkpoints` composite action) if the package is standalone, or Pattern B (hand-rolled) if the cache key needs package-specific logic. Do not invent Pattern C.
@@ -170,11 +170,11 @@ The chain script does not read or care about cache versions. Only the workflow d
 
 ## Related reading
 
-- `packages/build-infra/lib/constants.mts:51` — `CHECKPOINTS` enum and `CHECKPOINT_CHAINS` registry
-- `packages/build-infra/lib/checkpoint-manager.mts` — `createCheckpoint`, `shouldRun`, `hasCheckpoint` runtime
-- `packages/build-infra/scripts/get-checkpoint-chain.mts` — shared script for simple chains
-- `.github/actions/setup-checkpoints/action.yml` — composite action (Pattern A)
-- `.github/actions/restore-checkpoint/action.yml` — chain-walking restore (Pattern A and B)
-- `.github/actions/validate-checkpoints/action.yml` — artifact/metadata validation
-- `.github/cache-versions.json` — per-package cache invalidation dial
-- `packages/build-infra/docs/shared-cache.md` — complementary doc on the CI-side cache infrastructure
+- `packages/build-infra/lib/constants.mts:51` - `CHECKPOINTS` enum and `CHECKPOINT_CHAINS` registry
+- `packages/build-infra/lib/checkpoint-manager.mts` - `createCheckpoint`, `shouldRun`, `hasCheckpoint` runtime
+- `packages/build-infra/scripts/get-checkpoint-chain.mts` - shared script for simple chains
+- `.github/actions/setup-checkpoints/action.yml` - composite action (Pattern A)
+- `.github/actions/restore-checkpoint/action.yml` - chain-walking restore (Pattern A and B)
+- `.github/actions/validate-checkpoints/action.yml` - artifact/metadata validation
+- `.github/cache-versions.json` - per-package cache invalidation dial
+- `packages/build-infra/docs/shared-cache.md` - complementary doc on the CI-side cache infrastructure

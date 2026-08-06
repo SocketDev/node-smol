@@ -1,6 +1,6 @@
 # smol-manifest Implementation Plan
 
-> **Status: Shipped as JS-only** — The implementation lives at `packages/node-smol-builder/additions/source-patched/lib/internal/socketsecurity/manifest.js`. The C++ binding + simdjson/rapidyaml integration proposed here was not implemented. The JS path meets the performance target. Treat the C++ sections below as historical design only.
+> **Status: Shipped as JS-only** - The implementation lives at `packages/node-smol-builder/additions/source-patched/lib/internal/socketsecurity/manifest.js`. The C++ binding + simdjson/rapidyaml integration proposed here was not implemented. The JS path meets the performance target. Treat the C++ sections below as historical design only.
 
 ## Overview
 
@@ -59,6 +59,8 @@ Based on analysis of:
 ## C++ Architecture
 
 ### Header: `smol_manifest_binding.h`
+
+<details><summary>Header: `smol_manifest_binding.h`</summary>
 
 ```cpp
 #ifndef SRC_SMOL_MANIFEST_BINDING_H_
@@ -284,7 +286,11 @@ LockfileStats AnalyzeLockfile(const Lockfile& lock);
 #endif  // SRC_SMOL_MANIFEST_BINDING_H_
 ```
 
+</details>
+
 ### simdjson Integration
+
+<details><summary>simdjson Integration</summary>
 
 ```cpp
 // smol_manifest_json.cc
@@ -431,7 +437,11 @@ Lockfile JsonParser::ParsePackageLock(std::string_view content) {
 }  // namespace node
 ```
 
+</details>
+
 ### Yarn.lock Parser (Custom Format)
+
+<details><summary>Yarn.lock Parser (Custom Format)</summary>
 
 ```cpp
 // smol_manifest_yarn.cc
@@ -530,7 +540,11 @@ Lockfile CustomParser::ParseYarnLock(std::string_view content) {
 }  // namespace node
 ```
 
+</details>
+
 ### YAML Parser (pnpm-lock)
+
+<details><summary>YAML Parser (pnpm-lock)</summary>
 
 ```cpp
 // smol_manifest_yaml.cc
@@ -603,7 +617,11 @@ Lockfile YamlParser::ParsePnpmLock(std::string_view content) {
 }  // namespace node
 ```
 
+</details>
+
 ## V8 Binding
+
+<details><summary>V8 Binding</summary>
 
 ```cpp
 // smol_manifest_v8_binding.cc
@@ -708,9 +726,13 @@ NODE_MODULE_CONTEXT_AWARE_INTERNAL(smol_manifest, Initialize)
 }  // namespace node
 ```
 
+</details>
+
 ## TypeScript Interface
 
 ### `lib/internal/smol_manifest.d.ts`
+
+<details><summary>`lib/internal/smol_manifest.d.ts`</summary>
 
 ```typescript
 declare module 'node:smol-manifest' {
@@ -832,9 +854,13 @@ declare module 'node:smol-manifest' {
 }
 ```
 
+</details>
+
 ## JavaScript Wrapper
 
 ### `lib/internal/smol_manifest.js`
+
+<details><summary>`lib/internal/smol_manifest.js`</summary>
 
 ```javascript
 'use strict'
@@ -942,9 +968,13 @@ module.exports = {
 }
 ```
 
+</details>
+
 ## Test Cases
 
 ### `test/parallel/test-smol-manifest.js`
+
+<details><summary>`test/parallel/test-smol-manifest.js`</summary>
 
 ```javascript
 'use strict'
@@ -1086,6 +1116,8 @@ criterion = "0.4"
 console.log('All smol-manifest tests passed')
 ```
 
+</details>
+
 ## Performance Targets (50-100x)
 
 | Operation                 | Target  | JS Baseline | Speedup  |
@@ -1110,6 +1142,8 @@ console.log('All smol-manifest tests passed')
 ## Build Configuration
 
 ### `smol_manifest.gypi`
+
+<details><summary>`smol_manifest.gypi`</summary>
 
 ```python
 {
@@ -1212,9 +1246,13 @@ console.log('All smol-manifest tests passed')
 }
 ```
 
+</details>
+
 ## Cross-Platform SIMD Architecture
 
 ### Memory-Mapped File Access
+
+<details><summary>Memory-Mapped File Access</summary>
 
 ```cpp
 #include "smol_simd.h"
@@ -1324,7 +1362,11 @@ class MemoryMappedFile {
 }  // namespace smol
 ```
 
+</details>
+
 ### SIMD Line Scanner for yarn.lock
+
+<details><summary>SIMD Line Scanner for yarn.lock</summary>
 
 ```cpp
 #include "smol_simd.h"
@@ -1453,7 +1495,11 @@ SMOL_FORCE_INLINE size_t SkipWhitespace(const char* data, size_t len) {
 }  // namespace smol
 ```
 
+</details>
+
 ### String Interning for Package Names
+
+<details><summary>String Interning for Package Names</summary>
 
 ```cpp
 #include <atomic>
@@ -1537,7 +1583,11 @@ thread_local StringInterner g_interner;
 }  // namespace smol
 ```
 
+</details>
+
 ### Robin Hood Hash Map for Package Lookup
+
+<details><summary>Robin Hood Hash Map for Package Lookup</summary>
 
 ```cpp
 // Fast O(1) package lookup with excellent cache behavior
@@ -1628,6 +1678,8 @@ class RobinHoodMap {
   size_t size_ = 0;
 };
 ```
+
+</details>
 
 ## Dependencies
 

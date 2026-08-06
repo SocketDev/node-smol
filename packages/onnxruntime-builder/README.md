@@ -4,7 +4,7 @@ Builds a custom WebAssembly build of [ONNX Runtime](https://onnxruntime.ai/) tai
 
 Produces `ort.wasm` and the JS glue that loads it synchronously. Consumed by code that runs the `models` package's CodeT5 and MiniLM models without any external dependency at runtime.
 
-## Retention — do not garbage-collect
+## Retention - do not garbage-collect
 
 **No package.json declares this package, and that is not evidence it is
 unused.** It is a build input for the smol-ai inference stack, wired through the node-smol build

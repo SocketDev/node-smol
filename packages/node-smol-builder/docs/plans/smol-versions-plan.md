@@ -1,6 +1,6 @@
 # smol-versions Implementation Plan
 
-> **Status: Shipped as JS-only** — The parser lives at `packages/node-smol-builder/additions/source-patched/lib/internal/socketsecurity/versions.js` (with the public facade at `lib/smol-versions.js`). The C++ binding proposed in this plan (`smol_versions_binding.{h,cc}`, `smol_versions.gypi`, SIMD fast paths) was not implemented — the pure JS path was fast enough for the actual workload (90%+ of versions use the packed-representation fast path, see `versions.js:260-360`). Treat the C++ sections below as historical design only.
+> **Status: Shipped as JS-only** - The parser lives at `packages/node-smol-builder/additions/source-patched/lib/internal/socketsecurity/versions.js` (with the public facade at `lib/smol-versions.js`). The C++ binding proposed in this plan (`smol_versions_binding.{h,cc}`, `smol_versions.gypi`, SIMD fast paths) was not implemented - the pure JS path was fast enough for the actual workload (90%+ of versions use the packed-representation fast path, see `versions.js:260-360`). Treat the C++ sections below as historical design only.
 
 ## Overview
 
@@ -41,6 +41,8 @@ Based on analysis of:
 ## C++ Architecture
 
 ### Header: `smol_versions_binding.h`
+
+<details><summary>Header: `smol_versions_binding.h`</summary>
 
 ```cpp
 #ifndef SRC_SMOL_VERSIONS_BINDING_H_
@@ -274,7 +276,11 @@ namespace pypi {
 #endif  // SRC_SMOL_VERSIONS_BINDING_H_
 ```
 
+</details>
+
 ### V8 Binding: `smol_versions_v8_binding.cc`
+
+<details><summary>V8 Binding: `smol_versions_v8_binding.cc`</summary>
 
 ```cpp
 #include "smol_versions_binding.h"
@@ -443,9 +449,13 @@ NODE_MODULE_CONTEXT_AWARE_INTERNAL(smol_versions, Initialize)
 }  // namespace node
 ```
 
+</details>
+
 ## TypeScript Interface
 
 ### `lib/internal/smol_versions.d.ts`
+
+<details><summary>`lib/internal/smol_versions.d.ts`</summary>
 
 ```typescript
 declare module 'node:smol-versions' {
@@ -638,9 +648,13 @@ declare module 'node:smol-versions' {
 }
 ```
 
+</details>
+
 ## Ecosystem-Specific Logic
 
 ### Maven Version Comparison
+
+<details><summary>Maven Version Comparison</summary>
 
 ```cpp
 // Maven uses a complex comparison algorithm
@@ -694,7 +708,11 @@ int maven::QualifierRank(std::string_view q) {
 }
 ```
 
+</details>
+
 ### PyPI PEP 440 Parsing
+
+<details><summary>PyPI PEP 440 Parsing</summary>
 
 ```cpp
 Version ParsePypi(std::string_view input) {
@@ -735,9 +753,13 @@ std::pair<uint64_t, std::string_view> pypi::ParseEpoch(std::string_view input) {
 }
 ```
 
+</details>
+
 ## Test Cases
 
 ### `test/parallel/test-smol-versions.js`
+
+<details><summary>`test/parallel/test-smol-versions.js`</summary>
 
 ```javascript
 'use strict'
@@ -872,6 +894,8 @@ const versions = require('node:smol-versions')
 console.log('All smol-versions tests passed')
 ```
 
+</details>
+
 ## Performance Targets (50-100x)
 
 | Operation           | Target | JS Baseline | Speedup  |
@@ -913,6 +937,8 @@ struct alignas(32) PackedVersion {
 ```
 
 ### SIMD Digit Parsing (Cross-Platform)
+
+<details><summary>SIMD Digit Parsing (Cross-Platform)</summary>
 
 ```cpp
 #include "smol_simd.h"  // Shared SIMD header
@@ -1032,7 +1058,11 @@ inline uint64_t ParseDigits(const char* s, size_t len) {
 }  // namespace smol
 ```
 
+</details>
+
 ### Branchless Version Comparison
+
+<details><summary>Branchless Version Comparison</summary>
 
 ```cpp
 // Compare two packed versions without branches
@@ -1083,7 +1113,11 @@ void CompareVersionBatchSSE2(
 #endif
 ```
 
+</details>
+
 ### Lock-Free LRU Cache
+
+<details><summary>Lock-Free LRU Cache</summary>
 
 ```cpp
 #include <atomic>
@@ -1155,9 +1189,13 @@ class VersionCache {
 };
 ```
 
+</details>
+
 ## Build Configuration
 
 ### `smol_versions.gypi`
+
+<details><summary>`smol_versions.gypi`</summary>
 
 ```python
 {
@@ -1226,6 +1264,8 @@ class VersionCache {
   ],
 }
 ```
+
+</details>
 
 ## Implementation Phases
 

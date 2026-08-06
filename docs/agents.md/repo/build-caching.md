@@ -1,6 +1,6 @@
 # Build caching: cache keys, checkpoints, extraction cache
 
-Detail for the caching layers in `packages/build-infra/lib/` — `cache-key.mts`,
+Detail for the caching layers in `packages/build-infra/lib/` - `cache-key.mts`,
 `checkpoint-manager.mts`, and `extraction-cache.mts`. The short comments in
 those files carry the invariants; this page carries the discussion.
 
@@ -36,6 +36,8 @@ updates, the cache key changes and caches rebuild:
 workflows can cache each build phase and resume interrupted builds.
 
 ### Creating checkpoints
+
+<details><summary>Creating checkpoints</summary>
 
 `createCheckpoint` enforces the pattern build → smoke test → checkpoint. The
 `smokeTest` callback is a required parameter, so a checkpoint can only be
@@ -105,6 +107,8 @@ Option reference for `createCheckpoint`:
 | `platform` / `arch` / `libc` | Target triple; required for binary stages, ignored for source stages.       |
 | `binaryPath`                 | Binary to ad-hoc sign on macOS before the smoke test.                       |
 | `tarExcludes`                | Tar glob patterns, relative to the archive root, excluded from the tarball. |
+
+</details>
 
 ### Restoring checkpoints
 

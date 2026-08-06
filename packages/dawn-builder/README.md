@@ -19,7 +19,7 @@ into its own `*-builder` package:
 
 - Keeps `node-smol-builder/upstream/` lean for the node submodule + the
   small native deps (uSockets, md4c, tree-sitter, libqrencode).
-- Lets the Dawn build cache key be the submodule SHA — invalidates only
+- Lets the Dawn build cache key be the submodule SHA - invalidates only
   when Dawn moves, not when node-smol's own sources change.
 - Matches the existing `*-builder` convention used by curl, yoga,
   onnxruntime, lief, etc.
@@ -28,7 +28,7 @@ into its own `*-builder` package:
 
 Dawn ships both a GN-based Chromium-tooling build and a self-contained
 CMake build (`CMakeLists.txt` at the Dawn repo root). We use the CMake
-form — same shape as `yoga-layout-builder` and `onnxruntime-builder`.
+form - same shape as `yoga-layout-builder` and `onnxruntime-builder`.
 
 The build produces:
 
@@ -44,7 +44,7 @@ The Dawn submodule SHA participates in `node-smol-builder`'s SOURCE_PATCHED
 cache key via `prepare-external-sources.mts`. Bumping the Dawn submodule
 invalidates the cache; node-smol re-links against the updated artifact.
 
-Within a single Dawn SHA, the build is incremental — ccache handles the
+Within a single Dawn SHA, the build is incremental - ccache handles the
 per-translation-unit re-compilation when only headers change.
 
 ## Sparse checkout

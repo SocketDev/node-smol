@@ -1,6 +1,6 @@
 # Build toolchain: tools, checksums, tarballs, submodule versions
 
-Detail for the toolchain helpers in `packages/build-infra/lib/` —
+Detail for the toolchain helpers in `packages/build-infra/lib/` -
 `tool-installer.mts`, `node-checksum.mts`, `submodule-version.mts`,
 `tarball-utils.mts`, and `model-build-helpers.mts`. The short comments in
 those files carry the invariants; this page carries the discussion.
@@ -30,6 +30,8 @@ branch on `available` and surface `error` when it is set.
 purpose so package manager invocations never race each other.
 
 ## Node.js release checksums
+
+<details><summary>Node.js release checksums</summary>
 
 `node-checksum.mts` ties the Node.js source submodule to an authentic upstream
 release.
@@ -64,6 +66,8 @@ if (!result.valid) {
 
 Both helpers accept a `timeout` option in milliseconds, defaulting to 10
 seconds.
+
+</details>
 
 ## Submodule version comments
 

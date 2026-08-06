@@ -23,6 +23,8 @@ const { serve, fastJsonResponse } = require('node:smol-http')
 
 ## `serve(options)`
 
+<details><summary>`serve(options)`</summary>
+
 <!-- YAML
 added: v23.0.0
 -->
@@ -59,6 +61,8 @@ const server = serve({
 
 console.log(`Server running at http://localhost:${server.port}`)
 ```
+
+</details>
 
 ### Response types
 

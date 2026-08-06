@@ -28,24 +28,24 @@ Following the `bin-infra` / `napi-go-infra` pattern, not the `*-builder`
 pattern: this package ships **only source**, no Docker, no workflow, no
 release. Consumers (currently just `node-smol-builder`) embed the `.cc`
 / `.h` files via their additions/source-patched copy step. Compilation
-inherits node-smol's gyp pipeline — same path as `power_binding.cc`,
+inherits node-smol's gyp pipeline - same path as `power_binding.cc`,
 `util_binding.cc`, etc.
 
 If a second consumer ever needs Temporal outside of node-smol, lift to
-a `temporal-builder` (own workflow + binary release) — but only when
+a `temporal-builder` (own workflow + binary release) - but only when
 that demand materializes. For now: one consumer = one source-only
 embed = lowest overhead.
 
 ## Layout
 
-- `src/socketsecurity/temporal/` — C++ port of `temporal_rs` API surface.
+- `src/socketsecurity/temporal/` - C++ port of `temporal_rs` API surface.
   The `.cc` / `.h` files are copied into node-smol's
   `additions/source-patched/src/socketsecurity/temporal/` at build time.
-- `lib/paths.mts` — TS path helpers exported via the workspace
+- `lib/paths.mts` - TS path helpers exported via the workspace
   `exports` field; node-smol-builder imports these to find the source
   tree without hardcoding paths.
-- `scripts/` — helpers (parity-check vs upstream, clean, etc.).
-- `upstream/temporal/` — git submodule pointing at boa-dev/temporal,
+- `scripts/` - helpers (parity-check vs upstream, clean, etc.).
+- `upstream/temporal/` - git submodule pointing at boa-dev/temporal,
   pinned in `.gitmodules` for parity reference. **Read-only.** The
   port lives in `src/`, not here.
 
@@ -59,12 +59,12 @@ Parity verification happens at two layers:
   driven by node-smol's existing build pipeline.
 - **End-to-end Temporal behavior**: the Node 26 Temporal smoke test
   in node-smol's verification job (task #194) covers Date/PlainDate/
-  Duration arithmetic against the published Temporal proposal —
+  Duration arithmetic against the published Temporal proposal -
   same surface that boa-dev/temporal is tested against.
 
 If a JS-side test is needed (e.g. checking that node-smol exposes
 the Temporal global with the right API surface), add it under
-`packages/node-smol-builder/test/` — keep this package source-only.
+`packages/node-smol-builder/test/` - keep this package source-only.
 
 ## Naming
 
@@ -79,36 +79,36 @@ modules).
 kind `feature-parity`. The C++ port re-implements the Rust crate's
 externally observable behavior; there's no source-fork relationship.
 Bumps to upstream are tracked manually with parity audits, not
-auto-cascaded — semantic re-implementations need human review.
+auto-cascaded - semantic re-implementations need human review.
 
 ## Status
 
-Functional for ISO-calendar Temporal — the smoke test at
+Functional for ISO-calendar Temporal - the smoke test at
 `packages/build-infra/test/fixtures/smoke-test-temporal.mjs` passes
 end-to-end. Non-ISO calendars (Hebrew, Islamic, Chinese, etc.) and
 several less-common methods are still stubbed. **See
 [`docs/ports/temporal-infra-lockstep.md`](../../docs/ports/temporal-infra-lockstep.md)
-for the per-method tracker** — every remaining
+for the per-method tracker** - every remaining
 `not yet implemented` Err in the port corresponds to a tracker row
 with priority, effort estimate, and prerequisite dependency.
 
 ### Implementation order (when port work begins)
 
-1. **Primitives** — `Instant`, `PlainDate`, `PlainTime`,
+1. **Primitives** - `Instant`, `PlainDate`, `PlainTime`,
    `PlainDateTime` with ISO calendar only. ~1.5k LOC.
-2. **ISO arithmetic** — date math, duration normalization,
+2. **ISO arithmetic** - date math, duration normalization,
    rounding (Temporal `RoundingMode` enum). ~1k LOC.
-3. **ixdtf parsing** — ISO 8601 + RFC 9557 (Temporal extension)
+3. **ixdtf parsing** - ISO 8601 + RFC 9557 (Temporal extension)
    format parser. Either port `ixdtf` (~5k LOC, mechanical) or
    hand-roll a minimal subset (~1k LOC). Decision deferred.
-4. **Calendar binding** — wrap `icu::Calendar` to expose the
+4. **Calendar binding** - wrap `icu::Calendar` to expose the
    non-ISO chronologies via Temporal's `calendar` option. ~500
    LOC of binding code.
-5. **TimeZone binding** — call into V8's existing
+5. **TimeZone binding** - call into V8's existing
    `js-temporal-zoneinfo64.cc` for IANA tz lookups. ~300 LOC.
-6. **ZonedDateTime + Duration** — the API surfaces that compose
+6. **ZonedDateTime + Duration** - the API surfaces that compose
    primitives + calendar + tz. ~2k LOC.
-7. **JS bindings** — V8 `FunctionTemplate`s exposing the API as
+7. **JS bindings** - V8 `FunctionTemplate`s exposing the API as
    the global `Temporal` namespace, using
    `additions/source-patched/src/socketsecurity/temporal/temporal_binding.cc`
    as the glue. ~500 LOC.
@@ -117,7 +117,7 @@ with priority, effort estimate, and prerequisite dependency.
 
 A pure shim over V8's existing `js-temporal-objects.cc` was
 considered (cuts the port to ~1-2k LOC). Rejected because V8's
-implementation **still calls `temporal_capi`** under the hood —
+implementation **still calls `temporal_capi`** under the hood -
 shim'ing wouldn't drop the Rust toolchain dep, just hide it.
 The full port (delegating only to ICU + zoneinfo64) is the path
 that actually achieves the toolchain reduction.

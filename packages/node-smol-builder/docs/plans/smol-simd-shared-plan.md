@@ -1,6 +1,6 @@
 # Shared SIMD Infrastructure Plan
 
-> **Status: Shipped (with layout change)** — The SIMD utilities landed at `packages/node-smol-builder/additions/source-patched/src/socketsecurity/simd/simd.h` (+ a ~13-line `simd.cc` holding `bool g_has_avx2`), NOT at the flat `smol_simd.h` path this plan proposed. The `.cc` is compiled via `src/socketsecurity/http/http.gypi` as `'../simd/simd.cc'`, so no dedicated `simd.gypi` was needed. References in this plan to `smol_simd.h` / separate gyp integration are historical; treat them as "as-designed" and the filenames under `simd/` as "as-built."
+> **Status: Shipped (with layout change)** - The SIMD utilities landed at `packages/node-smol-builder/additions/source-patched/src/socketsecurity/simd/simd.h` (+ a ~13-line `simd.cc` holding `bool g_has_avx2`), NOT at the flat `smol_simd.h` path this plan proposed. The `.cc` is compiled via `src/socketsecurity/http/http.gypi` as `'../simd/simd.cc'`, so no dedicated `simd.gypi` was needed. References in this plan to `smol_simd.h` / separate gyp integration are historical; treat them as "as-designed" and the filenames under `simd/` as "as-built."
 
 ## Overview
 
@@ -9,6 +9,8 @@ Extract SIMD utilities from `smol_http_binding.cc` into a shared header that all
 ## Phase 1: Create Shared SIMD Header
 
 ### `smol_simd.h` - Cross-Platform SIMD Utilities
+
+<details><summary>`smol_simd.h` - Cross-Platform SIMD Utilities</summary>
 
 ```cpp
 #ifndef SRC_SMOL_SIMD_H_
@@ -570,9 +572,13 @@ inline size_t EscapeString(const char* src, size_t src_len, char* dst) {
 #endif  // SRC_SMOL_SIMD_H_
 ```
 
+</details>
+
 ## Phase 2: smol-ilp C++ Bindings
 
 ### `smol_ilp_binding.h`
+
+<details><summary>`smol_ilp_binding.h`</summary>
 
 ```cpp
 #ifndef SRC_SMOL_ILP_BINDING_H_
@@ -641,7 +647,11 @@ size_t FormatInt64(int64_t value, char* buffer);
 #endif  // SRC_SMOL_ILP_BINDING_H_
 ```
 
+</details>
+
 ### `smol_ilp_binding.cc`
+
+<details><summary>`smol_ilp_binding.cc`</summary>
 
 ```cpp
 #include "smol_ilp_binding.h"
@@ -840,7 +850,11 @@ size_t FormatInt64(int64_t value, char* buffer) {
 }  // namespace smol
 ```
 
+</details>
+
 ### V8 Binding: `smol_ilp_v8_binding.cc`
+
+<details><summary>V8 Binding: `smol_ilp_v8_binding.cc`</summary>
 
 ```cpp
 #include "smol_ilp_binding.h"
@@ -968,9 +982,13 @@ NODE_MODULE_CONTEXT_AWARE_INTERNAL(smol_ilp, Initialize)
 }  // namespace smol
 ```
 
+</details>
+
 ## Phase 3: smol-vfs C++ Bindings
 
 ### `smol_vfs_binding.h`
+
+<details><summary>`smol_vfs_binding.h`</summary>
 
 ```cpp
 #ifndef SRC_SMOL_VFS_BINDING_H_
@@ -1033,7 +1051,11 @@ uint64_t ParseOctal(const char* str, size_t len);
 #endif  // SRC_SMOL_VFS_BINDING_H_
 ```
 
+</details>
+
 ### `smol_vfs_binding.cc`
+
+<details><summary>`smol_vfs_binding.cc`</summary>
 
 ```cpp
 #include "smol_vfs_binding.h"
@@ -1144,9 +1166,13 @@ TarEntry ParseTarHeader(const uint8_t* header) {
 }  // namespace smol
 ```
 
+</details>
+
 ## Build Configuration
 
 ### `smol_simd.gypi` (shared)
+
+<details><summary>`smol_simd.gypi` (shared)</summary>
 
 ```python
 {
@@ -1203,6 +1229,8 @@ TarEntry ParseTarHeader(const uint8_t* header) {
   ],
 }
 ```
+
+</details>
 
 ## Performance Targets
 

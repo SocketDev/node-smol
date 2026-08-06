@@ -33,7 +33,7 @@ All three stubs under
 | `pe_stub.c`    | `CreateProcessA(..., NULL, ...)` passes NULL for `lpEnvironment`, which inherits the current environment; `envp` is explicitly unused |
 
 Before the tests below existed, a search for `SMOL_STUB_PATH` across the repo
-returned only those three sources, a node patch, and `bootstrap.js` — no test
+returned only those three sources, a node patch, and `bootstrap.js` - no test
 referred to it, so a refactor could reintroduce the stale pointer with every
 suite still green. The two tests in `packages/bin-stub-builder/test/` close
 that hole.

@@ -13,4 +13,4 @@ pnpm --filter binpress run build --prod # production build
 
 Output: `build/<mode>/<platform-arch>/out/Final/binpress`.
 
-Depends on `lief-builder` and `bin-stub-builder` — build those first, or let the cache-miss path fetch prebuilt artifacts from our GitHub releases.
+Depends on `lief-builder` and `bin-stub-builder` - build those first, or let the cache-miss path fetch prebuilt artifacts from our GitHub releases.

@@ -22,6 +22,8 @@ Decisions locked (2026-05-31):
 
 ## Pipeline overview
 
+<details><summary>Pipeline overview</summary>
+
 ```text
 SEA bundle (esbuilt main + VFS tar)
         │
@@ -56,7 +58,9 @@ harness (what to skip). One artifact, three consumers.
 
 ---
 
-## Component 1 — the detector (static analysis of the SEA bundle)
+</details>
+
+## Component 1 - the detector (static analysis of the SEA bundle)
 
 ### What it parses
 
@@ -64,11 +68,11 @@ sfw's SEA blob is a **single esbuilt `main` file** + `useCodeCache: true`
 (`firewall/scripts/create-sea.ts`). socket-cli additionally ships a **VFS tar**
 (`additions/.../vfs/loader.js`, `tar_parser.js`). The detector must cover both:
 
-1. **The bundled main JS** — scan the (possibly minified) source for feature signals.
-2. **The VFS tarball entries** — enumerate `.js`/`.mjs`/`.cjs`, scan each. Reuse the
+1. **The bundled main JS** - scan the (possibly minified) source for feature signals.
+2. **The VFS tarball entries** - enumerate `.js`/`.mjs`/`.cjs`, scan each. Reuse the
    in-tree `tar_parser.js` to walk entries without extracting to disk.
 
-### What it looks for — the feature-signal table
+### What it looks for - the feature-signal table
 
 Detection keys off **module specifiers and global references** that map 1:1 to a
 node-smol subsystem. Because the bundle is post-bundler, prefer robust signals
@@ -85,7 +89,7 @@ node-smol subsystem. Because the bundle is post-bundler, prefer robust signals
 | ffi                        | `'node:smol-ffi'` (and `/bun` subpath)                                       |
 | tree-sitter                | `'node:smol-tree-sitter'`                                                    |
 | qrcode                     | `'node:smol-qrcode'`                                                         |
-| markdown                   | `'node:smol-markdown'` (NOT app-level JS "markdown" — must be the specifier) |
+| markdown                   | `'node:smol-markdown'` (NOT app-level JS "markdown" - must be the specifier) |
 | ilp                        | `'node:smol-ilp'`                                                            |
 | power                      | `'node:smol-power'`                                                          |
 | manifest                   | `'node:smol-manifest'`                                                       |
@@ -104,25 +108,27 @@ Always-keep core (never gated): vfs, primordial, util, webstreams, simd, borings
    (oxc/acorn already in the toolchain) to find `Temporal.*`, `navigator.gpu`,
    `Intl.*` member expressions that a string scan can't catch.
 3. **`isBuiltin()` awareness:** when code does `isBuiltin('node:smol-power')` as a
-   _guard_ with a fallback (socket-cli's pattern), the feature is **optional** —
+   _guard_ with a fallback (socket-cli's pattern), the feature is **optional** -
    record it as `softUse` (works with or without). Soft-use features are _droppable_
    but flagged so the gate verifies the fallback path actually works without them.
 
-### The dynamic-require escape hatch — the one real risk of static analysis —
+### The dynamic-require escape hatch - the one real risk of static analysis -
 
 Static analysis can't see `require(someVariable)`. Mitigations, in order:
 
 - **Denylist/allowlist override** in the consumer's `package.json`
-  (`"smol": { "keep": ["quic"], "drop": ["tui"] }`) — explicit wins over inferred.
+  (`"smol": { "keep": ["quic"], "drop": ["tui"] }`) - explicit wins over inferred.
 - **Computed-require detection:** if the detector sees `require(<non-literal>)` or
   `import(<expr>)` it emits a **warning + conservative keep-all-ambiguous** for the
   affected feature family, never a silent drop.
-- **The gate (Component 4) is the backstop** — even a missed dynamic load surfaces
+- **The gate (Component 4) is the backstop** - even a missed dynamic load surfaces
   as a runtime failure against the trimmed binary, failing the build.
 
 ### Output
 
-A JSON manifest, content-hashed — the hash becomes the build cache key, see C3 —:
+<details><summary>Output</summary>
+
+A JSON manifest, content-hashed - the hash becomes the build cache key, see C3 -:
 
 ```json
 {
@@ -148,14 +154,18 @@ A JSON manifest, content-hashed — the hash becomes the build cache key, see C3
 
 ---
 
-## Component 2 — feature → configure-flag mapper
+</details>
+
+## Component 2 - feature → configure-flag mapper
+
+<details><summary>Component 2 - feature → configure-flag mapper</summary>
 
 The flag truth lives in `patches/source-patched/018-configure-postgres-iouring.patch`.
 Existing flags (verified):
 
 | Feature manifest key | Configure flag to emit when `drop:true`          | gyp var               | Default today                          |
 | -------------------- | ------------------------------------------------ | --------------------- | -------------------------------------- |
-| quic                 | `--without-smol-quic` (+ `--without-smol-http3`) | `node_use_smol_quic`  | **on** (must add gyp gate — see §gaps) |
+| quic                 | `--without-smol-quic` (+ `--without-smol-http3`) | `node_use_smol_quic`  | **on** (must add gyp gate - see §gaps) |
 | http3                | `--without-smol-http3`                           | `node_use_smol_http3` | on                                     |
 | tui                  | `--without-smol-tui`                             | `node_use_smol_tui`   | on (flag parsed; **gyp gate missing**) |
 | postgres             | _(omit `--with-postgres`)_                       | `node_use_postgres`   | **off** ✅                             |
@@ -165,7 +175,7 @@ Existing flags (verified):
 **Gaps the mapper depends on (must be built first):**
 
 - QUIC sources + `lsquic.gypi` + `ls-qpack.gypi` are in the unconditional
-  `['1==1', {}]` block of patch 004 — the `--without-smol-quic` flag does NOT yet
+  `['1==1', {}]` block of patch 004 - the `--without-smol-quic` flag does NOT yet
   gate them. **Wire them to `node_use_smol_quic`.**
 - TUI/keymap + `yoga.gypi` likewise need wiring to `node_use_smol_tui`.
 - **New flags needed** (no flag today): `--without-smol-sqlite`, `--without-smol-ffi`,
@@ -179,7 +189,9 @@ The mapper is a pure function `manifest → string[]`. No magic; it just reads t
 
 ---
 
-## Component 3 — cached compile off a build release
+</details>
+
+## Component 3 - cached compile off a build release
 
 **Requirement:** per-bundle compiles must NOT pay the 30–60 min from-scratch cost;
 derive from a cached **build release**.
@@ -194,12 +206,12 @@ BINARY_STRIPPED → BINARY_COMPRESSED → FINALIZED`, and source-stage checkpoin
 
 - **Shared prefix (cache once, reuse for every bundle):** `SOURCE_CLONED` →
   `SOURCE_PATCHED`. Cloning ~1 GB of upstream + applying all patches is identical
-  regardless of feature flags. This is the "build release" base — produce it once
+  regardless of feature flags. This is the "build release" base - produce it once
   per Node version + patch set, publish the `SOURCE_PATCHED` checkpoint tarball.
 - **Per-flag-set branch (cache per distinct manifest):** `configure(flags)` →
   `make` → `strip`. **Configure is cheap; `make` is the expensive step.** The cache
   key for the compiled output = `hash(SOURCE_PATCHED id + flag-set + platform)`.
-  Two bundles with the same feature manifest hit the **same** compiled cache entry —
+  Two bundles with the same feature manifest hit the **same** compiled cache entry -
   so sfw and sfw-free (both "minimal") build once and share.
 - **Invalidation:** the existing `writeCacheHash` mechanism already keys on inputs;
   add the flag-set to its hash input so a flag change busts only the compile layer,
@@ -210,14 +222,14 @@ BINARY_STRIPPED → BINARY_COMPRESSED → FINALIZED`, and source-stage checkpoin
 - First "minimal" bundle: full `make` (~30–60 min), cached.
 - Every subsequent bundle with the same feature set: **checkpoint restore, seconds.**
 - A new feature combination: re-`make` from the shared `SOURCE_PATCHED` base (no
-  re-clone, no re-patch) — the expensive-but-not-worst-case path.
+  re-clone, no re-patch) - the expensive-but-not-worst-case path.
 
 Wire via the existing `--from-checkpoint=source-patched` / `--stop-at` flags in
 `build.mts`; the detector→mapper just supplies the configure args.
 
 ---
 
-## Component 4 — fail-closed CI gate
+## Component 4 - fail-closed CI gate
 
 The detector is **advisory until the binary proves itself.** After the cached
 compile produces a trimmed `node`:
@@ -226,7 +238,7 @@ compile produces a trimmed `node`:
 2. **Run the consumer's own suite** against it (firewall: e2e/integration proxy
    tests; socket-cli: its CLI suite). Real workload, real code paths.
 3. **Absence probes:** for every `drop:true` feature, assert the binding is genuinely
-   gone — `isBuiltin('node:smol-quic') === false`, `internalBinding('quic')` throws.
+   gone - `isBuiltin('node:smol-quic') === false`, `internalBinding('quic')` throws.
    This catches a mapper bug that _thinks_ it dropped a feature but didn't.
 4. **Soft-use fallback probes:** for every `use:"soft"` dropped feature (e.g. power),
    run the code path that would have used it and assert the fallback works (e.g.
@@ -236,11 +248,11 @@ compile produces a trimmed `node`:
    without a green run.
 
 This is the safety net that makes aggressive static dropping acceptable: a missed
-dynamic `require` can't ship silently — it dies here.
+dynamic `require` can't ship silently - it dies here.
 
 ---
 
-## Component 5 — flaggable `node:smol-*` unit tests
+## Component 5 - flaggable `node:smol-*` unit tests
 
 **Requirement:** unit tests for compiled `node:smol-*` packages must be flaggable so
 a build that omits a module skips its tests instead of failing.
@@ -249,10 +261,12 @@ a build that omits a module skips its tests instead of failing.
 
 Tests already gate on **binary presence** via `it.skipIf(!smolBinary)`
 (`test/smol-manifest-native.test.mts:107`, `test/paths.mts:56`). The `node:smol-ffi/bun`
-test asserts `isBuiltin(...) === false` on stock Node. So the _idiom_ exists — it
+test asserts `isBuiltin(...) === false` on stock Node. So the _idiom_ exists - it
 just keys on "is there a smol binary," not "does this binary include feature X."
 
 ### The extension
+
+<details><summary>The extension</summary>
 
 Introduce a single feature-aware predicate, fed by the build's feature manifest:
 
@@ -279,13 +293,15 @@ describe('node:smol-quic', () => {
   can never disagree.
 - **Guard against false-green:** a CI lane that builds the _full_ feature set must
   run with `--require-all-features`, turning `skipIf` into a hard failure if any
-  expected feature is missing — so "skipped" can't mask a broken full build.
+  expected feature is missing - so "skipped" can't mask a broken full build.
 
 The build can emit the manifest next to the binary (e.g.
 `out/Final/node.features.json`), and `process.report`/`process.config.variables`
 already exposes the `node_use_*` gyp vars at runtime as a cross-check.
 
 ---
+
+</details>
 
 ## Build order (each step independently landable & testable)
 
@@ -303,11 +319,11 @@ Legend: ✅ done · ◻ todo.
 
 ### What landed for step 6 (2026-05-31)
 
-- **`test/helpers/smol-features.mts`** — exports `has(feature)`, `smolBinary`,
+- **`test/helpers/smol-features.mts`** - exports `has(feature)`, `smolBinary`,
   `missingRequiredFeatures()`. `has()` maps a registry feature name → its
   `node:smol-*` specifier (via `featureBuiltinSpecifier` in the registry) and
   **delegates to the existing `smolBuiltinIsAvailable()`** in `smol-builtin.mts`
-  (the canonical `isBuiltin('node:…')` probe) — no duplicate binary-spawn logic.
+  (the canonical `isBuiltin('node:…')` probe) - no duplicate binary-spawn logic.
   Features with no importable module (intl/temporal, reached via globals;
   `keep-unless-explicit`, never gated out) report present whenever a binary
   exists. Results cached per feature.
@@ -316,75 +332,79 @@ Legend: ✅ done · ◻ todo.
   instead of failing.
 - **`missingRequiredFeatures()`** is the full-build-lane guard: when
   `SOCKET_REQUIRE_ALL_FEATURES=1` and a binary is built, returns the gated
-  features the binary is missing so a CI assert can hard-fail — "skipped" can't
+  features the binary is missing so a CI assert can hard-fail - "skipped" can't
   mask a broken full build. No-op otherwise.
-- **`test/unit/smol-features-helper.test.mts`** — 6 tests (5 pass, 1 skipped
+- **`test/unit/smol-features-helper.test.mts`** - 6 tests (5 pass, 1 skipped
   without a binary). Probe mechanism proven end-to-end against stock Node's
   `process.config.variables.node_use_sqlite`.
 - **Deferred:** wiring `SOCKET_REQUIRE_ALL_FEATURES=1` into the CI workflow
   (`.github/workflows/node-smol.yml`) is a no-op until step 4/5 produce
-  per-bundle _trimmed_ binaries — the default full build always has every
+  per-bundle _trimmed_ binaries - the default full build always has every
   feature. Wire it alongside the gate (step 5) so the lane has trimmed builds to
   guard.
 
 ### What landed for step 4 (2026-05-31)
 
-- **`scripts/compile-for-bundle.mts`** — orchestrator: detects a bundle → builds
+<details><summary>What landed for step 4 (2026-05-31)</summary>
+
+- **`scripts/compile-for-bundle.mts`** - orchestrator: detects a bundle → builds
   the flag set → computes a 16-char cache key `sha256(SOURCE_PATCHED + sorted
 flags + platform + mode)` → invokes `build.mts --from-checkpoint=source-patched
 --without-smol=<flags>`. `--dry-run` prints the full plan (manifest summary,
-  flags, cache key, exact build command) without building — verified against the
+  flags, cache key, exact build command) without building - verified against the
   real `firewall/dist/sfw-registry.js`.
 - **Flag passthrough wiring:** `build.mts` gained a `--without-smol=` option
   (bare feature names mapped via the registry, OR raw `--…` flags verbatim,
   incl. `--v8-lite-mode`) parsed into `EXTRA_CONFIGURE_FLAGS`; `buildRelease`
   gained an `extraConfigureFlags` config field appended (deduped, skipping
   already-present) after the standard configure set. Previously the detector's
-  flags had **no path into the build** — this closes that gap.
+  flags had **no path into the build** - this closes that gap.
 - **Cache strategy:** the shared clone→patch prefix (`SOURCE_PATCHED`,
   platform-agnostic checkpoint) is reused across bundles; only configure→make→
   strip run per distinct flag set. Two bundles with the same feature manifest
   (e.g. sfw-free + sfw-registry, both minimal) produce the same cache key → one
   build. Verified by unit test.
-- **`test/unit/compile-for-bundle.test.mts`** — 7 tests locking the cache-key
+- **`test/unit/compile-for-bundle.test.mts`** - 7 tests locking the cache-key
   contract (stable, order-independent, sensitive to flags/platform/mode, dedup).
 - **Real build run (2026-05-31):** ran a clean trimmed build with the
   sfw-registry feature set (`build.mts --dev --without-smol=quic,http3,smolHttp,
 tui,keymap,ffi,ilp,treeSitter,qrcode,markdown,--without-sqlite`). Results:
   - ✅ Patches apply cleanly to pristine (real `patch -p1`).
-  - ✅ **Configure honored every flag** — generated `out/Release/config.gypi`
+  - ✅ **Configure honored every flag** - generated `out/Release/config.gypi`
     shows all 11 dropped features `"false"` (`node_use_smol_quic`…`node_use_sqlite`).
   - ✅ The gated build **compiled 4500+ objects** including the non-excluded smol
     sources; the excluded subsystems produced no missing/extra-source ninja
-    errors — confirming the gyp `conditions` correctly dropped them (a malformed
+    errors - confirming the gyp `conditions` correctly dropped them (a malformed
     gate would fail at gyp/ninja, not later).
-  - ❌ The build then failed at the **final crypto link** — `ld: symbol(s) not
+  - ❌ The build then failed at the **final crypto link** - `ld: symbol(s) not
 found for architecture arm64` for `ncrypto::Rsa`/`DH_free`/`EC_KEY_free`/
     `HMAC_CTX_free`. This is a **pre-existing BoringSSL↔ncrypto ABI mismatch on
     this checkout**, NOT a trimming regression: my commit touches zero crypto
     wiring (verified), `ncrypto` lives in the always-on `node_use_openssl` block
-    (untouched), and the missing symbols are core RSA/DH/EC/HMAC — none of the
+    (untouched), and the missing symbols are core RSA/DH/EC/HMAC - none of the
     gated features. The prebuilt `libsmol_crypto.a`/`libsmol_ssl.a` exist; the
     skew is version/ABI, upstream of this work.
   - **Confirmed pre-existing:** this checkout has only a `source-patched`
-    checkpoint and **no `binary-released` checkpoint** — i.e. a full node-smol
+    checkpoint and **no `binary-released` checkpoint** - i.e. a full node-smol
     binary had never linked in this environment before this work either. The
     crypto link failure is independent of trimming.
   - **Net:** the detection→configure→gyp-gate chain is validated through a real
     compile up to the crypto link. The runtime `isBuiltin` proof + the gate's
-    `--suite` run still need a binary that links — blocked on the unrelated
+    `--suite` run still need a binary that links - blocked on the unrelated
     BoringSSL/ncrypto ABI issue. Run on CI / the Depot Linux path (where the full
     build links) to get the final runtime confirmation: build trimmed, then
     `pnpm --filter node-smol-builder run gate -- --binary=<trimmed> --bundle=<app> --suite="…"`.
 
+</details>
+
 ### What landed for step 5 (2026-05-31)
 
-- **`scripts/gate-trimmed-binary.mts`** — fail-closed gate: re-derives the
+- **`scripts/gate-trimmed-binary.mts`** - fail-closed gate: re-derives the
   manifest from the bundle, then against the trimmed binary runs **absence
   probes** (every `drop:true` feature → `isBuiltin('node:…')` must be false),
-  **presence probes** (every kept feature must still import — catches
+  **presence probes** (every kept feature must still import - catches
   over-trimming), flags **soft-use** dropped features for fallback exercise, and
-  runs the consumer's **app suite** (`--suite`, with `$SMOL_BINARY` set) — the
+  runs the consumer's **app suite** (`--suite`, with `$SMOL_BINARY` set) - the
   real backstop for a missed dynamic `require()`. Any failure → non-zero exit,
   build must not ship. Probe failures fail closed (treated as "present" so they
   can't satisfy an expect-absent).
@@ -403,16 +423,18 @@ found for architecture arm64` for `ncrypto::Rsa`/`DH_free`/`EC_KEY_free`/
 
 ### What landed for steps 1–3 (2026-05-31)
 
-- **`patches/source-patched/004-node-gyp-smol-sources.patch`** — the unconditional
+<details><summary>What landed for steps 1–3 (2026-05-31)</summary>
+
+- **`patches/source-patched/004-node-gyp-smol-sources.patch`** - the unconditional
   `['1==1', {}]` source block now keeps only always-on core (vfs, http*binding,
   simd, util, primordial, versions, manifest, webstreams, temporal, power) and
   moves the 10 optional subsystems into a nested gyp `conditions` array, each
   gated `['node_use_smol_X=="true"', {}]`. Feature-specific gypi includes moved
   with their owner (`yoga.gypi`→tui, `lsquic.gypi`+`ls-qpack.gypi`→quic). Added
   `node_use_smol*_%`defaults (all`'true'`) to the top `variables`block,
-  mirroring`node_use_sqlite%`— this makes node.gyp self-sufficient on the
+  mirroring`node_use_sqlite%`- this makes node.gyp self-sufficient on the
   Windows`vcbuild.bat`path, which no-ops`--without-_` flags.
-- **`patches/source-patched/018-configure-postgres-iouring.patch`** — added 7
+- **`patches/source-patched/018-configure-postgres-iouring.patch`** - added 7
   `--without-smol-{http,ffi,ilp,keymap,qrcode,markdown,treesitter}` argparse
   flags + a `configure_smol_extras()` that sets the matching `node_use_smol_*`
   vars (inverted from the `--without-*` flag), wired into the configure call list.
@@ -426,22 +448,24 @@ found for architecture arm64` for `ncrypto::Rsa`/`DH_free`/`EC_KEY_free`/
 - **Editing technique:** patch bodies were regenerated via apply-to-pristine →
   edit the real file → `git diff` (correct hunk headers) → strip `diff --git`/
   `index` lines to match house style. Hand-editing unified-diff `+`/`-` bodies
-  corrupts the `@@` line counts — see [[node-smol-patch-editing-workflow]].
+  corrupts the `@@` line counts - see [[node-smol-patch-editing-workflow]].
 
 Remaining net-new work is the **cached compile orchestration (4)**, the
-**fail-closed gate (5)**, and the **flaggable test harness (6)** — all wiring
+**fail-closed gate (5)**, and the **flaggable test harness (6)** - all wiring
 existing machinery (checkpoints, postject, skipIf) to the manifest the detector
 already emits.
 
 ---
 
+</details>
+
 ## Open questions
 
 1. **Other node-smol consumers** beyond firewall + socket-cli? Each new consumer is
-   just another bundle through the same detector — but confirms the system must be
+   just another bundle through the same detector - but confirms the system must be
    per-bundle, not a single global trim.
 2. **Minification guarantees:** does the esbuild config preserve `node:` string
-   literals (it should — they're require args), or could a future plugin rewrite
+   literals (it should - they're require args), or could a future plugin rewrite
    them? If specifiers can be transformed, the detector must run **pre-minify** on
    the bundler's module graph instead of post-bundle. Worth pinning the detector to
    the pre-bundle source where available.

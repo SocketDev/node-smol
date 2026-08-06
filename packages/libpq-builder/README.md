@@ -1,11 +1,11 @@
 # libpq-builder
 
-Builds libpq — the PostgreSQL client library — with OpenSSL support so node-smol's `node:smol-sql` module can talk to Postgres directly without shelling out or loading a system shared library. Prefers a prebuilt artifact from GitHub releases; falls back to a from-source build when none matches the current platform.
+Builds libpq - the PostgreSQL client library - with OpenSSL support so node-smol's `node:smol-sql` module can talk to Postgres directly without shelling out or loading a system shared library. Prefers a prebuilt artifact from GitHub releases; falls back to a from-source build when none matches the current platform.
 
-## Retention — do not garbage-collect
+## Retention - do not garbage-collect
 
 **No package.json declares this package, and that is not evidence it is
-unused.** It is a build input for `node:smol-sql` — the Postgres client's libpq, wired through the node-smol build
+unused.** It is a build input for `node:smol-sql` - the Postgres client's libpq, wired through the node-smol build
 rather than a declared dependency edge, so a sweep that reasons about declared
 deps reads it as an orphan.
 
@@ -20,7 +20,7 @@ pnpm --filter libpq-builder run build                    # dev build (default)
 BUILD_MODE=prod pnpm --filter libpq-builder run build    # production build
 ```
 
-This package's build script does not read `--prod` / `--dev` CLI flags — set `BUILD_MODE` in the environment instead.
+This package's build script does not read `--prod` / `--dev` CLI flags - set `BUILD_MODE` in the environment instead.
 
 First-time from-source build init:
 
