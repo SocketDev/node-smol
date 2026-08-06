@@ -1,9 +1,12 @@
 /**
  * Submodule version and checksum readers for .gitmodules.
  *
- * Parses the `# package-X.Y.Z [sha256:<hex>]` comment convention that precedes
- * each `[submodule "..."]` block, extracting the version and optional checksum
- * for integrity verification.
+ * Reads the fleet pin format through the fleet's OWN parser
+ * (scripts/fleet/_shared/gitmodules.mts — the same module family that WRITES
+ * the pins via gen/gitmodules-hash), so this reader can never drift from the
+ * writer: `branch =` carries the release-tag pin the version derives from,
+ * and the `# <slug>-<version> (<date>) sha256:<hex>` header comment carries
+ * the archive content-hash.
  */
 
 import { readFileSync } from 'node:fs'
@@ -11,27 +14,25 @@ import path from 'node:path'
 
 import { PACKAGE_ROOT } from './constants.mts'
 import { isErrnoException } from '@socketsecurity/lib-stable/errors/predicates'
+import { coerceVersion } from '@socketsecurity/lib-stable/versions/parse'
+
+import { parseGitmodules } from '../../../scripts/fleet/_shared/gitmodules.mts'
+
+import type { GitmodulesEntry } from '../../../scripts/fleet/_shared/gitmodules.mts'
 
 /**
- * Extract submodule checksum from .gitmodules version comment.
+ * Extract submodule checksum from the .gitmodules header comment.
  *
- * Parses checksum annotations in the format `# package-X.Y.Z sha256:<hex>`
- * above submodule entries. Returns undefined if no checksum is present
- * (checksum is optional).
+ * The fleet pin comment is `# <slug>-<version> (<date>) sha256:<hex>`; the
+ * fleet parser surfaces the hash as `headerSha`. Returns undefined when the
+ * block carries no checksum (it is optional).
  *
  * @example
  *   const checksum = getSubmoduleChecksum(
  *     'packages/node-smol-builder/upstream/node',
  *     'node',
  *   )
- *   // Returns: { algorithm: 'sha256', hash: '10335f268f...' }
- *
- * @param {string} submodulePath - Submodule path (e.g.,
- *   "packages/node-smol-builder/upstream/node")
- * @param {string} packageName - Package name (e.g., "node")
- *
- * @returns {{ algorithm: string; hash: string } | undefined} Checksum object or
- *   undefined.
+ *   // Returns: { algorithm: 'sha256', hash: '55978d1460...' }
  */
 export function getSubmoduleChecksum(
   submodulePath: string,
@@ -40,63 +41,25 @@ export function getSubmoduleChecksum(
   if (!packageName || packageName.trim() === '') {
     throw new Error('Package name cannot be empty')
   }
-
-  const gitmodulesPath = path.join(PACKAGE_ROOT, '..', '..', '.gitmodules')
-
-  let content
-  try {
-    content = readFileSync(gitmodulesPath, 'utf8')
-  } catch (e) {
-    if (isErrnoException(e) && e.code === 'ENOENT') {
-      throw new Error(
-        `.gitmodules not found at: ${gitmodulesPath}\n` +
-          'This function must be called from within a monorepo package.',
-        { cause: e },
-      )
-    }
-    throw e
-  }
-
-  const escapedPackageName = packageName.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    String.raw`\$&`,
-  )
-  const escapedPath = submodulePath
-    .replace(/\[/g, String.raw`\[`)
-    .replace(/\]/g, String.raw`\]`)
-
-  // Match: # package-VERSION algorithm:hash\n[submodule "path"]
-  // The version comment may be followed by other annotation comment lines
-  // (e.g. `# full-checkout: …`) before the section header — tolerate any
-  // contiguous comment block between it and `[submodule]`.
-  const checksumPattern = `# ${escapedPackageName}-\\S+\\s+(\\w+):([0-9a-f]+)[^\\n]*\\n(?:#[^\\n]*\\n)*\\[submodule "${escapedPath}"\\]`
-  const checksumRegex = new RegExp(checksumPattern)
-  const checksumMatch = content.match(checksumRegex)
-
-  if (!checksumMatch) {
+  const entry = readSubmoduleEntry(submodulePath)
+  if (!entry.headerSha) {
     return undefined
   }
-
-  return {
-    __proto__: null,
-    algorithm: checksumMatch[1]!,
-    hash: checksumMatch[2]!,
-  } as { algorithm: string; hash: string }
+  // The fleet header hash is sha256 by definition (gen/gitmodules-hash writes
+  // only that form).
+  return { algorithm: 'sha256', hash: entry.headerSha }
 }
 
 /**
- * Extract a submodule version from its .gitmodules version comment, written
- * as `# <package>-<version>` in the comment block directly above the
- * `[submodule "<path>"]` section. Other annotation comment lines may sit
- * between the version comment and the section header.
+ * Extract a submodule's pinned release version from .gitmodules.
  *
- * @param {string} submodulePath - Submodule path as written in .gitmodules.
- * @param {string} packageName - Package name used in the version comment.
+ * The `branch =` field IS the release-tag pin (the fleet pins upstreams at
+ * tags), normalized to a bare semver through the lib's coerceVersion so a
+ * v-prefixed tag (`v26.7.0`, node's convention) and a bare one (`1.7.19`,
+ * lief's) both read the same.
  *
- * @returns {string} Version string.
- *
- * @throws {Error} If the version comment is missing or malformed.
- *   Full discussion: docs/agents.md/repo/build-toolchain.md.
+ * @throws {Error} When the block is missing, carries no branch pin, or the
+ *   branch does not coerce to a version.
  */
 export function getSubmoduleVersion(
   submodulePath: string,
@@ -105,7 +68,31 @@ export function getSubmoduleVersion(
   if (!packageName || packageName.trim() === '') {
     throw new Error('Package name cannot be empty')
   }
+  const entry = readSubmoduleEntry(submodulePath)
+  if (!entry.branch) {
+    throw new Error(
+      `No branch pin for submodule '${submodulePath}' in .gitmodules\n` +
+        'The fleet pins upstreams at release tags via `branch =`; a ref-only ' +
+        'block has no version to read.',
+    )
+  }
+  const version = coerceVersion(entry.branch)
+  if (!version) {
+    throw new Error(
+      `Unparseable version for submodule '${submodulePath}'\n` +
+        `  Saw: branch = ${entry.branch}; wanted a release tag that coerces ` +
+        'to semver (v26.7.0, 1.7.19, …).',
+    )
+  }
+  return version
+}
 
+/**
+ * Read and parse the monorepo root .gitmodules, returning the entry whose
+ * `path =` matches. Throws a What/Where/Saw/Fix error when the file or the
+ * entry is missing — a build must never guess a pin.
+ */
+export function readSubmoduleEntry(submodulePath: string): GitmodulesEntry {
   const gitmodulesPath = path.join(PACKAGE_ROOT, '..', '..', '.gitmodules')
 
   let content
@@ -122,40 +109,14 @@ export function getSubmoduleVersion(
     throw e
   }
 
-  const escapedPackageName = packageName.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    String.raw`\$&`,
+  const entry = parseGitmodules(content).find(
+    candidate => candidate.path === submodulePath,
   )
-
-  const escapedPath = submodulePath
-    .replace(/\[/g, String.raw`\[`)
-    .replace(/\]/g, String.raw`\]`)
-
-  // Match the version comment in the contiguous comment block BEFORE the
-  // submodule section. Other annotation lines (e.g. `# full-checkout: …`)
-  // may sit between it and the header.
-  // Format: # package-VERSION [optional checksum]\n[# other comments\n]*[submodule "path"]
-  const versionPattern = `# ${escapedPackageName}-(\\S+)[^\\n]*\\n(?:#[^\\n]*\\n)*\\[submodule "${escapedPath}"\\]`
-  const versionRegex = new RegExp(versionPattern)
-  const versionMatch = content.match(versionRegex)
-
-  if (!versionMatch || !versionMatch[1]) {
-    const sectionRegex = new RegExp(`\\[submodule "${escapedPath}"\\]`)
-    const sectionExists = sectionRegex.test(content)
-
-    if (!sectionExists) {
-      throw new Error(
-        `Submodule '${submodulePath}' not found in .gitmodules\n` +
-          `Expected section: [submodule "${submodulePath}"]`,
-      )
-    }
-
+  if (!entry) {
     throw new Error(
-      `Version comment not found for submodule '${submodulePath}' in .gitmodules\n` +
-        `Expected format: # ${packageName}-X.Y.Z in the comment block directly above [submodule "${submodulePath}"]\n` +
-        `Example:\n# ${packageName}-1.0.0\n[submodule "${submodulePath}"]`,
+      `Submodule '${submodulePath}' not found in .gitmodules\n` +
+        `Expected a block whose path is: ${submodulePath}`,
     )
   }
-
-  return versionMatch[1]
+  return entry
 }

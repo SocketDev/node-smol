@@ -44,7 +44,9 @@ function storedNodeDigest(): string {
     path.join(monorepoRoot, '.gitmodules'),
     'utf8',
   )
-  const match = /# node-v?[\d.]+ sha256:(?<digest>[0-9a-f]{64})/.exec(
+  // Date-tolerant: the fleet pin comment is `# node-v26.7.0 (2026-08-05)
+  // sha256:<hex>` — anything may sit between the version and the hash.
+  const match = /# node-v?[\d.]+[^\n]*?sha256:(?<digest>[0-9a-f]{64})/.exec(
     gitmodules,
   )
   if (!match?.groups) {
