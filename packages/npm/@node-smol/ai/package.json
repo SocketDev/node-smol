@@ -9,6 +9,7 @@
     "directory": "packages/npm/@node-smol/ai"
   },
   "files": [
+    "LICENSE",
     "README.md",
     "index.d.cts",
     "index.cjs",
