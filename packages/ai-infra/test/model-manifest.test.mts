@@ -51,7 +51,10 @@ describe('GGUF model manifests', () => {
   })
 
   it('uses a content-addressed cache path', () => {
-    expect(modelCachePath('/cache', DEFAULT_MODEL_MANIFEST)).toBe(
+    // modelCachePath returns a real filesystem path via path.join, so Windows
+    // answers with backslashes; normalize before comparing the shape.
+    const cachePath = modelCachePath('/cache', DEFAULT_MODEL_MANIFEST)
+    expect(cachePath.replaceAll('\\', '/')).toBe(
       `/cache/sha256/${DEFAULT_MODEL_MANIFEST.sha256}/${DEFAULT_MODEL_MANIFEST.fileName}`,
     )
   })
