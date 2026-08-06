@@ -36,7 +36,16 @@ describe('smol-ai native build', () => {
   })
 
   it('checks both executable-adjacent and prefix Node development files', () => {
-    expect(nodeDevelopmentCandidates('/opt/node/26/bin/node')).toStrictEqual({
+    // nodeDevelopmentCandidates joins real filesystem paths, so Windows
+    // answers with backslashes; normalize before comparing the shape.
+    const candidates = nodeDevelopmentCandidates('/opt/node/26/bin/node')
+    const normalized = {
+      importLibraries: candidates.importLibraries.map(p =>
+        p.replaceAll('\\', '/'),
+      ),
+      includeDirs: candidates.includeDirs.map(p => p.replaceAll('\\', '/')),
+    }
+    expect(normalized).toStrictEqual({
       importLibraries: ['/opt/node/26/bin/node.lib', '/opt/node/26/node.lib'],
       includeDirs: [
         '/opt/node/26/bin/include/node',
