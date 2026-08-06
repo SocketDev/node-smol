@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
+import { isMainModule } from '../fleet/_shared/is-main-module.mts'
+
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -55,4 +57,6 @@ function main(): void {
   process.exitCode = result.status ?? 1
 }
 
-main()
+if (isMainModule(import.meta.url)) {
+  main()
+}
