@@ -6,12 +6,12 @@
 	url = git@github.com:SocketDev/stuie.git
 	branch = main
 	shallow = true
-# node-v26.5.1 (2026-07-28) sha256:fa84f079df01104e33ae7e8ac679bb93ecc14fbe134b2f4799c61b5704a0dcbb
+# node-v26.7.0 (2026-08-05) sha256:55978d14606877dcb1ffd9d2b789fde4fac5355709eec9913e870b65d94f1f33
 [submodule "packages/node-smol-builder/upstream/node"]
-	ref = 6d1137f477b7a740a1426f3f826c028a6a19ece4
+	ref = b4f23d3619c98bed09af93a21192f6080197a8c6
 	path = packages/node-smol-builder/upstream/node
 	url = https://github.com/nodejs/node.git
-	branch = v26.5.1
+	branch = v26.7.0
 	ignore = dirty
 	shallow = true
 # yoga-3.2.1
