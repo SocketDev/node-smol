@@ -38,6 +38,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
+#if !defined(_WIN32)
+#include <unistd.h>
+#endif
 
 /* Default values. */
 #define UPDATE_CONFIG_DEFAULT_ENABLED true
@@ -317,7 +321,7 @@ static bool update_config_should_skip(const update_config_t *config) {
     /* On Windows, always allow for now. */
     return false;
 #else
-    if (!isatty(fileno(stderr))) {
+    if (!isatty(STDERR_FILENO)) {
         return true;
     }
 #endif
