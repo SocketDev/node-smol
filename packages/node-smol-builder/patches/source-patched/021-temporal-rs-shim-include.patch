@@ -1,9 +1,11 @@
-# @node-versions: v26.1.0
+# @node-versions: v26.7.0
 # @description: Replace V8's temporal_rs Rust dependency with socket-btm C++ shim
 #
 # V8's js-temporal-objects.cc #includes `temporal_rs/*.hpp`, which
 # upstream resolves through a header set shipped by the Rust crate
-# `temporal_capi` at deps/crates/vendor/temporal_capi/bindings/cpp/.
+# `temporal_capi` at deps/crates/vendor/<(temporal_capi_dir)/bindings/cpp/
+# (`temporal_capi-v0_2` as of v26.7.0 — upstream versions the vendored
+# crate dir through the `temporal_capi_dir` gyp variable).
 # Building those headers requires rustc + cargo + ICU4X data crates
 # (~50 transitive deps, ~5 minute cold build).
 #
@@ -17,7 +19,7 @@
 #
 # 1. Drops the rustc/cargo dependency (`node_crates`) — no Rust build.
 # 2. Repoints the include path from the Rust-generated bindings dir
-#    (`<(cargo_vendor_dir)/temporal_capi/bindings/cpp`) to
+#    (`<(cargo_vendor_dir)/<(temporal_capi_dir)/bindings/cpp`) to
 #    `../../include` + `../../src` (i.e. Node-source-root-relative paths
 #    that, after copy-additions.mts populates them from
 #    packages/temporal-infra/include/temporal_rs/ +
@@ -42,7 +44,7 @@
 #
 --- a/deps/crates/crates.gyp
 +++ b/deps/crates/crates.gyp
-@@ -112,15 +112,47 @@
+@@ -113,15 +113,47 @@
      },
      {
        'target_name': 'temporal_capi',
@@ -82,14 +84,14 @@
 +        '../../src/socketsecurity/temporal/time_zone.cc',
 +        '../../src/socketsecurity/temporal/utils.cc',
 +        '../../src/socketsecurity/temporal/zoned_date_time.cc',
-       ],
++      ],
 +      'include_dirs': [
 +        '../../include',
 +        '../../src',
-+      ],
+       ],
        'direct_dependent_settings': {
          'include_dirs': [
--          '<(cargo_vendor_dir)/temporal_capi/bindings/cpp',
+-          '<(cargo_vendor_dir)/<(temporal_capi_dir)/bindings/cpp',
 +          '../../include',
 +          '../../src',
          ],
