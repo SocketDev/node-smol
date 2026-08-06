@@ -9,6 +9,7 @@
     "test": "node ../../scripts/repo/run-smol-ai-tests.mts ai-infra"
   },
   "devDependencies": {
+    "@socketsecurity/lib-stable": "catalog:",
     "@types/node": "catalog:",
     "vitest": "catalog:"
   }

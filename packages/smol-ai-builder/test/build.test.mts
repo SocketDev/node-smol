@@ -2,6 +2,8 @@ import path from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
+import { normalizePath } from '@socketsecurity/lib-stable/paths/normalize'
+
 import {
   cmakeConfigureArgs,
   nodeDevelopmentCandidates,
@@ -40,10 +42,8 @@ describe('smol-ai native build', () => {
     // answers with backslashes; normalize before comparing the shape.
     const candidates = nodeDevelopmentCandidates('/opt/node/26/bin/node')
     const normalized = {
-      importLibraries: candidates.importLibraries.map(p =>
-        p.replaceAll('\\', '/'),
-      ),
-      includeDirs: candidates.includeDirs.map(p => p.replaceAll('\\', '/')),
+      importLibraries: candidates.importLibraries.map(normalizePath),
+      includeDirs: candidates.includeDirs.map(normalizePath),
     }
     expect(normalized).toStrictEqual({
       importLibraries: ['/opt/node/26/bin/node.lib', '/opt/node/26/node.lib'],

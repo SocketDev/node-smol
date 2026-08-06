@@ -2,6 +2,8 @@ import { createRequire } from 'node:module'
 
 import { describe, expect, it } from 'vitest'
 
+import { normalizePath } from '@socketsecurity/lib-stable/paths/normalize'
+
 const require = createRequire(import.meta.url)
 const {
   DEFAULT_MODEL_MANIFEST,
@@ -54,7 +56,7 @@ describe('GGUF model manifests', () => {
     // modelCachePath returns a real filesystem path via path.join, so Windows
     // answers with backslashes; normalize before comparing the shape.
     const cachePath = modelCachePath('/cache', DEFAULT_MODEL_MANIFEST)
-    expect(cachePath.replaceAll('\\', '/')).toBe(
+    expect(normalizePath(cachePath)).toBe(
       `/cache/sha256/${DEFAULT_MODEL_MANIFEST.sha256}/${DEFAULT_MODEL_MANIFEST.fileName}`,
     )
   })
