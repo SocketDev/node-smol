@@ -312,9 +312,12 @@ describe('corrupted checkpoints', () => {
     const checkpointDir = path.join(packagePath, 'build', 'prod', 'checkpoints')
     safeMkdirSync(checkpointDir)
 
-    // Create an empty but valid tar archive.
+    // Create an empty but valid tar archive: tar reads two 512-byte zero
+    // blocks (padded to the 10240-byte blocking factor) as end-of-archive.
+    // Written directly - a `tar -T /dev/null` spawn has no /dev/null on
+    // Windows runners.
     const emptyTar = path.join(checkpointDir, 'empty.tar')
-    spawnSync('tar', ['-cf', emptyTar, '-T', '/dev/null'], { stdio: 'pipe' })
+    writeFileSync(emptyTar, Buffer.alloc(10_240))
 
     const result = validateCheckpoints({
       buildMode: 'prod',
