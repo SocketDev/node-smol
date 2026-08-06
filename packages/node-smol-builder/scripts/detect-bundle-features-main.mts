@@ -38,9 +38,9 @@ export function pathToFileURLString(p: string | undefined): string {
 }
 
 async function main(): Promise<void> {
-  // `pnpm run detect -- --bundle=…` forwards a literal `--` into argv, which
-  // parseArgs treats as end-of-options. Drop a leading `--` so both the direct
-  // `node scripts/…` form and the `pnpm run` form behave the same.
+  // pnpm forwards a caller's bare `--` separator into argv, and parseArgs
+  // treats it as end-of-options. Drop a leading `--` so both the direct
+  // `node scripts/…` form and the `pnpm run detect` form behave the same.
   const rawArgs = process.argv.slice(2)
   const args = rawArgs[0] === '--' ? rawArgs.slice(1) : rawArgs
   const { values } = parseArgs({
