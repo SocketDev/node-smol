@@ -1,3 +1,4 @@
+// doctrine: allow max-file-lines -- 1:1 lockstep port of stuie's crates/stuie-cabi/src/text_view.rs; the per-file mirror is the audit surface, so a split would break comparability with the Rust reference.
 // Native TextBufferView lifecycle + geometry/indicator config.
 //
 // Port of the lifecycle + config-setter subset of stuie's

@@ -1,3 +1,4 @@
+// doctrine: allow max-file-lines -- 1:1 lockstep port of stuie's crates/stuie-cabi/src/text_buffer.rs; the per-file mirror is the audit surface, so a split would break comparability with the Rust reference.
 // Native TextBuffer store.
 //
 // Port of stuie's crates/stuie-cabi/src/text_buffer.rs. Foundation slice:
