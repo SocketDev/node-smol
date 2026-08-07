@@ -260,7 +260,8 @@ export async function defaultSmokeTest(
   packageName: string,
 ) {
   // Smoke test: verify binary exists and has reasonable size
-  // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size for size quick check.
+  // Need stats.size for size quick check.
+  // oxlint-disable-next-line socket/prefer-exists-sync -- stat fields consumed
   const stats = await fs.stat(binaryPath)
   if (stats.size < 1000) {
     throw new Error(`Binary too small: ${stats.size} bytes (expected >1KB)`)

@@ -122,10 +122,11 @@ export async function processFileContent(sourcePath, version) {
 
   // For JS files, replace placeholders.
   if (ext === '.cjs' || ext === '.js' || ext === '.mjs') {
-    // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.mode to preserve file permissions on copy.
+    // Need stats.mode to preserve file permissions on copy.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const stats = await fs.stat(sourcePath)
     let content = await fs.readFile(sourcePath, 'utf8')
-    content = content.replaceAll('%SMOL_VERSION%', version)
+    content = content.replaceAll('%SMOL_VERSION%', () => version)
     return { content, mode: stats.mode, processed: true }
   }
 

@@ -65,7 +65,9 @@ describe.skipIf(!hasBuiltArtifacts)('minilm-builder model output', () => {
         return
       }
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() reads stats.size to assert int4/int8 quantized model artifacts are in the expected size range.
+      // Every fs.stat() reads stats.size to assert int4/int8 quantized model
+      // artifacts are in the expected size range.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const stats = await fs.stat(int8ModelPath)
       expect(stats.size).toBeGreaterThan(5 * 1024 * 1024)
       // INT8 quantized MiniLM models are typically 10-25MB
@@ -139,9 +141,13 @@ describe.skipIf(!hasBuiltArtifacts)('minilm-builder model output', () => {
         return
       }
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() reads stats.size to assert int4/int8 quantized model artifacts are in the expected size range.
+      // Every fs.stat() reads stats.size to assert int4/int8 quantized model
+      // artifacts are in the expected size range.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const int4Stats = await fs.stat(int4ModelPath)
-      // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() reads stats.size to assert int4/int8 quantized model artifacts are in the expected size range.
+      // Every fs.stat() reads stats.size to assert int4/int8 quantized model
+      // artifacts are in the expected size range.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const int8Stats = await fs.stat(int8ModelPath)
 
       expect(int4Stats.size).toBeLessThan(int8Stats.size)

@@ -105,7 +105,8 @@ export async function collectBuildSourceFiles(phase, platform, arch) {
   // This handles custom directory structures like additions/source-patched/{js,cpp}
   const additionPhaseDirs = new Set()
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const addPath of sourcePaths.additions) {
     // Extract base phase directory (e.g., additions/source-patched)
     const match = addPath.match(/additions\/([^/]+)/)
@@ -151,7 +152,8 @@ export async function collectBuildSourceFiles(phase, platform, arch) {
     sources.push(libdeflateGyp)
   }
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const addDir of [...existingAdditionDirs, ...additionPhaseDirs]) {
     const addFiles = await glob('**/*', {
       absolute: true,

@@ -87,8 +87,8 @@ const {
 } = getBuildPaths(
   BUILD_MODE,
   TARGET_PLATFORM,
-  // socket-lint: allow top-level-await -- pure-ESM CLI entry point run
-  // directly via node/tsx-style loaders; never bundled to CJS.
+  // Pure-ESM CLI entry point run directly by node; never bundled to CJS.
+  // oxlint-disable-next-line socket/no-top-level-await -- pure-ESM entry
   values['platform-arch'] || (await getCurrentPlatformArch()),
 )
 const BUILD_DIR = buildDir

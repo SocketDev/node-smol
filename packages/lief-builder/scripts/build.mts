@@ -76,7 +76,10 @@ export function getLiefBuildDirs(platformArch) {
  *
  * @returns {string} Platform-arch identifier.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getCurrentLiefPlatformArch() {
   const libc = detectLibc()
   // Respect TARGET_ARCH for cross-compilation (set by workflows/Makefiles)
@@ -93,7 +96,10 @@ export function getCurrentLiefPlatformArch() {
  *
  * @returns {string} Path to downloaded LIEF directory.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getDownloadedLiefDir(platformArch) {
   return path.join(getDownloadedDir(packageRoot), 'lief', platformArch)
 }
@@ -127,7 +133,10 @@ export async function verifyArchiveChecksum(archivePath, assetName) {
  * @returns {(string | string[])[]} Array of required files. Arrays indicate
  *   alternatives, of which any one must exist.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getLiefRequiredFiles() {
   return LIEF_REQUIRED_FILES
 }
@@ -165,7 +174,10 @@ export function verifyLiefAt(dir) {
  *
  * @returns {boolean} True if complete LIEF installation exists.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function liefExistsAt(dir) {
   return verifyLiefAt(dir).valid
 }
@@ -178,7 +190,10 @@ export function liefExistsAt(dir) {
  * @returns {string | undefined} Path to LIEF library if exists, undefined
  *   otherwise.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getLiefLibPathAt(dir) {
   const unixPath = path.join(dir, 'libLIEF.a')
   const msvcPath = path.join(dir, 'LIEF.lib')
@@ -201,7 +216,10 @@ export function getLiefLibPathAt(dir) {
  * @returns {string | undefined} Path to LIEF library if exists, undefined
  *   otherwise.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getLiefLibPath(platformArch) {
   const resolvedPlatformArch = platformArch ?? getCurrentLiefPlatformArch()
   const { liefBuildDir } = getLiefBuildDirs(resolvedPlatformArch)
@@ -216,7 +234,10 @@ export function getLiefLibPath(platformArch) {
  *
  * @returns {boolean} True if LIEF library exists.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function liefExists(platformArch) {
   return getLiefLibPath(platformArch) !== undefined
 }
@@ -227,7 +248,10 @@ export function liefExists(platformArch) {
  *
  * @returns {string} LIEF version (e.g., "0.17.0")
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getLiefVersion() {
   const version = getSubmoduleVersion(
     'packages/lief-builder/upstream/lief',
@@ -240,13 +264,17 @@ export function getLiefVersion() {
 // LIEF version (extracted from .gitmodules comment).
 const LIEF_VERSION = getLiefVersion()
 
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function runCommand(command, args, cwd, env = {}) {
   logger.info(`Running: ${command} ${args.join(' ')}`)
 
   // Merge env properly, filtering out undefined values.
   const mergedEnv = { ...process.env }
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [key, value] of Object.entries(env)) {
     if (value === undefined) {
       delete mergedEnv[key]
@@ -362,7 +390,10 @@ export async function verifyMuslCompatibility(libPath) {
  *
  * @param {string} sourceDir - Destination directory for copied source.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function copyLiefSource(sourceDir) {
   if (!existsSync(liefUpstream)) {
     throw new Error(
@@ -477,7 +508,10 @@ export async function copyLiefSource(sourceDir) {
  *
  * @param {string} sourceDir - Path to LIEF source directory.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function applyLiefPatches(sourceDir) {
   const patchesDir = path.join(packageRoot, 'patches', 'lief')
 
@@ -543,7 +577,10 @@ export async function applyLiefPatches(sourceDir) {
  * @returns {Promise<string | null>} Path to downloaded LIEF directory, or null
  *   on failure.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function downloadPrebuiltLIEF(options = {}) {
   // Check if download is blocked by BUILD_DEPS_FROM_SOURCE environment flag.
   checkBuildSourceFlag('LIEF', 'DEPS', {
@@ -588,7 +625,9 @@ export async function downloadPrebuiltLIEF(options = {}) {
 
     // Verify tarball integrity before extraction (detect corrupted/truncated downloads).
     // This catches issues where a previous download was cached but is corrupt.
-    // oxlint-disable-next-line socket/prefer-exists-sync -- multiple fs.stat() calls consume stats.size for downloaded-archive / built-library size reporting and minimum-size quick checks.
+    // Multiple fs.stat() calls consume stats.size for downloaded-archive /
+    // built-library size reporting and minimum-size quick checks.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const archiveStats = await fs.stat(downloadedArchive)
     logger.info(
       `Archive size: ${(archiveStats.size / 1024 / 1024).toFixed(2)} MB`,
@@ -774,7 +813,10 @@ const ensureLiefLocks = new Map()
  *
  * @returns {Promise<string>} Path to LIEF library.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function ensureLief(options = {}) {
   const resolvedPlatformArch =
     options.platformArch ?? getCurrentLiefPlatformArch()
@@ -803,7 +845,10 @@ export async function ensureLief(options = {}) {
 /**
  * Internal implementation of ensureLief.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function ensureLiefImpl(options = {}) {
   const { force = false, platformArch } = options
   const resolvedPlatformArch = platformArch ?? getCurrentLiefPlatformArch()
@@ -1173,7 +1218,9 @@ async function main() {
       }
     }
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- multiple fs.stat() calls consume stats.size for downloaded-archive / built-library size reporting and minimum-size quick checks.
+    // Multiple fs.stat() calls consume stats.size for downloaded-archive /
+    // built-library size reporting and minimum-size quick checks.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const stats = await fs.stat(libPath)
     const sizeMB = (stats.size / 1024 / 1024).toFixed(2)
     logger.info(`LIEF library size: ${sizeMB} MB`)

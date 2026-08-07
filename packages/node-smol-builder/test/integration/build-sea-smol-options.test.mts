@@ -96,9 +96,9 @@ describe.skipIf(skipTests)('--build-sea with smol options', () => {
       expect(existsSync(outputExe)).toBeTruthy()
 
       // Verify it's different from source (has SEA blob injected)
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to compare source vs. output executable sizes.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- stat size read
       const sourceSize = (await fs.stat(sourceExe)).size
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to compare source vs. output executable sizes.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- stat size read
       const outputSize = (await fs.stat(outputExe)).size
       expect(outputSize).toBeGreaterThan(sourceSize)
     })

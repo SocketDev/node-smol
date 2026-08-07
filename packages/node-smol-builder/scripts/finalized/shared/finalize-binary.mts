@@ -137,7 +137,8 @@ export async function finalizeBinary(config) {
       if (!existsSync(finalBinary)) {
         throw new Error('Final binary not found')
       }
-      // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size and stats.mode to validate the final binary.
+      // Need stats.size and stats.mode to validate the final binary.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const stats = await fs.stat(finalBinary)
       if (stats.size === 0) {
         throw new Error('Final binary is empty')

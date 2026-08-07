@@ -248,7 +248,9 @@ describe.skipIf(skipTests)('stub signing and extraction flow', () => {
         throw new Error('extractedNodePath not set')
       }
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size and stats.mtime to verify extracted artifacts and detect metadata-rewrite races.
+      // Fs.stat() calls consume stats.size and stats.mtime to verify extracted
+      // artifacts and detect metadata-rewrite races.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const stats = await fs.stat(extractedNodePath)
       expect(stats.mode & 0o100).not.toBe(0)
     })
@@ -350,13 +352,17 @@ describe.skipIf(skipTests)('stub signing and extraction flow', () => {
 
     it('should not recreate cache directory', async () => {
       const metadataPath = path.join(testCacheDir, '.dlx-metadata.json')
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size and stats.mtime to verify extracted artifacts and detect metadata-rewrite races.
+      // Fs.stat() calls consume stats.size and stats.mtime to verify extracted
+      // artifacts and detect metadata-rewrite races.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const statsBefore = await fs.stat(metadataPath)
 
       // Run again
       await spawn(stubBinaryPath, ['--version'], { timeout: 5000 })
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size and stats.mtime to verify extracted artifacts and detect metadata-rewrite races.
+      // Fs.stat() calls consume stats.size and stats.mtime to verify extracted
+      // artifacts and detect metadata-rewrite races.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const statsAfter = await fs.stat(metadataPath)
 
       // Metadata file should not be modified (cache hit)

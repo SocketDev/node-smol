@@ -85,7 +85,9 @@ export interface RunResult {
  * Throws if no Final/ binary exists — call sites should gate the
  * whole suite via `smolBuiltinIsAvailable()` first.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- helpers grouped by builtin probe (probe → assert → describe); alphabetizing would split each builtin's helper triplet.
+// Helpers grouped by builtin probe (probe → assert → describe); alphabetizing
+// would split each builtin's helper triplet.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function runOnSmolBinary(
   script: string,
   options: RunOptions = {},
@@ -116,7 +118,9 @@ export async function runOnSmolBinary(
  *
  * Output is one line per export: `export:<name>=<typeof>`.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- helpers grouped by builtin probe (probe → assert → describe); alphabetizing would split each builtin's helper triplet.
+// Helpers grouped by builtin probe (probe → assert → describe); alphabetizing
+// would split each builtin's helper triplet.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function printExportShapeScript(name: string): string {
   return `
     const mod = require('node:${name}')
@@ -136,11 +140,18 @@ export function printExportShapeScript(name: string): string {
  * Parse the output of `printExportShapeScript` into a Map of
  * export name → typeof string.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- helpers grouped by builtin probe (probe → assert → describe); alphabetizing would split each builtin's helper triplet.
+// Helpers grouped by builtin probe (probe → assert → describe); alphabetizing
+// would split each builtin's helper triplet.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function parseExportShape(stdout: string): Map<string, string> {
   const shape = new Map<string, string>()
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const line of stdout.split('\n')) {
+    // `^export:` — line starts with literal "export:"
+    // `([^=]+)` — capture group 1: the export name (one or more non-`=` chars)
+    // `=` — literal separator between name and value
+    // `(.*)$` — capture group 2: the value runs to the end of the line
     const match = /^export:([^=]+)=(.*)$/.exec(line)
     if (match) {
       shape.set(match[1]!, match[2]!)

@@ -81,7 +81,9 @@ async function downloadStub(
     )
     await fs.copyFile(localStubPath, stubOut)
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size for the per-stub log message and per-platform size summary.
+    // Fs.stat() calls consume stats.size for the per-stub log message and
+    // per-platform size summary.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const stats = await fs.stat(stubOut)
     logger.success(
       `${platformName} stub (local, ${(stats.size / 1024).toFixed(1)}KB)`,
@@ -141,7 +143,9 @@ async function downloadStub(
     )
     await fs.rename(extractedPath, stubOut)
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size for the per-stub log message and per-platform size summary.
+    // Fs.stat() calls consume stats.size for the per-stub log message and
+    // per-platform size summary.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const stats = await fs.stat(stubOut)
     logger.success(`${platformName} stub (${(stats.size / 1024).toFixed(1)}KB)`)
 
@@ -174,7 +178,9 @@ async function downloadStub(
 /**
  * Convert binary to C array.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- script ordered as a top-down stub-generation pipeline (resolve platforms → fetch or build → embed → write); alphabetizing would scatter the flow.
+// Script ordered as a top-down stub-generation pipeline (resolve platforms →
+// fetch or build → embed → write); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 async function binaryToCArray(stubPath: string, varName: string) {
   // Read binary
   const data = await fs.readFile(stubPath)
@@ -401,10 +407,13 @@ export async function main() {
       entry[1] !== undefined && entry[1] !== '',
   )
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [name, stubPath] of stubSummary) {
     try {
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size for the per-stub log message and per-platform size summary.
+      // Fs.stat() calls consume stats.size for the per-stub log message and
+      // per-platform size summary.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const stats = await fs.stat(stubPath)
       logger.info(`${name}: ${(stats.size / 1024).toFixed(1)}KB`)
     } catch {
@@ -413,7 +422,8 @@ export async function main() {
   }
 
   // Clean up downloaded stubs from build directory
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [, stubPath] of stubSummary) {
     await safeDelete(stubPath)
   }

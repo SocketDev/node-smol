@@ -7,7 +7,8 @@
  * Gold standard: socket-packageurl-js (sibling fleet repo).
  */
 const PURL_SPEC_URL =
-  // oxlint-disable-next-line socket/inclusive-language -- upstream PURL spec URL uses a legacy branch name we don't control.
+  // Upstream PURL spec URL uses a legacy branch name we don't control.
+  // oxlint-disable-next-line socket/inclusive-language -- see note above
   'https://github.com/package-url/purl-spec/tree/master/test-suite-data'
 void PURL_SPEC_URL
 

@@ -859,7 +859,9 @@ export async function buildRelease(config, buildOptions = {}) {
     })
     logger.log('::endgroup::')
     logger.log(
-      // oxlint-disable-next-line socket/no-status-emoji -- emoji is wrapped in colors.green() decorator before being embedded in multi-line build summary; logger.success() would drop the color.
+      // Emoji is wrapped in colors.green() decorator before being embedded in
+      // multi-line build summary; logger.success() would drop the color.
+      // oxlint-disable-next-line socket/no-status-emoji -- see above
       `${colors.green('✓')} ${WIN32 ? 'Build' : 'Configuration'} complete`,
     )
     logger.log('')

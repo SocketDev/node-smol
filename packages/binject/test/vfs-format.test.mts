@@ -78,11 +78,14 @@ void runBinject
  *
  * @returns {Buffer} TAR archive
  */
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers grouped by workflow (runBinject first, then archive builders); alphabetizing would scatter the test setup flow.
+// Test helpers grouped by workflow (runBinject first, then archive builders);
+// alphabetizing would scatter the test setup flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function createTar(files: Map<string, Buffer>) {
   const blocks = []
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [name, content] of files) {
     // Create header (512 bytes)
     const header = Buffer.alloc(512)

@@ -41,7 +41,9 @@ async function getDefaultBinary() {
 
 // Test code to run in the built binary
 // Tests are based on experimental-fast-webstreams test suite
-// oxlint-disable-next-line socket/no-status-emoji -- vendored upstream validator; emits pass/fail markers via direct stdout writes (matches upstream WPT test reporter format) with no logger import.
+// Vendored upstream validator; emits pass/fail markers via direct stdout writes
+// (matches upstream WPT test reporter format) with no logger import.
+// oxlint-disable-next-line socket/no-status-emoji -- emoji is payload data
 const TEST_CODE = `
 'use strict';
 

@@ -332,7 +332,8 @@ export async function runInDocker(config) {
   args.push('-w', workdir)
 
   // Add environment variables
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [key, value] of Object.entries(env)) {
     args.push('-e', `${key}=${String(value)}`)
   }

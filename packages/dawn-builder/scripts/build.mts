@@ -97,7 +97,9 @@ export function parseArgs(): BuildConfig {
 // subsequent git invocations inside upstream/dawn don't fail with a missing
 // .git pointer. Idempotent + non-destructive: only acts if the moved-aside
 // file is present AND the canonical name is absent.
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (parseArgs → recoverOrphanedDotGit → main); alphabetizing would scatter the flow.
+// Build script is ordered as a top-down pipeline (parseArgs →
+// recoverOrphanedDotGit → main); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function recoverOrphanedDotGit(): Promise<void> {
   const dotGit = path.join(UPSTREAM_DAWN_DIR, '.git')
   const dotGitMoved = path.join(UPSTREAM_DAWN_DIR, '.git.moved-for-tint-gen')
@@ -109,7 +111,9 @@ export async function recoverOrphanedDotGit(): Promise<void> {
   }
 }
 
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (parseArgs → recoverOrphanedDotGit → main); alphabetizing would scatter the flow.
+// Build script is ordered as a top-down pipeline (parseArgs →
+// recoverOrphanedDotGit → main); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 async function main(): Promise<void> {
   const opts = parseArgs()
 

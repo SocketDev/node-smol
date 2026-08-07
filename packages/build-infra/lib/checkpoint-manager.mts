@@ -282,7 +282,8 @@ export async function createCheckpoint(
     const tarDir = path.dirname(resolvedArtifactPath)
     const tarBase = path.basename(resolvedArtifactPath)
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.isDirectory() to choose dir-vs-file archive flow.
+    // Need stats.isDirectory() to choose dir-vs-file archive flow.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const stats = await fs.stat(resolvedArtifactPath)
     const isDir = stats.isDirectory()
 
@@ -393,7 +394,9 @@ export async function createCheckpoint(
         }
       }
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size to detect empty or oversized tarball from a failed tar run.
+      // Need stats.size to detect empty or oversized tarball from a failed tar
+      // run.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const tempStats = await fs.stat(tempTarballPath)
       if (tempStats.size === 0) {
         safeDeleteSync(tempTarballPath, { force: true })
@@ -524,7 +527,8 @@ export async function createCheckpoint(
       throw err
     }
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size for the human-readable tarball-size log line.
+    // Need stats.size for the human-readable tarball-size log line.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const tarStats = await fs.stat(tarballPath)
     const sizeMB = (tarStats.size / 1024 / 1024).toFixed(1)
     logger.substep(`Saved ${checkpointName}.tar.gz (${sizeMB}MB)`)
@@ -826,7 +830,10 @@ export async function getCheckpointData(
       if (typeof parsed !== 'object' || parsed === null) {
         throw new TypeError('checkpoint JSON is not an object')
       }
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
+      // JSON.parse returns `any`; the shape is an invariant of the writer
+      // in this repo, and a malformed file throws in the surrounding
+      // try/catch rather than flowing on.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed
       return parsed as CheckpointData
     } catch (e) {
       throw new Error(
@@ -1065,7 +1072,9 @@ export async function restoreCheckpoint(
     }
 
     try {
-      // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size (truncation guard) and stats.mtimeMs (concurrent-replacement detector).
+      // Need stats.size (truncation guard) and stats.mtimeMs
+      // (concurrent-replacement detector).
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const stats = await fs.stat(tarballPath)
       const initialModTime = stats.mtimeMs
       const sizeMB = (stats.size / 1024 / 1024).toFixed(2)

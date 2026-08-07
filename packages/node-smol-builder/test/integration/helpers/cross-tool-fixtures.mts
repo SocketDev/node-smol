@@ -50,7 +50,9 @@ export async function getBinaryPath(packageName: string, binaryName: string) {
 /**
  * Execute command.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers are ordered by the repack flow they exercise; alphabetizing would scatter them across the file.
+// Test helpers are ordered by the repack flow they exercise; alphabetizing
+// would scatter them across the file.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function execCommand(
   command: string,
   args: string[] = [],

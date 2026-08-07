@@ -71,7 +71,9 @@ export async function staticVerifyBinary(
   logger.substep('Performing static verification (cross-compiled binary)')
 
   try {
-    // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size to reject 0-byte cross-compiled artifacts the linker may have silently emitted.
+    // Need stats.size to reject 0-byte cross-compiled artifacts the linker may
+    // have silently emitted.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const stats = await fs.stat(binaryPath)
     if (stats.size === 0) {
       printError('Binary is empty')

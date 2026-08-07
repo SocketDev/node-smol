@@ -135,9 +135,13 @@ export function scanSource(source: string, acc: ScanResult): void {
   // Computed require/import: require(<not a quote>) or import(<not a quote>).
   // A literal require('x')/import('x') has a quote immediately after the paren;
   // anything else (a variable, template, concat) is dynamic.
-  // oxlint-disable-next-line socket/no-source-sniffing -- same minification-robustness rationale as scanSource's string-signal scan above
+  // Same minification-robustness rationale as scanSource's string-signal scan
+  // above.
+  // oxlint-disable-next-line socket/no-source-sniffing -- see above
   const isComputedRequire = /\brequire\s*\(\s*[^'"`)]/.test(source)
-  // oxlint-disable-next-line socket/no-source-sniffing -- same minification-robustness rationale as scanSource's string-signal scan above
+  // Same minification-robustness rationale as scanSource's string-signal scan
+  // above.
+  // oxlint-disable-next-line socket/no-source-sniffing -- see above
   const isComputedImport = /\bimport\s*\(\s*[^'"`)]/.test(source)
   if (isComputedRequire || isComputedImport) {
     acc.hasComputedRequire = true

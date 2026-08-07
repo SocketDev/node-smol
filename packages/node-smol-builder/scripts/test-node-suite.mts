@@ -194,7 +194,8 @@ export function shouldSkipTest(testPath, compiledPatterns) {
   const testName = path.basename(testPath).toLowerCase()
   const testRelPath = testPath.toLowerCase()
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const { regex, stripped } of compiledPatterns) {
     // Match against filename.
     if (regex.test(testName)) {

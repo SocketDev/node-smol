@@ -92,11 +92,13 @@ export function buildCacheKey({
   hash.update(`platformArch=${platformArch}`)
   hash.update(`mode=${buildMode}`)
   hash.update(`tools=${toolsHash}`)
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const tool of Object.keys(toolVersions).toSorted()) {
     hash.update(`${tool}@${toolVersions[tool]}`)
   }
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const key of Object.keys(sources).toSorted()) {
     const src = sources[key] ?? {}
     hash.update(
@@ -112,7 +114,8 @@ export function buildCacheKey({
 
 export function hashFileContents(files: string[]): string {
   const hash = crypto.createHash('sha256')
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const file of files.toSorted()) {
     let content = Buffer.alloc(0)
     if (existsSync(file)) {
@@ -136,7 +139,8 @@ export async function loadExternalTools(
   }
   validateExternalTools(data)
   const versions: Record<string, string> = {}
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [tool, meta] of Object.entries(data.tools ?? {})) {
     versions[tool] = meta?.version ?? ''
   }
@@ -352,7 +356,8 @@ export async function runPipeline(config, cliOverrides) {
     logger.substep(`Starting from stage: ${flags.fromStage}`)
   }
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const stage of stages.slice(startIdx)) {
     await runStage(stage, ctx, {})
   }
@@ -432,7 +437,9 @@ export async function runStage(stage, ctx, stageParams) {
   )
 
   if (!shouldProceed) {
-    // oxlint-disable-next-line socket/no-status-emoji -- substep is an indented line marker, not a top-level status; the leading "✓" complements the substep indent.
+    // Substep is an indented line marker, not a top-level status; the leading
+    // "OK" complements the substep indent.
+    // oxlint-disable-next-line socket/no-status-emoji -- emoji is payload data
     stageLogger.substep(`✓ ${stage.name} up-to-date (cached)`)
     return
   }

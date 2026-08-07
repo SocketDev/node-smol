@@ -44,7 +44,9 @@ const NODE_VERSION = getNodeVersion()
  * Get platform/arch configuration for binary downloads
  * Uses lazy evaluation to ensure NODE_VERSION is resolved.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- helpers ordered by download pipeline (resolve URL → fetch → extract → cache → return path); alphabetizing would scatter the flow.
+// Helpers ordered by download pipeline (resolve URL → fetch → extract → cache →
+// return path); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getBinaryConfig(platform: string, arch: string) {
   const version = NODE_VERSION
   const key = `${platform}-${arch}`
@@ -111,7 +113,9 @@ const SUPPORTED_PLATFORMS = [
  *
  * @returns {Promise<Buffer>} Binary data
  */
-// oxlint-disable-next-line socket/sort-source-methods -- helpers ordered by download pipeline (resolve URL → fetch → extract → cache → return path); alphabetizing would scatter the flow.
+// Helpers ordered by download pipeline (resolve URL → fetch → extract → cache →
+// return path); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function downloadBinary(url: string) {
   const response = await httpRequest(url)
   if (!response.ok) {
@@ -130,7 +134,9 @@ export async function downloadBinary(url: string) {
  *
  * @returns {Promise<Buffer>} Extracted binary data
  */
-// oxlint-disable-next-line socket/sort-source-methods -- helpers ordered by download pipeline (resolve URL → fetch → extract → cache → return path); alphabetizing would scatter the flow.
+// Helpers ordered by download pipeline (resolve URL → fetch → extract → cache →
+// return path); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function extractFromTarGz(tarGzData: Buffer, extractPath: string) {
   const tempDir = path.join(os.tmpdir(), `binject-extract-${Date.now()}`)
   await fs.mkdir(tempDir, { recursive: true })
@@ -163,7 +169,9 @@ export async function extractFromTarGz(tarGzData: Buffer, extractPath: string) {
  *
  * @returns {Promise<Buffer>} Extracted binary data
  */
-// oxlint-disable-next-line socket/sort-source-methods -- helpers ordered by download pipeline (resolve URL → fetch → extract → cache → return path); alphabetizing would scatter the flow.
+// Helpers ordered by download pipeline (resolve URL → fetch → extract → cache →
+// return path); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function extractFromZip(
   zipData: Buffer,
   extractPath: string,
@@ -190,7 +198,9 @@ export async function extractFromZip(
  * @returns {Promise<{ path: string; format: string; version: string }>} Path to
  *   cached binary, its format, and version.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- helpers ordered by download pipeline (resolve URL → fetch → extract → cache → return path); alphabetizing would scatter the flow.
+// Helpers ordered by download pipeline (resolve URL → fetch → extract → cache →
+// return path); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function getNodeBinary(platform: string, arch: string) {
   const key = `${platform}-${arch}`
   const config = getBinaryConfig(platform, arch)

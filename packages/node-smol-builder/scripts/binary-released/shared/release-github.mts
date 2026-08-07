@@ -21,7 +21,9 @@ const REPO = 'socket-btm'
  * Check if GitHub API is authenticated.
  * Validates by attempting to get authenticated user.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- release script ordered as a top-down pipeline (gather artifacts → checksum → assemble notes → upload → publish); alphabetizing would scatter the flow.
+// Release script ordered as a top-down pipeline (gather artifacts → checksum →
+// assemble notes → upload → publish); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function checkGitHubAuth() {
   try {
     const octokit = new Octokit({
@@ -62,7 +64,9 @@ export async function releaseExists(tag) {
 /**
  * Delete existing release.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- release script ordered as a top-down pipeline (gather artifacts → checksum → assemble notes → upload → publish); alphabetizing would scatter the flow.
+// Release script ordered as a top-down pipeline (gather artifacts → checksum →
+// assemble notes → upload → publish); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function deleteRelease(tag) {
   logger.log('')
   logger.log(`Deleting existing release: ${tag}`)
@@ -88,7 +92,9 @@ export async function deleteRelease(tag) {
 /**
  * Create GitHub release.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- release script ordered as a top-down pipeline (gather artifacts → checksum → assemble notes → upload → publish); alphabetizing would scatter the flow.
+// Release script ordered as a top-down pipeline (gather artifacts → checksum →
+// assemble notes → upload → publish); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function createGitHubRelease(
   tag,
   archives,

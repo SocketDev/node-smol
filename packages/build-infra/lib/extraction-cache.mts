@@ -163,7 +163,8 @@ export function computeSourceHash(
 
   // Hash each file individually. The filename is included so renames that affect ordering are detected.
   const fileHashes: string[] = []
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const { absolutePath, hashPath } of entries) {
     try {
       // Read as raw bytes. Reading with 'utf8' corrupts binary inputs

@@ -66,7 +66,10 @@ export function getCheckpointChain() {
  *
  * @returns {{ buildDir: string; libpqBuildDir: string }}
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getBuildDirs(platformArch) {
   const buildDir = getPlatformBuildDir(packageRoot, platformArch)
   const libpqBuildDir = path.join(buildDir, 'out', BUILD_STAGES.FINAL, 'libpq')
@@ -121,7 +124,10 @@ export async function verifyArchiveChecksum(archivePath, assetName) {
  *
  * @returns {Promise<string>} Path to downloaded libpq directory.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function downloadLibpq(options = {}) {
   const { force = false, platformArch } = options
   const resolvedPlatformArch = platformArch ?? (await getCurrentPlatformArch())
@@ -173,7 +179,9 @@ export async function downloadLibpq(options = {}) {
   }
 
   // Verify tarball integrity before extraction.
-  // oxlint-disable-next-line socket/prefer-exists-sync -- multiple fs.stat() calls consume stats.size for downloaded-archive / built-library size reporting and minimum-size quick checks.
+  // Multiple fs.stat() calls consume stats.size for downloaded-archive /
+  // built-library size reporting and minimum-size quick checks.
+  // oxlint-disable-next-line socket/prefer-exists-sync -- stat fields consumed
   const archiveStats = await fs.stat(downloadedArchive)
   logger.info(
     `Archive size: ${(archiveStats.size / 1024 / 1024).toFixed(2)} MB`,
@@ -260,7 +268,9 @@ export async function downloadLibpq(options = {}) {
   // Write version file after cleanup.
   await fs.writeFile(versionFile, POSTGRES_VERSION, 'utf8')
 
-  // oxlint-disable-next-line socket/prefer-exists-sync -- multiple fs.stat() calls consume stats.size for downloaded-archive / built-library size reporting and minimum-size quick checks.
+  // Multiple fs.stat() calls consume stats.size for downloaded-archive /
+  // built-library size reporting and minimum-size quick checks.
+  // oxlint-disable-next-line socket/prefer-exists-sync -- stat fields consumed
   const stats = await fs.stat(path.join(extractDir, 'libpq.a'))
   const sizeMB = (stats.size / 1024 / 1024).toFixed(2)
   logger.success(`Downloaded libpq (${sizeMB} MB) to ${extractDir}`)
@@ -278,7 +288,10 @@ export async function downloadLibpq(options = {}) {
  *
  * @returns {Promise<string>} Path to directory containing libpq libraries.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function ensureLibpq(options = {}) {
   const { force = false, platformArch } = options
   const resolvedPlatformArch = platformArch ?? (await getCurrentPlatformArch())
@@ -317,7 +330,10 @@ export const POSTGRES_VERSION = getPostgresVersion()
  *
  * @returns {string} PostgreSQL version (e.g., "16.6")
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getPostgresVersion() {
   try {
     const version = getSubmoduleVersion(

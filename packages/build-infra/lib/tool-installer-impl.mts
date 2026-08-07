@@ -77,7 +77,9 @@ export async function checkElevatedPrivileges() {
  *
  * @returns {Promise<boolean>} True if installation succeeded.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- ordered by install pipeline phase (install package manager → install tool → resolve pinned → verify); alphabetizing across phases would scatter the flow.
+// Ordered by install pipeline phase (install package manager → install tool →
+// resolve pinned → verify); alphabetizing across phases would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function installPackageManager(
   managerName,
   { autoYes = false } = {},
@@ -167,7 +169,9 @@ export async function installPackageManager(
  *
  * @returns {Promise<boolean>} True if installation succeeded.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- ordered by install pipeline phase (install package manager → install tool → resolve pinned → verify); alphabetizing across phases would scatter the flow.
+// Ordered by install pipeline phase (install package manager → install tool →
+// resolve pinned → verify); alphabetizing across phases would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function installTool(
   tool,
   packageManager,
@@ -347,7 +351,9 @@ export async function installTool(
  *     }
  *   | undefined}
  */
-// oxlint-disable-next-line socket/sort-source-methods -- ordered by install pipeline phase (install package manager → install tool → resolve pinned → verify); alphabetizing across phases would scatter the flow.
+// Ordered by install pipeline phase (install package manager → install tool →
+// resolve pinned → verify); alphabetizing across phases would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function resolvePinnedArtifact(tool, version) {
   const archMap = { __proto__: null, arm64: 'aarch64', x64: 'x86_64' }
   const osMap = {
@@ -392,7 +398,9 @@ export function resolvePinnedArtifact(tool, version) {
  *
  * @returns {Promise<boolean>} True if tool runs successfully
  */
-// oxlint-disable-next-line socket/sort-source-methods -- ordered by install pipeline phase (install package manager → install tool → resolve pinned → verify); alphabetizing across phases would scatter the flow.
+// Ordered by install pipeline phase (install package manager → install tool →
+// resolve pinned → verify); alphabetizing across phases would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function verifyToolWorks(tool, verifyArgs = ['--version']) {
   const binPath = whichSync(tool, { nothrow: true })
   if (!binPath) {

@@ -34,13 +34,17 @@ import {
  * @param {string} cwd - Working directory.
  * @param {object} env - Extra environment variables.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function runCommand(command, args, cwd, env = {}) {
   logger.info(`Running: ${command} ${args.join(' ')}`)
 
   // Merge env properly, filtering out undefined values.
   const mergedEnv = { ...process.env }
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [key, value] of Object.entries(env)) {
     if (value === undefined) {
       delete mergedEnv[key]
@@ -74,7 +78,10 @@ export async function runCommand(command, args, cwd, env = {}) {
  *
  * @returns {{ includeDir: string; libDir: string }} OpenSSL paths
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getNodeOpenSSLPaths() {
   // Node.js OpenSSL is in node-smol-builder's upstream
   const nodeUpstream = path.join(
@@ -107,7 +114,10 @@ export function getNodeOpenSSLPaths() {
  * tree doesn't carry built libs yet. Returns undefined when nothing
  * works so configure can auto-probe.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getOpenSSLPaths() {
   const candidates = []
   candidates.push(getNodeOpenSSLPaths())
@@ -156,7 +166,10 @@ export function getOpenSSLPaths() {
  *
  * @param {string} libpqBuildDir - Directory to build libpq in.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function buildLibpq(libpqBuildDir) {
   logger.info('Building libpq from PostgreSQL source…')
 
@@ -299,7 +312,10 @@ export async function buildLibpq(libpqBuildDir) {
  *
  * @param {string} libpqBuildDir - Directory containing libpq build.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- build script is ordered as a top-down pipeline (download → extract → configure → build → install → smoke test); alphabetizing across pipeline phases would scatter the flow and break the checkpoint reading order.
+// Build script is ordered as a top-down pipeline (download → extract →
+// configure → build → install → smoke test); alphabetizing across pipeline
+// phases would scatter the flow and break the checkpoint reading order.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function copyDistributionFiles(libpqBuildDir) {
   const distDir = path.join(libpqBuildDir, 'dist')
   await safeMkdir(distDir)

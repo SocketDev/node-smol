@@ -58,7 +58,8 @@ const RETRY_DELAY_MS = 1000
  *
  * @returns {Promise<string>} Hex-encoded SHA256 hash
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by download pipeline phase (parse manifest → fetch → verify checksum → pack); alphabetizing across phases would scatter the download flow.
+// Ordered by download pipeline phase; alphabetizing would scatter it.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function computeFileSha256(filePath) {
   const hash = crypto.createHash('sha256')
   const stream = createReadStream(filePath)
@@ -100,7 +101,8 @@ export async function verifyFileSha256(filePath, expectedHash) {
  *
  * @returns {Promise<void>}
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by download pipeline phase (parse manifest → fetch → verify checksum → pack); alphabetizing across phases would scatter the download flow.
+// Ordered by download pipeline phase; alphabetizing would scatter it.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function downloadFile(url, destPath, options = {}) {
   const timeout = options.timeout ?? DOWNLOAD_TIMEOUT_MS
   const maxRetries = options.retries ?? MAX_RETRIES
@@ -124,7 +126,8 @@ export async function downloadFile(url, destPath, options = {}) {
  *
  * @returns {Promise<void>}
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by download pipeline phase (parse manifest → fetch → verify checksum → pack); alphabetizing across phases would scatter the download flow.
+// Ordered by download pipeline phase; alphabetizing would scatter it.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function extractArchive(archivePath, destDir) {
   await fs.mkdir(destDir, { recursive: true })
 
@@ -167,7 +170,8 @@ export async function extractArchive(archivePath, destDir) {
  *
  * @returns {Promise<{ success: boolean; toolDir: string; version: string }>}
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by download pipeline phase (parse manifest → fetch → verify checksum → pack); alphabetizing across phases would scatter the download flow.
+// Ordered by download pipeline phase; alphabetizing would scatter it.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function downloadVfsTool(
   toolName,
   {
@@ -274,7 +278,8 @@ export async function downloadVfsTool(
  *   failed: string[]
  * }>}
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by download pipeline phase (parse manifest → fetch → verify checksum → pack); alphabetizing across phases would scatter the download flow.
+// Ordered by download pipeline phase; alphabetizing would scatter it.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function downloadAllVfsTools({
   arch = process.arch,
   destDir,
@@ -292,7 +297,8 @@ export async function downloadAllVfsTools({
   for (let i = 0; i < availableTools.length; i++) {
     const toolName = availableTools[i]
     try {
-      // eslint-disable-next-line no-await-in-loop -- Sequential downloads for rate limiting
+      // Sequential downloads for rate limiting.
+      // eslint-disable-next-line no-await-in-loop -- sequential downloads
       const result = await downloadVfsTool(toolName, {
         arch,
         destDir,
@@ -339,7 +345,8 @@ export async function downloadAllVfsTools({
  *
  * @returns {Promise<{ success: boolean; size: number }>}
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by download pipeline phase (parse manifest → fetch → verify checksum → pack); alphabetizing across phases would scatter the download flow.
+// Ordered by download pipeline phase; alphabetizing would scatter it.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function createVfsToolsTarball({
   arch = process.arch,
   outputPath,
@@ -363,7 +370,8 @@ export async function createVfsToolsTarball({
     stdio: 'pipe',
   })
 
-  // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size for log output and return value.
+  // Need stats.size for log output and return value.
+  // oxlint-disable-next-line socket/prefer-exists-sync -- stat fields consumed
   const stats = await fs.stat(outputPath)
   logger.success(
     `Created ${outputPath} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`,

@@ -9,7 +9,10 @@
 import type { TestAttrs } from './types.mts'
 
 export function parseFrontmatter(source: string): TestAttrs {
-  // oxlint-disable-next-line socket/no-source-sniffing -- parsing test262 frontmatter (YAML in /*---...---*/ comment) is the spec-defined way to read test metadata; no typed export or AST alternative exists for this file format
+  // Parsing test262 frontmatter (YAML in /*---...---*/ comment) is the
+  // spec-defined way to read test metadata; no typed export or AST alternative
+  // exists for this file format.
+  // oxlint-disable-next-line socket/no-source-sniffing -- see above
   const match = source.match(/\/\*---([\s\S]*?)---\*\//)
   if (!match) {
     return {}

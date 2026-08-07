@@ -42,7 +42,9 @@ export async function setupSeaConfigVfsTestDir(
   }
 
   // Check if binary is small enough for binject.
-  // oxlint-disable-next-line socket/prefer-exists-sync -- access(X_OK) checks executable permission, not just existence; stats.size verifies non-empty binary; existsSync can't substitute for either.
+  // Access(X_OK) checks executable permission, not just existence; stats.size
+  // verifies non-empty binary; existsSync can't substitute for either.
+  // oxlint-disable-next-line socket/prefer-exists-sync -- permission checks
   const stats = await fs.stat(foundBinary)
   if (stats.size > MAX_NODE_BINARY_SIZE) {
     logger.warn(

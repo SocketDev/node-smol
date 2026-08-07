@@ -12,7 +12,8 @@ import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'
 
 import { getBuildPaths, PACKAGE_ROOT } from '../scripts/paths.mts'
 
-// socket-lint: allow top-level-await -- vitest ESM test file, never bundled to CJS
+// Vitest ESM test file, never bundled to CJS.
+// oxlint-disable-next-line socket/no-top-level-await -- vitest ESM file
 const platformArch = await getCurrentPlatformArch()
 const buildDevDir = getBuildPaths('dev', platformArch).outputFinalDir
 const buildProdDir = getBuildPaths('prod', platformArch).outputFinalDir
@@ -57,7 +58,9 @@ describe.skipIf(!hasBuiltArtifacts)('models build output', () => {
         return
       }
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() reads stats.size to assert quantized model artifacts are in the expected size range.
+      // Every fs.stat() reads stats.size to assert quantized model artifacts
+      // are in the expected size range.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const stats = await fs.stat(modelPath)
       // MiniLM-L6 quantized models are typically 10-30MB
       // > 1MB (minimum threshold for both int4 and int8)
@@ -85,7 +88,9 @@ describe.skipIf(!hasBuiltArtifacts)('models build output', () => {
         return
       }
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() reads stats.size to assert quantized model artifacts are in the expected size range.
+      // Every fs.stat() reads stats.size to assert quantized model artifacts
+      // are in the expected size range.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const stats = await fs.stat(modelPath)
       // CodeT5 quantized models are typically larger than MiniLM
       // > 10MB
@@ -198,11 +203,13 @@ describe.skipIf(!hasBuiltArtifacts)('models build output', () => {
           continue
         }
 
-        // eslint-disable-next-line no-await-in-loop
-        // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() reads stats.size to assert quantized model artifacts are in the expected size range.
+        // Every fs.stat() reads stats.size to assert quantized model
+        // artifacts are in the expected size range.
+        // oxlint-disable-next-line socket/prefer-exists-sync -- stat size read
         const int8Stats = await fs.stat(int8Path)
-        // eslint-disable-next-line no-await-in-loop
-        // oxlint-disable-next-line socket/prefer-exists-sync -- every fs.stat() reads stats.size to assert quantized model artifacts are in the expected size range.
+        // Every fs.stat() reads stats.size to assert quantized model
+        // artifacts are in the expected size range.
+        // oxlint-disable-next-line socket/prefer-exists-sync -- stat size read
         const int4Stats = await fs.stat(int4Path)
 
         const reduction = 1 - int4Stats.size / int8Stats.size

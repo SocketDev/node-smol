@@ -379,7 +379,8 @@ async function main() {
     // Ensure stubs are available.
     const stubBinaryPath = await ensureStubs({ force: forceRebuild })
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size for the log line.
+    // Need stats.size for the log line.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const stats = await fs.stat(stubBinaryPath)
     const sizeKB = (stats.size / 1024).toFixed(2)
     logger.info(`Stub binary size: ${sizeKB} KB`)

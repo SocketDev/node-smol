@@ -97,14 +97,18 @@ export async function finalizeWasm(config) {
       if (magic !== '0061736d') {
         throw new Error('Invalid WASM file (bad magic number)')
       }
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to validate WASM and sync-wrapper size before finalize.
+      // Fs.stat() calls consume stats.size to validate WASM and sync-wrapper
+      // size before finalize.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const wasmStats = await fs.stat(outputWasmFile)
       if (wasmStats.size < 100_000) {
         throw new Error(
           `WASM file too small: ${wasmStats.size} bytes (expected >100KB)`,
         )
       }
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to validate WASM and sync-wrapper size before finalize.
+      // Fs.stat() calls consume stats.size to validate WASM and sync-wrapper
+      // size before finalize.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const syncStats = await fs.stat(outputSyncCjsFile)
       if (syncStats.size === 0) {
         throw new Error('Sync wrapper file is empty')

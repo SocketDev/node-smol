@@ -84,7 +84,8 @@ export async function generateSyncCjs(config) {
     : ' * Built for synchronous instantiation.'
 
   // Get file size for documentation
-  // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size for size-in-comment documentation.
+  // Need stats.size for size-in-comment documentation.
+  // oxlint-disable-next-line socket/prefer-exists-sync -- stat fields consumed
   const mjsStats = await fs.stat(mjsFile)
 
   // Generate the CommonJS wrapper
@@ -126,7 +127,8 @@ module.exports = ${exportName}Module;
 
   await fs.writeFile(outputSyncJs, jsContent, 'utf8')
 
-  // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size for the size log line.
+  // Need stats.size for the size log line.
+  // oxlint-disable-next-line socket/prefer-exists-sync -- stat fields consumed
   const syncJsSize = (await fs.stat(outputSyncJs)).size
   logger.substep(`Sync JS (CJS): ${outputSyncJs}`)
   logger.substep(`Sync JS size: ${(syncJsSize / 1024).toFixed(2)} KB`)

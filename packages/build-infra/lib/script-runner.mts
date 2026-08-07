@@ -209,7 +209,8 @@ export async function runSequence(
   commands: readonly CommandSpec[],
   globalOptions: SpawnExtra = {},
 ): Promise<number> {
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const { args = [], command, description, options = {} } of commands) {
     if (description) {
       logger.step(description)

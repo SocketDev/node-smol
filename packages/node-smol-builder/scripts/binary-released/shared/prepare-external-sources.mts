@@ -312,7 +312,8 @@ export async function prepareExternalSources(config: {
   // blanket wipe would destroy. Patched targets (deps/lsquic) are gitignored
   // vendored trees, so wiping them loses nothing.
   const patchedTargets = new Set(VENDOR_PATCH_BUNDLES.map(b => b.targetDir))
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const { from, to } of EXTERNAL_SOURCES) {
     if (!existsSync(from)) {
       throw new Error(`External source directory not found: ${from}`)

@@ -75,7 +75,8 @@ export async function ensureAllToolsInstalled(
     const tool = tools[i]
     logger.substep(`[${i + 1}/${tools.length}] Checking ${tool}`)
 
-    // eslint-disable-next-line no-await-in-loop -- Tools must be installed sequentially
+    // Tools must be installed sequentially.
+    // eslint-disable-next-line no-await-in-loop -- sequential installs
     const result = await ensureToolInstalled(tool, { autoInstall, autoYes })
 
     if (!result.available) {

@@ -134,7 +134,9 @@ describe('Prompt API-compatible LanguageModel', () => {
     })
 
     expect(progress).toHaveBeenCalledWith({ loaded: 0.5 })
-    // oxlint-disable-next-line typescript/unbound-method -- asserting on the spy reference itself; it is never invoked, so there is no receiver to lose.
+    // Asserting on the spy reference itself; it is never invoked, so there is
+    // no receiver to lose.
+    // oxlint-disable-next-line typescript/unbound-method -- spy reference only
     expect(backend.createSession).toHaveBeenCalledWith('/cache/model.gguf', {
       maxTokens: 128,
       seed: 42,
@@ -155,7 +157,9 @@ describe('Prompt API-compatible LanguageModel', () => {
     await expect(session.measureInputUsage('abc')).resolves.toBe(3)
     await expect(session.clone()).resolves.toMatchObject({ inputQuota: 256 })
     session.destroy()
-    // oxlint-disable-next-line typescript/unbound-method -- asserting on the spy reference itself; it is never invoked, so there is no receiver to lose.
+    // Asserting on the spy reference itself; it is never invoked, so there is
+    // no receiver to lose.
+    // oxlint-disable-next-line typescript/unbound-method -- spy reference only
     expect(nativeSession.destroy).toHaveBeenCalledOnce()
   })
 

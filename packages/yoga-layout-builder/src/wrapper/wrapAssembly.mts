@@ -60,7 +60,8 @@ export function wrapAssembly(lib) {
     }
   }
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const fnName of [
     'setPosition',
     'setMargin',
@@ -180,7 +181,8 @@ export function wrapAssembly(lib) {
     lib.Node.prototype,
     'calculateLayout',
     // This patch must mirror yoga's own calculateLayout positional signature —
-    // it wraps the upstream method in place. socket-lint: allow optional-positional-trap
+    // it wraps the upstream method in place.
+    // oxlint-disable-next-line socket/no-optional-positional-trap -- mirrored
     function (original, width = NaN, height = NaN, direction = Direction.LTR) {
       // Just a small patch to add support for the function default parameters
       return original.call(this, width, height, direction)

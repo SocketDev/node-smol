@@ -59,11 +59,12 @@ export async function publishArtifacts(
     // libdecrepit.a did when it was added after crypto/ssl.
     const from = resolved.from.replace(
       /([\\/])lib([a-z0-9_]+)\.a$/,
-      `$1${winReleaseDir}${libPrefix}$2${libSuffix}`,
+      (match, sep, name) =>
+        `${sep}${winReleaseDir}${libPrefix}${name}${libSuffix}`,
     )
     const to = resolved.to.replace(
       new RegExp(`lib(${PREFIX}_[a-z0-9_]+)\\.a$`),
-      `${libPrefix}$1${libSuffix}`,
+      (match, name) => `${libPrefix}${name}${libSuffix}`,
     )
     if (!existsSync(from)) {
       throw new Error(`Expected build artifact not found: ${from}`)

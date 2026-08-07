@@ -208,7 +208,8 @@ export async function detectLibc(binaryPath) {
  * Get file size in MB.
  */
 export async function getFileSizeMB(filePath) {
-  // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size for file size calculation.
+  // Need stats.size for file size calculation.
+  // oxlint-disable-next-line socket/prefer-exists-sync -- stat fields consumed
   const stats = await fs.stat(filePath)
   return stats.size / 1024 / 1024
 }
@@ -310,7 +311,8 @@ export function parseArgs() {
   let targetLibc
   let binpressPath
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const arg of args.slice(2)) {
     if (arg.startsWith('--target-arch=')) {
       targetArch = arg.substring('--target-arch='.length)

@@ -49,7 +49,8 @@ const FIXTURES = [
 let totalPackages = 0
 let totalElapsedMs = 0
 
-// oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+// Loop variable is destructured.
+// oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
 for (const { path, eco, fmt, minPackages } of FIXTURES) {
   if (!existsSync(path)) {
     logger.log(`SKIP  ${path} (not present)`)
@@ -81,7 +82,8 @@ for (const { path, eco, fmt, minPackages } of FIXTURES) {
 
   // Every PackageRef is well-formed.
   const malformed = []
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const p of result.packages) {
     if (!p.name || typeof p.name !== 'string') {
       malformed.push(p)

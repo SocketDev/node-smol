@@ -1,6 +1,8 @@
 'use strict'
 
-// eslint-disable-next-line unicorn/prefer-node-protocol -- this source also runs under Node's internal builtin loader, which rejects node: specifiers.
+// This source also runs under Node's internal builtin loader, which rejects
+// node: specifiers.
+// eslint-disable-next-line unicorn/prefer-node-protocol -- builtin loader
 const path = require('path')
 
 const DEFAULT_MODEL_MANIFEST = Object.freeze({

@@ -103,7 +103,8 @@ export async function applyCommonTransforms(config) {
   })
 
   // Handle require declarators - remove them from their variable declarations
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const { node: declaratorNode, varDecl } of requireDeclaratorsToRemove) {
     const declarators = varDecl.declarations
     const index = declarators.indexOf(declaratorNode)

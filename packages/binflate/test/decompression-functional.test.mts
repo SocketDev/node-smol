@@ -50,7 +50,8 @@ const BINPRESS_PACKAGE_DIR = path.join(PACKAGES_DIR, 'binpress')
 
 // Determine build mode + per-platform-arch layout.
 const BUILD_MODE = getBuildMode()
-// socket-lint: allow top-level-await -- vitest ESM test file, never bundled to CJS
+// Vitest ESM test file, never bundled to CJS.
+// oxlint-disable-next-line socket/no-top-level-await -- vitest ESM file
 const PLATFORM_ARCH = await getCurrentPlatformArch()
 
 // Get binflate binary path

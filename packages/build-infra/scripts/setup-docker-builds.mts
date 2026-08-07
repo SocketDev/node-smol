@@ -179,7 +179,8 @@ async function main() {
   logger.log('=== Summary ===')
   logger.log('')
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [target, success] of Object.entries(results)) {
     if (success) {
       logger.success(target)

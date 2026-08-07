@@ -46,7 +46,8 @@ const BINPRESS_NAME = process.platform === 'win32' ? 'binpress.exe' : 'binpress'
 // uses. The old hand-joined path (build/<mode>/out/Final) omitted the
 // platform-arch segment, so the suite ran a stale leftover binary.
 const BINPRESS = path.join(
-  // socket-lint: allow top-level-await -- vitest ESM test file, never bundled to CJS
+  // Vitest ESM test file, never bundled to CJS.
+  // oxlint-disable-next-line socket/no-top-level-await -- vitest ESM file
   getPlatformBuildDir(PACKAGE_DIR, await getCurrentPlatformArch()),
   'out',
   'Final',
@@ -198,7 +199,8 @@ describe.skipIf(
       const initialStub = getStubPath('ratio-stub')
       await execCommand(BINPRESS, [TEST_INPUT, '-o', initialStub])
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size to verify non-empty stub.
+      // Need stats.size to verify non-empty stub.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const initialSize = (await fs.stat(initialStub)).size
       expect(initialSize).toBeGreaterThan(0)
 
@@ -212,7 +214,8 @@ describe.skipIf(
 
       expect(result.code).toBe(0)
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size to verify non-empty stub.
+      // Need stats.size to verify non-empty stub.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const updatedSize = (await fs.stat(updatedStub)).size
       expect(updatedSize).toBeGreaterThan(0)
     })

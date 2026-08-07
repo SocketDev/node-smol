@@ -63,7 +63,9 @@ export async function generateSyncEsm(config) {
     : ' * Built for synchronous instantiation.'
 
   // Get file size for documentation
-  // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to size-document the WASM input and report the generated MJS wrapper size.
+  // Fs.stat() calls consume stats.size to size-document the WASM input and
+  // report the generated MJS wrapper size.
+  // oxlint-disable-next-line socket/prefer-exists-sync -- stat fields consumed
   const mjsStats = await fs.stat(mjsFile)
 
   // Generate the ESM wrapper (no 'use strict', use export default)
@@ -99,7 +101,9 @@ export default ${exportName}Module;
 
   await fs.writeFile(outputSyncMjs, mjsOutput, 'utf8')
 
-  // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to size-document the WASM input and report the generated MJS wrapper size.
+  // Fs.stat() calls consume stats.size to size-document the WASM input and
+  // report the generated MJS wrapper size.
+  // oxlint-disable-next-line socket/prefer-exists-sync -- stat fields consumed
   const syncMjsSize = (await fs.stat(outputSyncMjs)).size
   logger.substep(`Sync MJS (ESM): ${outputSyncMjs}`)
   logger.substep(`Sync MJS size: ${(syncMjsSize / 1024).toFixed(2)} KB`)

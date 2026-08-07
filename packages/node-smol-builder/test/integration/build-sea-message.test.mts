@@ -52,7 +52,8 @@ describe.skipIf(skipTests)('--build-sea flag', () => {
     expect(result.code).toBe(0)
     expect(existsSync(blobFile)).toBeTruthy()
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- need stat.size to verify blob is non-empty.
+    // Need stat.size to verify blob is non-empty.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const stat = await fs.stat(blobFile)
     expect(stat.size).toBeGreaterThan(0)
 

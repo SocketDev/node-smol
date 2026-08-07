@@ -120,7 +120,8 @@ export function detectPackageManagers() {
 
   const managers = []
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const managerName of config.available) {
     const managerConfig = config[managerName]
     if (whichSync(managerConfig.binary, { nothrow: true })) {
@@ -138,7 +139,9 @@ export function detectPackageManagers() {
  *
  * @returns {string[]} Array of installation instruction strings.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- ordered by detection → lookup → instructions pipeline; alphabetizing across phases would scatter the flow.
+// Ordered by detection → lookup → instructions pipeline; alphabetizing across
+// phases would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getInstallInstructions(tool) {
   const config = getToolConfig(tool)
   if (!config) {
@@ -168,7 +171,9 @@ export function getInstallInstructions(tool) {
  *
  * @returns {string[]} Array of installation instruction strings.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- ordered by detection → lookup → instructions pipeline; alphabetizing across phases would scatter the flow.
+// Ordered by detection → lookup → instructions pipeline; alphabetizing across
+// phases would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getPackageManagerInstructions() {
   const platform = getPlatform()
   const config = PACKAGE_MANAGER_CONFIGS[platform]
@@ -195,7 +200,9 @@ export function getPackageManagerInstructions() {
  *
  * @returns {string | undefined} Preferred package manager name or undefined.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- ordered by detection → lookup → instructions pipeline; alphabetizing across phases would scatter the flow.
+// Ordered by detection → lookup → instructions pipeline; alphabetizing across
+// phases would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getPreferredPackageManager() {
   const platform = getPlatform()
   const config = PACKAGE_MANAGER_CONFIGS[platform]

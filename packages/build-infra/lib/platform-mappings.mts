@@ -106,7 +106,9 @@ export function getPlatformArch(
  *
  * @throws {Error} If platform/arch is unsupported.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- platform/arch mapping tables (const) and the helpers that read them are co-located; autofix bails on the const-interleaved layout.
+// Platform/arch mapping tables (const) and the helpers that read them are
+// co-located; autofix bails on the const-interleaved layout.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getAssetPlatformArch(
   platform: string,
   arch: string,
@@ -184,7 +186,9 @@ export async function isMusl(): Promise<boolean> {
  * @returns {Promise<string>} Platform-arch string (e.g., 'win-x64',
  *   'linux-x64-musl').
  */
-// oxlint-disable-next-line socket/sort-source-methods -- platform/arch mapping tables (const) and the helpers that read them are co-located; autofix bails on the const-interleaved layout.
+// Platform/arch mapping tables (const) and the helpers that read them are
+// co-located; autofix bails on the const-interleaved layout.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function getCurrentPlatformArch(): Promise<string> {
   // If the workflow or Dockerfile set PLATFORM_ARCH explicitly, trust it.
   if (process.env['PLATFORM_ARCH']) {
@@ -294,7 +298,9 @@ export function parsePlatformArch(platformArch: string): {
  *
  * @returns {string | undefined} Requested glibc floor, or undefined.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- platform/arch mapping tables (const) and the helpers that read them are co-located; autofix bails on the const-interleaved layout.
+// Platform/arch mapping tables (const) and the helpers that read them are
+// co-located; autofix bails on the const-interleaved layout.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getRequestedGlibcFloor(): string | undefined {
   const raw = process.env['GLIBC_FLOOR']
   if (!raw) {

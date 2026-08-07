@@ -48,9 +48,15 @@ describe('binject CLI commands', () => {
   beforeAll(async () => {
     logger.log('Checking for BINJECT at:', BINJECT)
     try {
-      // oxlint-disable-next-line socket/prefer-exists-sync -- many access(X_OK) and access(F_OK) calls check executable permission / output-file readiness inside Promise.all races; existsSync (sync, no permission check) is not a substitute.
+      // Many access(X_OK) and access(F_OK) calls check executable permission /
+      // output-file readiness inside Promise.all races; existsSync (sync, no
+      // permission check) is not a substitute.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- permission checks
       await fs.access(BINJECT, FS_CONSTANTS.X_OK)
-      // oxlint-disable-next-line socket/prefer-exists-sync -- many access(X_OK) and access(F_OK) calls check executable permission / output-file readiness inside Promise.all races; existsSync (sync, no permission check) is not a substitute.
+      // Many access(X_OK) and access(F_OK) calls check executable permission /
+      // output-file readiness inside Promise.all races; existsSync (sync, no
+      // permission check) is not a substitute.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- permission checks
       const stats = await fs.stat(BINJECT)
       logger.log(
         'BINJECT found! Size:',
@@ -75,7 +81,10 @@ describe('binject CLI commands', () => {
       return
     }
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- many access(X_OK) and access(F_OK) calls check executable permission / output-file readiness inside Promise.all races; existsSync (sync, no permission check) is not a substitute.
+    // Many access(X_OK) and access(F_OK) calls check executable permission /
+    // output-file readiness inside Promise.all races; existsSync (sync, no
+    // permission check) is not a substitute.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- permission checks
     const stats = await fs.stat(foundBinary)
     if (stats.size > MAX_NODE_BINARY_SIZE) {
       logger.warn(

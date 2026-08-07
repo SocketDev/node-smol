@@ -211,5 +211,7 @@ const constants = {
 }
 
 export { constants }
-// oxlint-disable-next-line socket/no-default-export -- wrapAssembly.mts + the wasm-sync inliner consume the default export as `YGEnums`.
+// WrapAssembly.mts + the wasm-sync inliner consume the default export as
+// `YGEnums`.
+// oxlint-disable-next-line socket/no-default-export -- vitest config contract
 export default constants

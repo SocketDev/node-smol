@@ -71,7 +71,8 @@ export async function quantizeModel(config) {
 
   const quantizedPaths = []
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const { input, output } of models) {
     const onnxPath = path.join(modelDir, input)
     const quantPath = path.join(modelDir, output)

@@ -265,7 +265,10 @@ export async function buildStripped(config, buildOptions = {}) {
 
     if (unit === 'M' && size >= 20 && size <= 30) {
       logger.log(
-        // oxlint-disable-next-line socket/no-status-emoji -- emoji is wrapped in colors.green() decorator, which composes color with the marker, before being embedded in a multi-line summary string; logger.success() would drop the color.
+        // Emoji is wrapped in colors.green() decorator, which composes color
+        // with the marker, before being embedded in a multi-line summary
+        // string; logger.success() would drop the color.
+        // oxlint-disable-next-line socket/no-status-emoji -- see above
         `${colors.green('✓')} Binary size is optimal (20-30MB with V8 Lite Mode)`,
       )
     } else if (unit === 'M' && size < 20) {

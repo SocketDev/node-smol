@@ -47,7 +47,10 @@ export function checkpointMatchesNodeVersion(
   expectedVersion: string = expectedNodeVersion,
 ): boolean {
   try {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
+    // JSON.parse returns `any`; the shape is an invariant of the writer
+    // in this repo, and a malformed file throws in the surrounding
+    // try/catch rather than flowing on.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed
     const checkpoint = JSON.parse(readFileSync(checkpointPath, 'utf8')) as {
       nodeVersion?: unknown | undefined
     }
@@ -125,7 +128,8 @@ export function getLatestBinary(stage: string): string | undefined {
   const platformArch = getDefaultPlatformArch()
 
   // Check both dev and prod.
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const mode of ['dev', 'prod']) {
     const buildPaths = getBuildPaths(mode, process.platform, platformArch)
     const binary = getBinaryPath(buildPaths, stage)

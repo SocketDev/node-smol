@@ -1,6 +1,8 @@
 'use strict'
 
-/* eslint-disable unicorn/prefer-node-protocol -- this source also runs under Node's internal builtin loader, which rejects node: specifiers. */
+// This source also runs under Node's internal builtin loader, which rejects
+// node: specifiers.
+/* eslint-disable unicorn/prefer-node-protocol -- internal builtin loader */
 const crypto = require('crypto')
 const { once } = require('events')
 const { createReadStream, createWriteStream, existsSync } = require('fs')

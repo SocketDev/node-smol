@@ -138,7 +138,8 @@ export function convertToCommonJS(content: string, _filename: string): string {
       exportLines.push(`exports.${alias} = ${tempVar}.${original};`)
     }
   }
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is an array-producing expression.
+  // Iterable is an array-producing expression.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const name of Array.from(localExports).toSorted()) {
     exportLines.push(`exports.${name} = ${name};`)
   }

@@ -74,7 +74,8 @@ export function parseCliArgs(argv: readonly string[]) {
     floor: '2.17',
     fallbackReport: false,
   }
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const arg of argv.slice(2)) {
     if (arg.startsWith('--binary=')) {
       result.binary = arg.slice('--binary='.length)
@@ -97,7 +98,8 @@ export function parseObjdumpOutput(text: string): SymbolRow[] {
   // symbol name. Empty captures are skipped.
   const pattern = /\(GLIBC_(\d+(?:\.\d+)+)\)\s+(\S+)/
   const rows: SymbolRow[] = []
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const line of text.split('\n')) {
     const match = pattern.exec(line)
     if (!match) {
@@ -236,7 +238,8 @@ async function main() {
   logger.log('')
   logger.log('GLIBC version  |  Symbol count')
   logger.log('---------------|--------------')
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [version, count] of countByVersion(rows)) {
     logger.log(`  ${version.padEnd(12)} | ${String(count).padStart(5)}`)
   }
@@ -255,7 +258,9 @@ async function main() {
       logger.log('  ---------|-------------------')
       for (let i = 0, { length } = violations; i < length; i += 1) {
         const v = violations[i]
-        // oxlint-disable-next-line socket/no-status-emoji -- emoji are column-aligned table cell markers ("✓ yes   "/"✗ NO    "), not status prefixes.
+        // Emoji are column-aligned table cell markers ("OK yes "/"✗ NO "), not
+        // status prefixes.
+        // oxlint-disable-next-line socket/no-status-emoji -- see above
         const has = wrapped.has(v.symbol) ? '✓ yes   ' : '✗ NO    '
         logger.log(`  ${has} | GLIBC_${v.version.padEnd(6)} ${v.symbol}`)
       }

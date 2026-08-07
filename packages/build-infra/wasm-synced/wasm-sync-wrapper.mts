@@ -133,7 +133,9 @@ export async function generateWasmSyncWrapper(config) {
       throw new Error('Sync CJS file not found after generation')
     }
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to size-report the generated CJS/MJS wrappers.
+    // Fs.stat() calls consume stats.size to size-report the generated CJS/MJS
+    // wrappers.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const syncStats = await fs.stat(outputSyncCjs)
     if (syncStats.size === 0) {
       throw new Error('Sync CJS file is empty')
@@ -156,7 +158,9 @@ export async function generateWasmSyncWrapper(config) {
       throw new Error('Sync MJS file not found after generation')
     }
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to size-report the generated CJS/MJS wrappers.
+    // Fs.stat() calls consume stats.size to size-report the generated CJS/MJS
+    // wrappers.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const syncMjsStats = await fs.stat(outputSyncMjs)
     if (syncMjsStats.size === 0) {
       throw new Error('Sync MJS file is empty')

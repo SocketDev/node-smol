@@ -191,8 +191,10 @@ export function renderEnumsModule(
   lines.push('}')
   lines.push('')
   lines.push('export { constants }')
+  lines.push('// wrapAssembly.mts + the wasm-sync inliner consume the')
+  lines.push('// default export as `YGEnums`.')
   lines.push(
-    '// oxlint-disable-next-line socket/no-default-export -- wrapAssembly.mts + the wasm-sync inliner consume the default export as `YGEnums`.',
+    '// oxlint-disable-next-line socket/no-default-export -- wasm inliner',
   )
   lines.push('export default constants')
   lines.push('')
@@ -218,7 +220,10 @@ export async function stampWrapAssemblyVersion(
         `marker (${wrapAssemblyPath}); the yoga-version drift guard was removed.`,
     )
   }
-  const next = text.replace(WRAP_ASSEMBLY_VERSION_RE, `$1${yogaVersion}`)
+  const next = text.replace(
+    WRAP_ASSEMBLY_VERSION_RE,
+    (match, prefix) => `${prefix}${yogaVersion}`,
+  )
   if (next === text) {
     return false
   }

@@ -189,7 +189,8 @@ export async function ensureWptStreams(force: boolean = false): Promise<void> {
  */
 export function findTestFiles(dir: string): string[] {
   const results: string[] = []
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name)
     if (entry.isDirectory()) {
@@ -212,7 +213,8 @@ export function parseArgs(): CliOptions {
     verbose: false,
   }
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier
+  // Iterable is not a bare identifier.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const arg of args) {
     if (arg === '--force') {
       opts.force = true
@@ -350,7 +352,8 @@ export function composeWptScript(testFile: string, relPath: string): string {
   // Skip them like the old run-file did — the test then fails naturally
   // on the missing global, which the allowlist covers (those files are
   // in SKIP_FILES anyway).
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier
+  // Iterable is not a bare identifier.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const metaPath of metaScripts) {
     if (existsSync(metaPath)) {
       parts.push(readFileSync(metaPath, 'utf8'))
@@ -392,10 +395,16 @@ export async function runTestFile(
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier
     for (const line of stdout.trim().split('\n')) {
       try {
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
+        // JSON.parse returns `any`; the shape is an invariant of the writer
+        // in this repo, and a malformed file throws in the surrounding
+        // try/catch rather than flowing on.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed
         const parsed = JSON.parse(line) as Partial<TestResult>
         if (parsed && typeof parsed.passed === 'number') {
-          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
+          // JSON.parse returns `any`; the shape is an invariant of the writer
+          // in this repo, and a malformed file throws in the surrounding
+          // try/catch rather than flowing on.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed
           return parsed as TestResult
         }
       } catch {

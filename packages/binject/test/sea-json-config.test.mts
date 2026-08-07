@@ -76,13 +76,16 @@ export async function findNodeBinary() {
     }
     try {
       // Check if file exists and is executable
-      // eslint-disable-next-line no-await-in-loop
-      // oxlint-disable-next-line socket/prefer-exists-sync -- access(X_OK) checks executable permission, not just existence; stats.size verifies non-empty binary; existsSync can't substitute for either.
+      // Access(X_OK) checks executable permission, not just existence;
+      // stats.size verifies non-empty binary; existsSync can't substitute for
+      // either.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- permission checks
       const stats = await fs.stat(binaryPath)
       if (stats.isFile()) {
         // Try to access with execute permission
-        // eslint-disable-next-line no-await-in-loop
-        // oxlint-disable-next-line socket/prefer-exists-sync -- access(X_OK) checks executable permission, not just existence; stats.size verifies non-empty binary; existsSync can't substitute for either.
+        // Access(X_OK) checks executable permission, not just existence;
+        // existsSync can't substitute for it.
+        // oxlint-disable-next-line socket/prefer-exists-sync -- permission check
         await fs.access(binaryPath, fs.constants.X_OK)
         return binaryPath
       }
@@ -117,7 +120,9 @@ describe('sEA JSON Config', () => {
     const foundBinary = await findNodeBinary()
 
     // Check if binary is small enough for binject
-    // oxlint-disable-next-line socket/prefer-exists-sync -- access(X_OK) checks executable permission, not just existence; stats.size verifies non-empty binary; existsSync can't substitute for either.
+    // Access(X_OK) checks executable permission, not just existence; stats.size
+    // verifies non-empty binary; existsSync can't substitute for either.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- permission checks
     const stats = await fs.stat(foundBinary)
     if (stats.size > MAX_NODE_BINARY_SIZE) {
       logger.warn(

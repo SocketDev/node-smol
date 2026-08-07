@@ -133,7 +133,8 @@ export async function main(): Promise<void> {
   const digests: Array<{ digest: string; file: string }> = []
   for (let i = 0, { length } = assets; i < length; i += 1) {
     const file = assets[i]!
-    // oxlint-disable-next-line no-await-in-loop -- sequential hashing keeps memory flat and the manifest ordering obvious.
+    // Sequential hashing keeps memory flat and the manifest ordering obvious.
+    // oxlint-disable-next-line no-await-in-loop -- sequential by design
     digests.push({ digest: await sha256File(file), file })
   }
   const checksumsPath = path.join(dir, CHECKSUMS_BASENAME)

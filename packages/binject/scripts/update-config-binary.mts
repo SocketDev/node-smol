@@ -109,11 +109,13 @@ export function serializeSmolConfig(config: Record<string, unknown>) {
 
   // Extract update config and fakeArgvEnv
   const rawUpdate = config['update']
-  const updateConfig: Record<string, unknown> =
-    rawUpdate !== null && typeof rawUpdate === 'object'
-      ? // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowing a value whose shape is established by the call above; TypeScript cannot carry that proof through this boundary.
-        (rawUpdate as Record<string, unknown>)
-      : {}
+  let updateConfig: Record<string, unknown> = {}
+  if (rawUpdate !== null && typeof rawUpdate === 'object') {
+    // Narrowing a value whose shape is established by the check above;
+    // TypeScript cannot carry that proof through this boundary.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed
+    updateConfig = rawUpdate as Record<string, unknown>
+  }
   const fakeArgvEnv = validateString(
     'fakeArgvEnv',
     config['fakeArgvEnv'],
@@ -255,7 +257,8 @@ export function serializeUpdateConfig(config: Record<string, unknown>) {
 /**
  * Validate and normalize a boolean field.
  */
-// socket-lint: allow boolean-trap -- defaultValue is a typed fallback, not a behavioral toggle
+// DefaultValue is a typed fallback, not a behavioral toggle.
+// oxlint-disable-next-line socket/no-boolean-trap-param -- see note above
 export function validateBoolean(
   name: string,
   value: unknown,

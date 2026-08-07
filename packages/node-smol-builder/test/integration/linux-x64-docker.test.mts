@@ -203,7 +203,11 @@ console.log('Is SEA:', require('node:sea').isSea());
         const appJs = path.join(testDir, 'app.js')
         await fs.writeFile(
           appJs,
-          // oxlint-disable-next-line socket/no-status-emoji -- emoji literals are embedded in test fixture JS source executed inside the SEA binary and asserted via toContain(); the runtime can't call logger.success() because it runs without our logger import.
+          // Emoji literals are embedded in test fixture JS source executed
+          // inside the SEA binary and asserted via toContain(); the runtime
+          // can't call logger.success() because it runs without our logger
+          // import.
+          // oxlint-disable-next-line socket/no-status-emoji -- see above
           `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
@@ -298,7 +302,10 @@ console.log('✓ Test completed successfully');
         expect(execResult.stdout).toContain('Is SEA: true')
         expect(execResult.stdout).toContain('VFS available: true')
         expect(execResult.stdout).toContain('Package name: test-sea-vfs-app')
-        // oxlint-disable-next-line socket/no-status-emoji -- emoji literals are embedded in test fixture JS source executed inside the SEA binary and asserted via toContain(); the runtime can't call logger.success() because it runs without our logger import.
+        // Emoji literals are embedded in test fixture JS source executed inside
+        // the SEA binary and asserted via toContain(); the runtime can't call
+        // logger.success() because it runs without our logger import.
+        // oxlint-disable-next-line socket/no-status-emoji -- see above
         expect(execResult.stdout).toContain('✓ Test completed successfully')
       },
     )

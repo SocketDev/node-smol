@@ -94,7 +94,9 @@ export async function generateSync(config) {
         throw new Error('Sync JS file not found')
       }
 
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to detect empty-output failures during the WASM sync-wrapper generation phase.
+      // Fs.stat() calls consume stats.size to detect empty-output failures
+      // during the WASM sync-wrapper generation phase.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const syncStats = await fs.stat(syncJsFilePath)
       if (syncStats.size === 0) {
         throw new Error('Sync JS file is empty')
@@ -124,7 +126,9 @@ export async function generateSync(config) {
     binaryPath: path.relative(buildDir, outputSyncDir),
     binarySize: syncSize,
     smokeTest: async () => {
-      // oxlint-disable-next-line socket/prefer-exists-sync -- fs.stat() calls consume stats.size to detect empty-output failures during the WASM sync-wrapper generation phase.
+      // Fs.stat() calls consume stats.size to detect empty-output failures
+      // during the WASM sync-wrapper generation phase.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const syncStats = await fs.stat(syncJsFile)
       if (syncStats.size === 0) {
         throw new Error('Sync wrapper file is empty')

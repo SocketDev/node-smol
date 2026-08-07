@@ -111,7 +111,9 @@ export function extractSnapshotFromCheckout(
  * HEAD of the stuie checkout, or an empty string when git cannot answer.
  */
 export function readGitHead(stuieDir: string): string {
-  // oxlint-disable-next-line socket/prefer-async-spawn -- main() is a sync CLI writer; HEAD must resolve before the snapshot is serialized.
+  // Main() is a sync CLI writer; HEAD must resolve before the snapshot is
+  // serialized.
+  // oxlint-disable-next-line socket/prefer-async-spawn -- see note above
   const result = spawnSync('git', ['-C', stuieDir, 'rev-parse', 'HEAD'], {
     encoding: 'utf8',
   })

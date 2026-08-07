@@ -115,8 +115,10 @@ const VENDORED_GYPI_BUNDLES: ReadonlyArray<{
  * `skipSubstrings`. Returns paths normalized to forward slashes and
  * sorted for deterministic gypi output.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- helper defined before its only caller (generateVendoredGypi); keeping the definition adjacent to the call site reads better than alphabetizing this set of exports.
-// oxlint-disable-next-line socket/export-top-level-functions -- internal helper for generateVendoredGypi; not consumed externally.
+// Helper defined before its only caller (generateVendoredGypi); keeping the
+// definition adjacent to the call site reads better than alphabetizing this set
+// of exports.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 async function walkSources(
   root: string,
   extensions: readonly string[],

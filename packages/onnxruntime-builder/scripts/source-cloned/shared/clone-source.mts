@@ -193,12 +193,15 @@ export async function cloneOnnxSource(config) {
       `eigen;([^;]+${eigenCommit}[^;]*);[a-f0-9]{40}`,
       'g',
     )
-    depsContent = depsContent.replace(eigenPattern, `eigen;$1;${eigenSha1}`)
+    depsContent = depsContent.replace(
+      eigenPattern,
+      (match, url) => `eigen;${url};${eigenSha1}`,
+    )
     if (!depsContent.includes(eigenSha1)) {
       logger.warn('Primary pattern failed, trying direct replacement')
       depsContent = depsContent.replace(
         /eigen;(https:\/\/gitlab\.com\/libeigen\/eigen\/-\/archive\/e7248b26a1ed53fa030c5c459f7ea095dfd276ac\/[^;]+);[a-f0-9]{40}/g,
-        `eigen;$1;${eigenSha1}`,
+        (match, url) => `eigen;${url};${eigenSha1}`,
       )
     }
     await fs.writeFile(depsPath, depsContent, 'utf8')
@@ -270,7 +273,8 @@ export async function cloneOnnxSource(config) {
     // Helps debug if we get unexpected pattern variations.
     postBuildContent = postBuildContent.replace(
       /Unexpected number of matches for "" in "": \./,
-      'Unexpected number of Worker URL matches: found $' +
+      () =>
+        'Unexpected number of Worker URL matches: found $' +
         '{matches.length}, expected 1. Pattern: $' +
         '{regex}',
     )

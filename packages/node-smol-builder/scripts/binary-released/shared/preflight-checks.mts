@@ -248,7 +248,8 @@ export async function checkRequiredTools({ arch, autoYes }) {
 
   // Step 6: Check manual tools.
   let allManualAvailable = true
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const { cmd, name } of manualTools) {
     const binPath = whichSync(cmd, { nothrow: true })
     if (binPath) {

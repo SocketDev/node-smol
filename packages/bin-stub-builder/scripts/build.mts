@@ -42,7 +42,8 @@ buildBinSuitePackage({
   smokeTest: async (binaryPath: string) => {
     // Custom smoke test for smol_stub (doesn't have --version flag).
     // Just verify binary exists and has reasonable size.
-    // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.size for size quick check + log.
+    // Need stats.size for size quick check + log.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const stats = await fs.stat(binaryPath)
     if (stats.size < 1000) {
       throw new Error(`Binary too small: ${stats.size} bytes (expected >1KB)`)

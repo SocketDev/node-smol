@@ -112,7 +112,8 @@ export async function runSetupToolchain(config) {
       const { ensureSubmodule } = await import('./submodule-init.mts')
       for (let i = 0; i < submodules.length; i += 1) {
         const sub = submodules[i]
-        // eslint-disable-next-line no-await-in-loop -- serial git submodule update avoids racing the index.lock
+        // Serial git submodule update avoids racing the index.lock.
+        // eslint-disable-next-line no-await-in-loop -- serial update
         await ensureSubmodule({ monorepoRoot, ...sub })
       }
     }

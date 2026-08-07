@@ -123,7 +123,8 @@ describe.skipIf(skipTests)('final binary extraction to ~/.socket/_dlx/', () => {
       expect(existsSync(cachedBinaryPath)).toBeTruthy()
 
       // Verify binary is executable
-      // oxlint-disable-next-line socket/prefer-exists-sync -- need stats.mode for executable-permission assertion.
+      // Need stats.mode for executable-permission assertion.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const stats = await fs.stat(cachedBinaryPath)
       expect(stats.mode & 0o100).not.toBe(0)
     })

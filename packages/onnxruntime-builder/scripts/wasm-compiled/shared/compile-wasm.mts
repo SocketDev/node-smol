@@ -246,13 +246,25 @@ export async function compileWasm(config) {
       'ONNX Runtime build script failed',
       '',
       'Common causes:',
-      // oxlint-disable-next-line socket/no-status-emoji -- emoji are bullet markers in a multi-line troubleshooting message array (joined with \n) thrown as Error.message; there is no per-bullet logger.fail() call possible.
+      // Emoji are bullet markers in a multi-line troubleshooting message array
+      // (joined with \n) thrown as Error.message; there is no per-bullet
+      // logger.fail() call possible.
+      // oxlint-disable-next-line socket/no-status-emoji -- see above
       '  ✗ Insufficient disk space (need ~5GB free)',
-      // oxlint-disable-next-line socket/no-status-emoji -- emoji are bullet markers in a multi-line troubleshooting message array (joined with \n) thrown as Error.message; there is no per-bullet logger.fail() call possible.
+      // Emoji are bullet markers in a multi-line troubleshooting message array
+      // (joined with \n) thrown as Error.message; there is no per-bullet
+      // logger.fail() call possible.
+      // oxlint-disable-next-line socket/no-status-emoji -- see above
       '  ✗ Missing dependencies (cmake, python3, emscripten)',
-      // oxlint-disable-next-line socket/no-status-emoji -- emoji are bullet markers in a multi-line troubleshooting message array (joined with \n) thrown as Error.message; there is no per-bullet logger.fail() call possible.
+      // Emoji are bullet markers in a multi-line troubleshooting message array
+      // (joined with \n) thrown as Error.message; there is no per-bullet
+      // logger.fail() call possible.
+      // oxlint-disable-next-line socket/no-status-emoji -- see above
       '  ✗ Compilation timeout or out-of-memory',
-      // oxlint-disable-next-line socket/no-status-emoji -- emoji are bullet markers in a multi-line troubleshooting message array (joined with \n) thrown as Error.message; there is no per-bullet logger.fail() call possible.
+      // Emoji are bullet markers in a multi-line troubleshooting message array
+      // (joined with \n) thrown as Error.message; there is no per-bullet
+      // logger.fail() call possible.
+      // oxlint-disable-next-line socket/no-status-emoji -- see above
       '  ✗ Incompatible Emscripten version',
       '',
       'Troubleshooting:',

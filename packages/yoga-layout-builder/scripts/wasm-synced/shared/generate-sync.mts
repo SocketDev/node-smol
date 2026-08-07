@@ -18,7 +18,10 @@ import { getFileSize } from 'build-infra/lib/build-helpers'
 import { generateWasmSyncWrapper } from 'build-infra/wasm-synced/wasm-sync-wrapper'
 import MagicString from 'magic-string'
 
-// oxlint-disable-next-line socket/prefer-stable-self-import -- yoga-layout-builder is a private, unpublished workspace package with no "-stable" alias to import instead; its src/wrapper is the only copy of these enum constants.
+// Yoga-layout-builder is a private, unpublished workspace package with no
+// "-stable" alias to import instead; its src/wrapper is the only copy of these
+// enum constants.
+// oxlint-disable-next-line socket/prefer-stable-self-import -- see note above
 import { constants as YGEnums } from '../../../src/wrapper/YGEnums.mts'
 import { PACKAGE_ROOT } from '../../paths.mts'
 
@@ -102,7 +105,8 @@ export async function generateSync(config) {
     binarySize: syncSize,
     smokeTest: async () => {
       const require = createRequire(import.meta.url)
-      // oxlint-disable-next-line socket/prefer-exists-sync -- need syncStats.size to detect empty-output failure.
+      // Need syncStats.size to detect empty-output failure.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const syncStats = await fs.stat(syncCjsFile)
       if (syncStats.size === 0) {
         throw new Error('Sync wrapper file is empty')

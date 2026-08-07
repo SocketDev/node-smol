@@ -40,7 +40,9 @@ export function findTestStub() {
  *
  * @returns {string | null} Path to uncompressed binary or null if none found
  */
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers ordered by signature-cache flow (build → sign → cache → verify → invalidate); alphabetizing would scatter the flow.
+// Test helpers ordered by signature-cache flow (build → sign → cache → verify →
+// invalidate); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function findNodeSmolBinary() {
   return getLatestStrippedBinary() ?? getLatestReleaseBinary()
 }
@@ -52,7 +54,9 @@ export interface ExecCommandResult {
   stdout: string
 }
 
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers ordered by signature-cache flow (build → sign → cache → verify → invalidate); alphabetizing would scatter the flow.
+// Test helpers ordered by signature-cache flow (build → sign → cache → verify →
+// invalidate); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function execCommand(
   command: string,
   args: string[] = [],
@@ -102,19 +106,25 @@ export async function verifySignature(binaryPath: string) {
   return result.code === 0
 }
 
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers ordered by signature-cache flow (build → sign → cache → verify → invalidate); alphabetizing would scatter the flow.
+// Test helpers ordered by signature-cache flow (build → sign → cache → verify →
+// invalidate); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function getSignatureInfo(binaryPath: string) {
   // codesign outputs to stderr
   const result = await execCommand('codesign', ['-dvvv', binaryPath])
   return result.stderr
 }
 
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers ordered by signature-cache flow (build → sign → cache → verify → invalidate); alphabetizing would scatter the flow.
+// Test helpers ordered by signature-cache flow (build → sign → cache → verify →
+// invalidate); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getCacheDir() {
   return getSocketDlxDir()
 }
 
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers ordered by signature-cache flow (build → sign → cache → verify → invalidate); alphabetizing would scatter the flow.
+// Test helpers ordered by signature-cache flow (build → sign → cache → verify →
+// invalidate); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function getCacheEntries() {
   const cacheDir = getCacheDir()
   try {
@@ -126,7 +136,9 @@ export async function getCacheEntries() {
   }
 }
 
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers ordered by signature-cache flow (build → sign → cache → verify → invalidate); alphabetizing would scatter the flow.
+// Test helpers ordered by signature-cache flow (build → sign → cache → verify →
+// invalidate); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function getCachedBinaryPath(cacheKey: string) {
   const platform = os.platform()
   const binaryName = platform === 'win32' ? 'node.exe' : 'node'
@@ -138,7 +150,9 @@ export async function getCachedBinaryPath(cacheKey: string) {
  * because the repack workflow modifies the cache state in ways that break
  * subsequent injections.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers ordered by signature-cache flow (build → sign → cache → verify → invalidate); alphabetizing would scatter the flow.
+// Test helpers ordered by signature-cache flow (build → sign → cache → verify →
+// invalidate); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function cleanCacheBeforeTest() {
   const cacheDir = getCacheDir()
   try {
@@ -169,7 +183,9 @@ export async function cleanCacheBeforeTest() {
  *
  * @returns Path to the generated .blob file
  */
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers ordered by signature-cache flow (build → sign → cache → verify → invalidate); alphabetizing would scatter the flow.
+// Test helpers ordered by signature-cache flow (build → sign → cache → verify →
+// invalidate); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function generateValidSEABlob(
   baseDir: string,
   prefix: string,
@@ -213,7 +229,9 @@ export async function generateValidSEABlob(
  * Create unique VFS content using UUID to ensure each test creates a unique
  * cache entry.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- test helpers ordered by signature-cache flow (build → sign → cache → verify → invalidate); alphabetizing would scatter the flow.
+// Test helpers ordered by signature-cache flow (build → sign → cache → verify →
+// invalidate); alphabetizing would scatter the flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function createUniqueVFSContent(description: string) {
   const uuid = crypto.randomUUID()
   return `${description}\nUnique ID: ${uuid}\n`

@@ -146,7 +146,9 @@ export async function fetchText(url) {
 /**
  * Download file and compute SHA256.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- script is ordered as a top-down build pipeline (load manifest → fetch each tool → verify → write); alphabetizing would scatter the pipeline.
+// Script is ordered as a top-down build pipeline (load manifest → fetch each
+// tool → verify → write); alphabetizing would scatter the pipeline.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function downloadAndHash(url) {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'vfs-hash-'))
   const tmpFile = path.join(tmpDir, 'download')
@@ -172,7 +174,8 @@ export async function downloadAndHash(url) {
 export function parseChecksumFile(content) {
   const checksums = new Map()
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
+  // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const line of content.split('\n')) {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith('#')) {
@@ -193,14 +196,17 @@ export function parseChecksumFile(content) {
 /**
  * Get Python embeddable package info. This downloads and computes hashes.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- script is ordered as a top-down build pipeline (load manifest → fetch each tool → verify → write); alphabetizing would scatter the pipeline.
+// Script is ordered as a top-down build pipeline (load manifest → fetch each
+// tool → verify → write); alphabetizing would scatter the pipeline.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function getPythonRelease() {
   const { assets: assetPatterns, baseUrl, version } = PYTHON_CONFIG
   const assets = new Map()
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [platform, pattern] of Object.entries(assetPatterns)) {
-    const filename = pattern.replace('{version}', version)
+    const filename = pattern.replace('{version}', () => version)
     const url = `${baseUrl}/${version}/${filename}`
 
     logger.info(`  Computing SHA256 for ${filename}...`)
@@ -219,7 +225,9 @@ export async function getPythonRelease() {
 /**
  * Get latest release info for a tool.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- script is ordered as a top-down build pipeline (load manifest → fetch each tool → verify → write); alphabetizing would scatter the pipeline.
+// Script is ordered as a top-down build pipeline (load manifest → fetch each
+// tool → verify → write); alphabetizing would scatter the pipeline.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function getLatestRelease(toolName) {
   const config = TOOL_CONFIGS[toolName]
   if (!config) {
@@ -247,7 +255,8 @@ export async function getLatestRelease(toolName) {
   }
 
   // Match assets to platforms
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [platform, pattern] of Object.entries(config.assetPatterns)) {
     const asset = release.assets.find(a => pattern.test(a.name))
     if (asset) {
@@ -273,7 +282,9 @@ export async function getLatestRelease(toolName) {
 /**
  * Generate the updated VFS_TOOL_URLS object as a string.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- script is ordered as a top-down build pipeline (load manifest → fetch each tool → verify → write); alphabetizing would scatter the pipeline.
+// Script is ordered as a top-down build pipeline (load manifest → fetch each
+// tool → verify → write); alphabetizing would scatter the pipeline.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function generateToolConfig(toolName, version, assets) {
   const lines = [`  ${toolName}: {`, `    version: '${version}',`]
 
@@ -327,7 +338,8 @@ export async function updateDownloaderFile(updates, dryRun) {
   )
   let content = await fs.readFile(downloaderPath, 'utf8')
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
+  // Loop variable is destructured.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [toolName, { assets, version }] of Object.entries(updates)) {
     const newConfig = generateToolConfig(toolName, version, assets)
 
@@ -336,7 +348,7 @@ export async function updateDownloaderFile(updates, dryRun) {
     const toolRegex = new RegExp(`(  ${toolName}: \\{[\\s\\S]*?^  \\},)`, 'm')
 
     if (toolRegex.test(content)) {
-      content = content.replace(toolRegex, newConfig)
+      content = content.replace(toolRegex, () => newConfig)
       logger.success(`Updated ${toolName} to v${version}`)
     } else {
       logger.warn(`Could not find ${toolName} config block in file`)

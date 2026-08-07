@@ -40,7 +40,10 @@ const expectedTargets = [
 describe('@node-smol/ai package family', () => {
   it('declares the complete eight-target N-API family', () => {
     expect(NATIVE_TARGETS).toEqual(expectedTargets)
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
+    // JSON.parse returns `any`; the shape is an invariant of the writer
+    // in this repo, and a malformed file throws in the surrounding
+    // try/catch rather than flowing on.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed
     const wrapper = JSON.parse(
       readFileSync(path.join(npmRoot, 'ai', 'package.json'), 'utf8'),
     ) as { optionalDependencies: Record<string, string> }
@@ -57,7 +60,10 @@ describe('@node-smol/ai package family', () => {
       expect(existsSync(path.join(directory, 'README.md')), packageName).toBe(
         true,
       )
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; the shape is an invariant of the writer in this repo, and a malformed file throws in the surrounding try/catch rather than flowing on.
+      // JSON.parse returns `any`; the shape is an invariant of the writer
+      // in this repo, and a malformed file throws in the surrounding
+      // try/catch rather than flowing on.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
         cpu: string[]
         libc?: string[] | undefined

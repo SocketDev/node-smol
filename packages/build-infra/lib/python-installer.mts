@@ -86,7 +86,9 @@ export let venvAvailable = false
  *
  * @returns {boolean} True if pip is available.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by pip-install pipeline phase (detect → resolve → install → verify); alphabetizing across phases would scatter the install flow.
+// File is ordered by pip-install pipeline phase (detect → resolve → install →
+// verify); alphabetizing across phases would scatter the install flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function checkPipAvailable() {
   return Boolean(
     whichSync('pip3', { nothrow: true }) || whichSync('pip', { nothrow: true }),
@@ -99,7 +101,9 @@ export function checkPipAvailable() {
  * @returns {string | undefined} Resolved pip command path or undefined if not
  *   found.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by pip-install pipeline phase (detect → resolve → install → verify); alphabetizing across phases would scatter the install flow.
+// File is ordered by pip-install pipeline phase (detect → resolve → install →
+// verify); alphabetizing across phases would scatter the install flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getPipCommand() {
   // If venv is available, use it
   if (venvAvailable && venvPipPath) {
@@ -135,7 +139,9 @@ export function getPipCommand() {
  *
  * @returns {string} Path to the shared venv directory.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by pip-install pipeline phase (detect → resolve → install → verify); alphabetizing across phases would scatter the install flow.
+// File is ordered by pip-install pipeline phase (detect → resolve → install →
+// verify); alphabetizing across phases would scatter the install flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export function getDefaultVenvPath() {
   return path.join(os.homedir(), '.socket-btm-venv')
 }
@@ -150,7 +156,9 @@ export function getDefaultVenvPath() {
  *
  * @returns {Promise<boolean>} True if venv is ready.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by pip-install pipeline phase (detect → resolve → install → verify); alphabetizing across phases would scatter the install flow.
+// File is ordered by pip-install pipeline phase (detect → resolve → install →
+// verify); alphabetizing across phases would scatter the install flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function initializeVenv({ quiet = false, venvDir } = {}) {
   // Only initialize once per process
   if (venvInitialized) {
@@ -257,7 +265,9 @@ let cachedPythonCommand
  * @returns {Promise<string | undefined>} Resolved python command path or
  *   undefined if not found.
  */
-// oxlint-disable-next-line socket/sort-source-methods -- file is ordered by pip-install pipeline phase (detect → resolve → install → verify); alphabetizing across phases would scatter the install flow.
+// File is ordered by pip-install pipeline phase (detect → resolve → install →
+// verify); alphabetizing across phases would scatter the install flow.
+// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
 export async function getPythonCommand() {
   // If venv is available, use it
   if (venvAvailable && venvPythonPath) {

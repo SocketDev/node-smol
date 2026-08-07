@@ -296,7 +296,8 @@ export function getCumulativeHierarchicalPaths(
  */
 // The (platform, arch, libc) triple is this repo's stable target signature and
 // every param defaults to the running process, so callers pass zero args in
-// the common case. socket-lint: allow optional-positional-trap
+// the common case.
+// oxlint-disable-next-line socket/no-optional-positional-trap -- stable triple
 export function getDefaultPlatformArch(
   platform: string = process.platform,
   arch: string = process.arch,

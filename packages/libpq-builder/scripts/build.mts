@@ -155,7 +155,9 @@ async function main() {
       // Should not reach here after auto-init above.
       const libpqDir = await ensureLibpq()
       const libpqLib = path.join(libpqDir, 'libpq.a')
-      // oxlint-disable-next-line socket/prefer-exists-sync -- multiple fs.stat() calls consume stats.size for downloaded-archive / built-library size reporting and minimum-size quick checks.
+      // Multiple fs.stat() calls consume stats.size for downloaded-archive /
+      // built-library size reporting and minimum-size quick checks.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const stats = await fs.stat(libpqLib)
       const sizeMB = (stats.size / 1024 / 1024).toFixed(2)
 
@@ -207,7 +209,9 @@ async function main() {
       throw new Error(`libpq library not found at ${libPath}`)
     }
 
-    // oxlint-disable-next-line socket/prefer-exists-sync -- multiple fs.stat() calls consume stats.size for downloaded-archive / built-library size reporting and minimum-size quick checks.
+    // Multiple fs.stat() calls consume stats.size for downloaded-archive /
+    // built-library size reporting and minimum-size quick checks.
+    // oxlint-disable-next-line socket/prefer-exists-sync -- see above
     const stats = await fs.stat(libPath)
     const sizeMB = (stats.size / 1024 / 1024).toFixed(2)
     logger.info(`libpq library size: ${sizeMB} MB`)

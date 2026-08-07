@@ -121,7 +121,8 @@ async function main(): Promise<void> {
   const matchedExpected = new Set<string>()
   const unexpectedFailures: UnexpectedFailure[] = []
 
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier
+  // Iterable is not a bare identifier.
+  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const testFile of testFiles) {
     let result: TestResult
     try {
@@ -158,10 +159,16 @@ async function main(): Promise<void> {
     // Status: green checkmark, yellow tilde (expected fail), red X (unexpected fail)
     let status
     if (result.failed === 0) {
-      // oxlint-disable-next-line socket/no-status-emoji -- WPT validator emits ANSI-colored status markers ("\x1b[32m✓\x1b[0m" etc.) in column-aligned table rows; logger.success() would lose the colorization required by the WPT result format.
+      // WPT validator emits ANSI-colored status markers ("\x1b[32mOK\x1b[0m"
+      // etc.) in column-aligned table rows; logger.success() would lose the
+      // colorization required by the WPT result format.
+      // oxlint-disable-next-line socket/no-status-emoji -- see above
       status = '\x1b[32m✓\x1b[0m'
     } else {
-      // oxlint-disable-next-line socket/no-status-emoji -- WPT validator emits ANSI-colored status markers ("\x1b[32m✓\x1b[0m" etc.) in column-aligned table rows; logger.success() would lose the colorization required by the WPT result format.
+      // WPT validator emits ANSI-colored status markers ("\x1b[32mOK\x1b[0m"
+      // etc.) in column-aligned table rows; logger.success() would lose the
+      // colorization required by the WPT result format.
+      // oxlint-disable-next-line socket/no-status-emoji -- see above
       status = classification.allExpected
         ? '\x1b[33m~\x1b[0m'
         : '\x1b[31m✗\x1b[0m'
@@ -226,7 +233,10 @@ async function main(): Promise<void> {
 
   if (unexpectedFailures.length > 0) {
     logger.error('')
-    // oxlint-disable-next-line socket/no-status-emoji -- WPT validator emits ANSI-colored status markers ("\x1b[32m✓\x1b[0m" etc.) in column-aligned table rows; logger.success() would lose the colorization required by the WPT result format.
+    // WPT validator emits ANSI-colored status markers ("\x1b[32mOK\x1b[0m"
+    // etc.) in column-aligned table rows; logger.success() would lose the
+    // colorization required by the WPT result format.
+    // oxlint-disable-next-line socket/no-status-emoji -- emoji is payload data
     logger.fail('[31m❌ UNEXPECTED failures (regressions):[0m')
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- loop variable is destructured
     for (const { file, test } of unexpectedFailures.slice(0, 10)) {
