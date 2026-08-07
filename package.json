@@ -30,7 +30,7 @@
     "lockstep": "node scripts/fleet/lockstep.mts",
     "lockstep:emit-mirror-globs": "node scripts/fleet/lockstep-emit-mirror-globs.mts",
     "lockstep:emit-schema": "node scripts/fleet/lockstep-emit-schema.mts",
-    "prepare": "node scripts/fleet/install-git-hooks.mts && node scripts/fleet/prepare.mts",
+    "prepare": "node scripts/repo/bootstrap/prepare.mts && node scripts/fleet/install-git-hooks.mts && node scripts/fleet/prepare.mts",
     "release": "node scripts/repo/release.mts",
     "security": "node scripts/fleet/security.mts",
     "sync-package-manager-pins": "node scripts/fleet/sync-package-manager-pins.mts",
@@ -60,7 +60,9 @@
     "hide-comments": "node scripts/fleet/hide-comments.mts",
     "ruleset:bypass": "node scripts/fleet/grant-ruleset-bypass.mts",
     "soak:bypass": "node scripts/fleet/soak-bypass.mts",
-    "npm:trust": "node scripts/fleet/publish-infra/npm/trust.mts"
+    "npm:trust": "node scripts/fleet/publish-infra/npm/trust.mts",
+    "sync-fleet": "node scripts/repo/bootstrap/fleet.mjs",
+    "fleet:status": "node scripts/repo/bootstrap/fleet.mjs --status"
   },
   "devDependencies": {
     "@playwright/mcp": "catalog:",
@@ -99,6 +101,7 @@
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
+    "parse5": "catalog:",
     "playwright-core": "catalog:",
     "portless": "catalog:",
     "regjsparser": "catalog:",
