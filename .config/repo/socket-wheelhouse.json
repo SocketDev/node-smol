@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "repoName": "node-smol",
   "bundle": {
-    "ref": "fleet-pack-1e0fb3551ebcf541535e02b08ce452bfb482ed44",
-    "cascadeSha": "1e0fb3551ebcf541535e02b08ce452bfb482ed44"
+    "ref": "fleet-pack-045f3e759c7a43eae6d500a7f530985dfcd5e45c",
+    "cascadeSha": "045f3e759c7a43eae6d500a7f530985dfcd5e45c"
   },
   "repo": {
     "type": "mono"
