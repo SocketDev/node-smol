@@ -26,9 +26,9 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { makeExecutable } from 'build-infra/lib/build-helpers'
-import { getBuildMode } from 'build-infra/lib/constants'
-import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'
+import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
+import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

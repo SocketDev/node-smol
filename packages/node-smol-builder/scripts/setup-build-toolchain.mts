@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
-import { runSetupToolchain } from 'build-infra/lib/setup-build-toolchain'
+import { runSetupToolchain } from 'node-smol-packages-build-infra/lib/setup-build-toolchain'
 
 const logger = getDefaultLogger()
 

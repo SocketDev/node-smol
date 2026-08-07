@@ -11,24 +11,30 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { checkBuildSourceFlag } from 'build-infra/lib/build-env'
-import { createCheckpoint, shouldRun } from 'build-infra/lib/checkpoint-manager'
+import { checkBuildSourceFlag } from 'node-smol-packages-build-infra/lib/build-env'
+import {
+  createCheckpoint,
+  shouldRun,
+} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
 import {
   BUILD_STAGES,
   CHECKPOINTS,
   getBuildMode,
   getPlatformBuildDir,
-} from 'build-infra/lib/constants'
+} from 'node-smol-packages-build-infra/lib/constants'
 // logTransientErrorHelp loaded lazily inside catch blocks below (see
 // curl-builder/scripts/build.mts for full rationale on the
 // http-request/convenience CJS/ESM interop crash).
-import { appendCCRemapFlags } from 'build-infra/lib/path-remap-flags'
-import { getDownloadedDir } from 'build-infra/lib/paths'
-import { getAssetPlatformArch, isMusl } from 'build-infra/lib/platform-mappings'
-import { verifyReleaseChecksum } from 'build-infra/lib/release-checksums/core'
-import { extractTarball } from 'build-infra/lib/tarball-utils'
-import { getSubmoduleVersion } from 'build-infra/lib/version-helpers'
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { appendCCRemapFlags } from 'node-smol-packages-build-infra/lib/path-remap-flags'
+import { getDownloadedDir } from 'node-smol-packages-build-infra/lib/paths'
+import {
+  getAssetPlatformArch,
+  isMusl,
+} from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { verifyReleaseChecksum } from 'node-smol-packages-build-infra/lib/release-checksums/core'
+import { extractTarball } from 'node-smol-packages-build-infra/lib/tarball-utils'
+import { getSubmoduleVersion } from 'node-smol-packages-build-infra/lib/version-helpers'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { which } from '@socketsecurity/lib-stable/bin/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
@@ -787,7 +793,7 @@ export async function downloadPrebuiltLIEF(options = {}) {
     logger.info(`Failed to download prebuilt LIEF: ${errorMessage(e)}`)
     try {
       const { logTransientErrorHelp } =
-        await import('build-infra/lib/github-error-utils')
+        await import('node-smol-packages-build-infra/lib/github-error-utils')
       await logTransientErrorHelp(e)
     } catch {
       // Hint module failed to load — original error already logged.
@@ -1339,7 +1345,7 @@ async function main() {
     logger.fail(`LIEF build failed: ${errorMessage(e)}`)
     try {
       const { logTransientErrorHelp } =
-        await import('build-infra/lib/github-error-utils')
+        await import('node-smol-packages-build-infra/lib/github-error-utils')
       await logTransientErrorHelp(e)
     } catch {
       // Hint module failed to load — original error already logged.

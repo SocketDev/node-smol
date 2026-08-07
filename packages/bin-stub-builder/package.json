@@ -1,5 +1,5 @@
 {
-  "name": "bin-stub-builder",
+  "name": "node-smol-packages-bin-stub-builder",
   "version": "0.0.0",
   "private": true,
   "description": "Platform-specific stub binaries for compressed Node.js executables",
@@ -13,14 +13,14 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "bin-infra": "workspace:0.0.0",
-    "build-infra": "workspace:0.0.0",
-    "curl-builder": "workspace:0.0.0",
-    "glibc-shims-infra": "workspace:0.0.0"
+    "node-smol-packages-bin-infra": "workspace:0.0.0",
+    "node-smol-packages-build-infra": "workspace:0.0.0",
+    "node-smol-packages-curl-builder": "workspace:0.0.0",
+    "node-smol-packages-glibc-shims-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
-    "lief-builder": "workspace:0.0.0",
+    "node-smol-packages-lief-builder": "workspace:0.0.0",
     "vitest": "catalog:"
   }
 }

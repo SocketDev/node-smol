@@ -19,8 +19,11 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { BUILD_STAGES, CHECKPOINTS } from 'build-infra/lib/constants'
-import { getAssetPlatformArch } from 'build-infra/lib/platform-mappings'
+import {
+  BUILD_STAGES,
+  CHECKPOINTS,
+} from 'node-smol-packages-build-infra/lib/constants'
+import { getAssetPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { getSocketHomePath } from '@socketsecurity/lib-stable/paths/socket'
 
@@ -107,7 +110,7 @@ export function getBuildPaths(
   // .cache/), not in node_modules/.cache. It's keyed on the build mode
   // + platform tuple that owns this build, so a node_modules-rooted
   // cache would be wrong here (one node_modules feeds many builds).
-  // oxlint-disable-next-line socket/prefer-node-modules-dot-cache -- build cache is keyed on the build-mode/platform tuple, not a node_modules-rooted global cache
+  // oxlint-disable-next-line socket/prefer-repo-root-dot-cache -- build cache is keyed on the build-mode/platform tuple, not a repo-root global cache
   const cacheDir = path.join(buildDir, '.cache')
 
   // Platform-specific binary name
@@ -383,7 +386,7 @@ export function getSharedBuildPaths() {
 // Sibling packages that own their own scripts/paths.mts (dawn-builder,
 // yoga-layout-builder) get their PACKAGE_ROOT imported here; siblings
 // without a canonical paths.mts are re-derived (no other owner exists).
-import { PACKAGE_ROOT as YOGA_LAYOUT_BUILDER_DIR_FROM_OWNER } from 'yoga-layout-builder/scripts/paths'
+import { PACKAGE_ROOT as YOGA_LAYOUT_BUILDER_DIR_FROM_OWNER } from 'node-smol-packages-yoga-layout-builder/scripts/paths'
 
 export const YOGA_LAYOUT_BUILDER_DIR = YOGA_LAYOUT_BUILDER_DIR_FROM_OWNER
 

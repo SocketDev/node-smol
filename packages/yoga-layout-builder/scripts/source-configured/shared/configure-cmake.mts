@@ -8,8 +8,8 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import { printError } from 'build-infra/lib/build-output'
-import { ensureEmscripten } from 'build-infra/lib/emscripten-installer'
+import { printError } from 'node-smol-packages-build-infra/lib/build-output'
+import { ensureEmscripten } from 'node-smol-packages-build-infra/lib/emscripten-installer'
 
 import { which } from '@socketsecurity/lib-stable/bin/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'

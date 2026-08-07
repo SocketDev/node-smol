@@ -8,8 +8,8 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { getPlatformBuildDir } from 'build-infra/lib/constants'
-import { getAssetPlatformArch } from 'build-infra/lib/platform-mappings'
+import { getPlatformBuildDir } from 'node-smol-packages-build-infra/lib/constants'
+import { getAssetPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { detectLibc } from '@socketsecurity/lib-stable/releases/socket-btm'
 

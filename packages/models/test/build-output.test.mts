@@ -8,7 +8,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest'
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'
+import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { getBuildPaths, PACKAGE_ROOT } from '../scripts/paths.mts'
 

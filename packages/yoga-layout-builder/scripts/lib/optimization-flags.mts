@@ -4,7 +4,7 @@
  * Provides CXX and linker flags for production and development builds.
  */
 
-import { getCCRemapFlags } from 'build-infra/lib/path-remap-flags'
+import { getCCRemapFlags } from 'node-smol-packages-build-infra/lib/path-remap-flags'
 
 /**
  * Get optimization flags for a build mode.

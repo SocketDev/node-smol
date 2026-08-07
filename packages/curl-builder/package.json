@@ -1,5 +1,5 @@
 {
-  "name": "curl-builder",
+  "name": "node-smol-packages-curl-builder",
   "version": "0.0.0",
   "private": true,
   "description": "Builds libcurl with mbedTLS for HTTPS support in stub binaries",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "build-infra": "workspace:0.0.0"
+    "node-smol-packages-build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

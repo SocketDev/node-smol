@@ -6,8 +6,11 @@
 import path from 'node:path'
 import process from 'node:process'
 
-import { BUILD_STAGES, getBuildMode } from 'build-infra/lib/constants'
-import { getPlatformArch } from 'build-infra/lib/platform-mappings'
+import {
+  BUILD_STAGES,
+  getBuildMode,
+} from 'node-smol-packages-build-infra/lib/constants'
+import { getPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -15,7 +18,7 @@ import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 import {
   RESOURCE_SMOL_VFS_BLOB,
   RESOURCE_SMOL_VFS_CONFIG,
-} from 'bin-infra/test/helpers/segment-names'
+} from 'node-smol-packages-bin-infra/test/helpers/segment-names'
 
 import { PACKAGE_ROOT } from '../../scripts/paths.mts'
 
@@ -137,7 +140,7 @@ export async function runBinject(
 
   // Run binject (it handles everything: injection, sentinel flipping, section resizing)
   // Use test-specific cache directory to ensure test isolation
-  // oxlint-disable-next-line socket/prefer-node-modules-dot-cache -- testDir is a tmpdir, not a repo root
+  // oxlint-disable-next-line socket/prefer-repo-root-dot-cache -- testDir is a tmpdir, not a repo root
   const cacheDir = path.join(testDir, '.cache')
   await safeMkdir(cacheDir)
   const spawnEnv = { ...process.env, SOCKET_DLX_DIR: cacheDir }

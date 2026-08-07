@@ -2,7 +2,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import { execBuildStep } from 'build-infra/lib/build-helpers'
+import { execBuildStep } from 'node-smol-packages-build-infra/lib/build-helpers'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

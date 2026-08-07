@@ -41,7 +41,7 @@ wires the gyp include + ldflags from its own gyp file:
 In TypeScript build glue:
 
 ```ts
-import { GLIBC_SHIMS_LINK_FLAGS } from 'glibc-shims-infra/lib/link-flags'
+import { GLIBC_SHIMS_LINK_FLAGS } from 'node-smol-packages-glibc-shims-infra/lib/link-flags'
 // pass as ldflags array entries
 ```
 

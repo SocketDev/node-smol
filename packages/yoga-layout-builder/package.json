@@ -1,5 +1,5 @@
 {
-  "name": "yoga-layout-builder",
+  "name": "node-smol-packages-yoga-layout-builder",
   "version": "0.0.0",
   "private": true,
   "description": "Custom Yoga Layout WASM build optimized for Socket CLI",
@@ -22,8 +22,8 @@
     "@socketsecurity/lib-stable": "catalog:",
     "acorn": "catalog:",
     "acorn-walk": "catalog:",
-    "build-infra": "workspace:0.0.0",
-    "magic-string": "catalog:"
+    "magic-string": "catalog:",
+    "node-smol-packages-build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

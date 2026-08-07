@@ -48,8 +48,8 @@ import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import { errorMessage } from 'build-infra/lib/error-utils'
-import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { getBuildPaths, UPSTREAM_DAWN_DIR } from './paths.mts'
 

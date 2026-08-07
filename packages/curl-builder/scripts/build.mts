@@ -14,8 +14,11 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { checkBuildSourceFlag } from 'build-infra/lib/build-env'
-import { createCheckpoint, shouldRun } from 'build-infra/lib/checkpoint-manager'
+import { checkBuildSourceFlag } from 'node-smol-packages-build-infra/lib/build-env'
+import {
+  createCheckpoint,
+  shouldRun,
+} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
 import {
   BUILD_STAGES,
   CHECKPOINT_CHAINS,
@@ -23,21 +26,21 @@ import {
   getBuildMode,
   getPlatformBuildDir,
   validateCheckpointChain,
-} from 'build-infra/lib/constants'
+} from 'node-smol-packages-build-infra/lib/constants'
 // logTransientErrorHelp loaded lazily inside the catch block below.
 // Its transitive @socketsecurity/lib-stable/http-request
 // import has an ESM/CJS interop issue that crashes module-load in
 // strict isolated environments (production CI works via root-hoisting).
-import { appendCCRemapFlags } from 'build-infra/lib/path-remap-flags'
+import { appendCCRemapFlags } from 'node-smol-packages-build-infra/lib/path-remap-flags'
 import {
   getAssetPlatformArch,
   getCurrentPlatformArch,
   isMusl,
-} from 'build-infra/lib/platform-mappings'
-import { verifyReleaseChecksum } from 'build-infra/lib/release-checksums/core'
-import { extractTarball } from 'build-infra/lib/tarball-utils'
-import { getSubmoduleVersion } from 'build-infra/lib/version-helpers'
-import { errorMessage } from 'build-infra/lib/error-utils'
+} from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { verifyReleaseChecksum } from 'node-smol-packages-build-infra/lib/release-checksums/core'
+import { extractTarball } from 'node-smol-packages-build-infra/lib/tarball-utils'
+import { getSubmoduleVersion } from 'node-smol-packages-build-infra/lib/version-helpers'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { which } from '@socketsecurity/lib-stable/bin/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
@@ -1023,7 +1026,7 @@ async function main() {
     logger.fail(`curl build failed: ${errorMessage(e)}`)
     try {
       const { logTransientErrorHelp } =
-        await import('build-infra/lib/github-error-utils')
+        await import('node-smol-packages-build-infra/lib/github-error-utils')
       await logTransientErrorHelp(e)
     } catch {
       // Hint module failed to load — original error already logged.

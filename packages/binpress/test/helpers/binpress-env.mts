@@ -12,7 +12,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { getBuildMode } from 'build-infra/lib/constants'
+import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 

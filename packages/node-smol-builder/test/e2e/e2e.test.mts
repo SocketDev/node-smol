@@ -18,14 +18,14 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { makeExecutable } from 'build-infra/lib/build-helpers'
+import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { getSocketDlxDir } from '@socketsecurity/lib-stable/paths/socket'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import { MACHO_SEGMENT_NODE_SEA } from 'bin-infra/test/helpers/segment-names'
+import { MACHO_SEGMENT_NODE_SEA } from 'node-smol-packages-bin-infra/test/helpers/segment-names'
 import { runBinject, SMOL_VFS_BLOB } from '../helpers/binject.mts'
 import { getLatestFinalBinary, getPackageDir } from '../paths.mts'
 

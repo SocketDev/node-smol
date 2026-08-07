@@ -1,5 +1,5 @@
 {
-  "name": "boringssl-builder",
+  "name": "node-smol-packages-boringssl-builder",
   "version": "0.0.0",
   "private": true,
   "description": "Builds BoringSSL static libs (prefixed: BORINGSSL_PREFIX=smol) for lsquic + uWebSockets consumption",
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "build-infra": "workspace:0.0.0"
+    "node-smol-packages-build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

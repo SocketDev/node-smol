@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import {
   getBuildPaths,

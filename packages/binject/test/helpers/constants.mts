@@ -5,7 +5,10 @@
  * the C source code.
  */
 
-export { MAX_NODE_BINARY_SIZE, MAX_VFS_SIZE } from 'build-infra/lib/constants'
+export {
+  MAX_NODE_BINARY_SIZE,
+  MAX_VFS_SIZE,
+} from 'node-smol-packages-build-infra/lib/constants'
 
 /**
  * Maximum SEA blob size binject accepts.

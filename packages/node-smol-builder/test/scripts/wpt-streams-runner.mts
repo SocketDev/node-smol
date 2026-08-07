@@ -26,12 +26,12 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'
+import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { loadAllowlist } from './wpt-streams/allowlist.mts'
 import type { TestResult } from './wpt-streams/types.mts'

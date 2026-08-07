@@ -113,8 +113,8 @@ The hand-rolled pattern is used when the workflow needs package-specific logic a
 ## Creating a checkpoint at runtime
 
 ```js
-import { createCheckpoint } from 'build-infra/lib/checkpoint-manager'
-import { CHECKPOINTS } from 'build-infra/lib/constants'
+import { createCheckpoint } from 'node-smol-packages-build-infra/lib/checkpoint-manager'
+import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
 
 await createCheckpoint(
   buildDir, // absolute path to build/<mode>/<platform-arch>

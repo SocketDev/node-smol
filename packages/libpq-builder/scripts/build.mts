@@ -21,10 +21,13 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { createCheckpoint, shouldRun } from 'build-infra/lib/checkpoint-manager'
-import { CHECKPOINTS } from 'build-infra/lib/constants'
-import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'
-import { errorMessage } from 'build-infra/lib/error-utils'
+import {
+  createCheckpoint,
+  shouldRun,
+} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
+import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
+import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -253,7 +256,7 @@ async function main() {
     logger.fail(`libpq build failed: ${errorMessage(e)}`)
     try {
       const { logTransientErrorHelp } =
-        await import('build-infra/lib/github-error-utils')
+        await import('node-smol-packages-build-infra/lib/github-error-utils')
       await logTransientErrorHelp(e)
     } catch {
       // Hint module failed to load — original error already logged.

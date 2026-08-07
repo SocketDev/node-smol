@@ -9,7 +9,10 @@
 # The .mts driver's node comes via
 # `COPY --from=ghcr.io/socketdev/socket-wheelhouse/node-base`, not a runtime
 # baked here.
-ARG FLEET_BASE=ghcr.io/socketdev/socket-wheelhouse/c-base:latest
+# Digest resolved from c-base:latest on 2026-08-07 via
+# `docker buildx imagetools inspect`; refresh the pin when the wheelhouse
+# republishes c-base.
+ARG FLEET_BASE=ghcr.io/socketdev/socket-wheelhouse/c-base:latest@sha256:a625cbaa4212cdde97207b4bc11395cbd6359e8800bdf30acda30a4cccd46d8f
 FROM ${FLEET_BASE}
 
 ENV DEBIAN_FRONTEND=noninteractive

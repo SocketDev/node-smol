@@ -11,9 +11,9 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { appendCCRemapFlags } from 'build-infra/lib/path-remap-flags'
-import { isMusl } from 'build-infra/lib/platform-mappings'
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { appendCCRemapFlags } from 'node-smol-packages-build-infra/lib/path-remap-flags'
+import { isMusl } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'

@@ -8,11 +8,14 @@
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getFileSize } from 'build-infra/lib/build-helpers'
-import { createCheckpoint, shouldRun } from 'build-infra/lib/checkpoint-manager'
-import { CHECKPOINTS } from 'build-infra/lib/constants'
-import { getPythonCommand } from 'build-infra/lib/python-installer'
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { getFileSize } from 'node-smol-packages-build-infra/lib/build-helpers'
+import {
+  createCheckpoint,
+  shouldRun,
+} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
+import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
+import { getPythonCommand } from 'node-smol-packages-build-infra/lib/python-installer'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

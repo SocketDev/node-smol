@@ -9,9 +9,12 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { runCommand, selectMakefile } from 'bin-infra/lib/builder'
-import { errorMessage } from 'build-infra/lib/error-utils'
-import { ensureLief } from 'lief-builder/lib/ensure-lief'
+import {
+  runCommand,
+  selectMakefile,
+} from 'node-smol-packages-bin-infra/lib/builder'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { ensureLief } from 'node-smol-packages-lief-builder/lib/ensure-lief'
 
 import { getCI } from '@socketsecurity/lib-stable/env/ci'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

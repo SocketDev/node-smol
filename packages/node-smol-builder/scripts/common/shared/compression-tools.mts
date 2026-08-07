@@ -15,8 +15,11 @@ import process from 'node:process'
 // logTransientErrorHelp loaded lazily inside the catch block below
 // (see curl-builder/scripts/build.mts for full rationale on the
 // http-request/convenience CJS/ESM interop crash).
-import { getDownloadedDir, getFinalBinaryPath } from 'build-infra/lib/paths'
-import { getPlatformArch } from 'build-infra/lib/platform-mappings'
+import {
+  getDownloadedDir,
+  getFinalBinaryPath,
+} from 'node-smol-packages-build-infra/lib/paths'
+import { getPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { envAsBoolean } from '@socketsecurity/lib-stable/env/boolean'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -121,7 +124,7 @@ export async function downloadToolIfMissing(tool, platform, arch, libc) {
   } catch (e) {
     try {
       const { logTransientErrorHelp } =
-        await import('build-infra/lib/github-error-utils')
+        await import('node-smol-packages-build-infra/lib/github-error-utils')
       await logTransientErrorHelp(e)
     } catch {
       // Hint module failed to load — original error already logged.

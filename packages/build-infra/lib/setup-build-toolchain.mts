@@ -2,10 +2,10 @@
  * @file Consolidated build toolchain setup utilities Provides platform-specific
  *   build tool installation for C/C++ packages. Replaces duplicate
  *   setup-build-toolchain directories across packages. Usage: import {
- *   createSetupToolchain } from 'build-infra/lib/setup-build-toolchain.mts'
- *   const setup = createSetupToolchain({ darwin: ['clang', 'cmake', 'make'],
- *   linux: ['gcc', 'make', 'cmake'], win32: ['mingw-w64', 'cmake', 'make'], })
- *   await setup()
+ *   createSetupToolchain } from
+ *   'node-smol-packages-build-infra/lib/setup-build-toolchain.mts' const setup
+ *   = createSetupToolchain({ darwin: ['clang', 'cmake', 'make'], linux: ['gcc',
+ *   'make', 'cmake'], win32: ['mingw-w64', 'cmake', 'make'], }) await setup()
  */
 
 import path from 'node:path'

@@ -9,7 +9,7 @@ import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { makeExecutable } from 'build-infra/lib/build-helpers'
+import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 

@@ -37,7 +37,7 @@ import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import { makeExecutable } from 'build-infra/lib/build-helpers'
+import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
 
 import { runBinject } from '../helpers/binject.mts'
 import { getLatestFinalBinary } from '../paths.mts'

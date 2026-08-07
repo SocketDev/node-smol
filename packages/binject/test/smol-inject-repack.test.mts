@@ -19,7 +19,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { makeExecutable } from 'build-infra/lib/build-helpers'
+import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -30,7 +30,7 @@ import {
   getBinjectPath,
   getBinpressPath,
 } from './helpers/paths.mts'
-import { MACHO_SEGMENT_SMOL } from 'bin-infra/test/helpers/segment-names'
+import { MACHO_SEGMENT_SMOL } from 'node-smol-packages-bin-infra/test/helpers/segment-names'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const logger = getDefaultLogger()

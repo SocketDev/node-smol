@@ -6,8 +6,8 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { execBuildStep } from 'build-infra/lib/build-helpers'
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { execBuildStep } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 

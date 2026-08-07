@@ -18,15 +18,15 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { makeExecutable } from 'build-infra/lib/build-helpers'
-import { getBuildMode } from 'build-infra/lib/constants'
+import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 
 import {
   MACHO_SECTION_PRESSED_DATA,
   MACHO_SEGMENT_SMOL,
-} from 'bin-infra/test/helpers/segment-names'
+} from 'node-smol-packages-bin-infra/test/helpers/segment-names'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

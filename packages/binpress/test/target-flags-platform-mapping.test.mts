@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getAssetPlatformArch,
   getPlatformArch,
-} from 'build-infra/lib/platform-mappings'
+} from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 describe('platform mapping functions', () => {
   describe('getPlatformArch() - Internal naming', () => {

@@ -4,9 +4,9 @@
  * This module provides reusable test utilities to eliminate duplicate
  * test code across builder packages (onnxruntime-builder, yoga-layout-builder).
  *
- * Usage:
- * import { createWasmTestHelpers } from 'build-infra/lib/test/helpers'
- * const helpers = createWasmTestHelpers({ wasmDir, wasmName: 'ort', ... })
+ * Usage: import { createWasmTestHelpers } from
+ * 'node-smol-packages-build-infra/lib/test/helpers' const helpers =
+ * createWasmTestHelpers({ wasmDir, wasmName: 'ort', ... })
  * helpers.testWasmMagicNumber()
  */
 

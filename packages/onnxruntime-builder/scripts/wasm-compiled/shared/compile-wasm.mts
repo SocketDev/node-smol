@@ -9,13 +9,16 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { formatDuration, getFileSize } from 'build-infra/lib/build-helpers'
-import { printError } from 'build-infra/lib/build-output'
-import { ensureEmscripten } from 'build-infra/lib/emscripten-installer'
+import {
+  formatDuration,
+  getFileSize,
+} from 'node-smol-packages-build-infra/lib/build-helpers'
+import { printError } from 'node-smol-packages-build-infra/lib/build-output'
+import { ensureEmscripten } from 'node-smol-packages-build-infra/lib/emscripten-installer'
 import {
   appendCCRemapFlags,
   getCCRemapFlagsString,
-} from 'build-infra/lib/path-remap-flags'
+} from 'node-smol-packages-build-infra/lib/path-remap-flags'
 
 import { whichSync } from '@socketsecurity/lib-stable/bin/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'

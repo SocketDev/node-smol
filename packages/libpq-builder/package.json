@@ -1,5 +1,5 @@
 {
-  "name": "libpq-builder",
+  "name": "node-smol-packages-libpq-builder",
   "version": "0.0.0",
   "private": true,
   "description": "Builds libpq PostgreSQL client library with OpenSSL support",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "build-infra": "workspace:0.0.0"
+    "node-smol-packages-build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

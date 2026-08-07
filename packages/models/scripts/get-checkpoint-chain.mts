@@ -17,7 +17,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { CHECKPOINT_CHAINS } from 'build-infra/lib/constants'
+import { CHECKPOINT_CHAINS } from 'node-smol-packages-build-infra/lib/constants'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 

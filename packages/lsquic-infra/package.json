@@ -1,5 +1,5 @@
 {
-  "name": "lsquic-infra",
+  "name": "node-smol-packages-lsquic-infra",
   "version": "0.0.0",
   "private": true,
   "description": "Source-only lsquic + ls-qpack for embedding into node-smol-builder as the QUIC engine backing node:smol-quic and node:smol-http3 builtins. No binary release; consumers compile inline via additions/source-patched. Links against node-smol's vendored OpenSSL 3.5.6 (no BoringSSL).",
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "build-infra": "workspace:0.0.0"
+    "node-smol-packages-build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@types/node": "catalog:"

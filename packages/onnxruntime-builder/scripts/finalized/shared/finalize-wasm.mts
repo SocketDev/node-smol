@@ -8,9 +8,9 @@ import { existsSync, promises as fs } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 
-import { getFileSize } from 'build-infra/lib/build-helpers'
-import { restoreCheckpoint } from 'build-infra/lib/checkpoint-manager'
-import { CHECKPOINTS } from 'build-infra/lib/constants'
+import { getFileSize } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { restoreCheckpoint } from 'node-smol-packages-build-infra/lib/checkpoint-manager'
+import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

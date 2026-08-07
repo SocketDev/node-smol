@@ -18,7 +18,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

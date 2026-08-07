@@ -7,8 +7,8 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { BUILD_STAGES } from 'build-infra/lib/constants'
-import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'
+import { BUILD_STAGES } from 'node-smol-packages-build-infra/lib/constants'
+import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

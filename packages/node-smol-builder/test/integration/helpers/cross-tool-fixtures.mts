@@ -8,7 +8,7 @@
 import path from 'node:path'
 import process from 'node:process'
 
-import { getBuildMode } from 'build-infra/lib/constants'
+import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
 
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 

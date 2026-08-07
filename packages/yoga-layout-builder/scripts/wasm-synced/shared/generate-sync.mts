@@ -14,8 +14,8 @@ import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import * as acorn from 'acorn'
 import * as walk from 'acorn-walk'
-import { getFileSize } from 'build-infra/lib/build-helpers'
-import { generateWasmSyncWrapper } from 'build-infra/wasm-synced/wasm-sync-wrapper'
+import { getFileSize } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { generateWasmSyncWrapper } from 'node-smol-packages-build-infra/wasm-synced/wasm-sync-wrapper'
 import MagicString from 'magic-string'
 
 // Yoga-layout-builder is a private, unpublished workspace package with no

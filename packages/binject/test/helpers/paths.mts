@@ -6,9 +6,9 @@
 import path from 'node:path'
 import process from 'node:process'
 
-import { getBuildMode } from 'build-infra/lib/constants'
-import { getFinalBinaryPath } from 'build-infra/lib/paths'
-import { getPlatformArch } from 'build-infra/lib/platform-mappings'
+import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
+import { getFinalBinaryPath } from 'node-smol-packages-build-infra/lib/paths'
+import { getPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { REPO_ROOT } from '../../../../scripts/fleet/paths.mts'
 

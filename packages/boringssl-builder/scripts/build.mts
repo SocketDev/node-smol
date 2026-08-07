@@ -17,7 +17,7 @@ import { existsSync, mkdirSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'

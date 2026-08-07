@@ -33,14 +33,14 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { detectBundleFeatures } from './detect-bundle-features.mts'
-import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'
+import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 // `parseArgs` widens every value to the union of all declared option types, so
 // a string option still reads as string-or-boolean. Narrow once, here.

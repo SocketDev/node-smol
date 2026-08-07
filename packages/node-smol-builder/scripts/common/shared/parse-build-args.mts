@@ -7,7 +7,10 @@
 import os from 'node:os'
 import process from 'node:process'
 
-import { BYTES, CHECKPOINTS } from 'build-infra/lib/constants'
+import {
+  BYTES,
+  CHECKPOINTS,
+} from 'node-smol-packages-build-infra/lib/constants'
 
 import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

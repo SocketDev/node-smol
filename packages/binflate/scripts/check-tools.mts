@@ -8,7 +8,7 @@ import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
-import { runCheckTools } from 'build-infra/lib/check-tools'
+import { runCheckTools } from 'node-smol-packages-build-infra/lib/check-tools'
 
 const logger = getDefaultLogger()
 

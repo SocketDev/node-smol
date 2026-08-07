@@ -32,9 +32,12 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { createPrebuiltApi } from 'build-infra/lib/ensure-prebuilt'
-import { BUILD_STAGES, getPlatformBuildDir } from 'build-infra/lib/constants'
-import { getAssetPlatformArch } from 'build-infra/lib/platform-mappings'
+import { createPrebuiltApi } from 'node-smol-packages-build-infra/lib/ensure-prebuilt'
+import {
+  BUILD_STAGES,
+  getPlatformBuildDir,
+} from 'node-smol-packages-build-infra/lib/constants'
+import { getAssetPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { detectLibc } from '@socketsecurity/lib-stable/releases/socket-btm'
 

@@ -1,5 +1,5 @@
 {
-  "name": "bin-infra",
+  "name": "node-smol-packages-bin-infra",
   "version": "0.0.0",
   "private": true,
   "description": "Shared binary infrastructure for binject, binpress, and binflate",
@@ -20,13 +20,13 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "build-infra": "workspace:0.0.0",
-    "curl-builder": "workspace:0.0.0"
+    "node-smol-packages-build-infra": "workspace:0.0.0",
+    "node-smol-packages-curl-builder": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
-    "bin-stub-builder": "workspace:0.0.0",
-    "lief-builder": "workspace:0.0.0",
+    "node-smol-packages-bin-stub-builder": "workspace:0.0.0",
+    "node-smol-packages-lief-builder": "workspace:0.0.0",
     "octokit": "catalog:",
     "vitest": "catalog:"
   }

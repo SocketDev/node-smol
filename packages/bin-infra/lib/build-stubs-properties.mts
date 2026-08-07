@@ -15,11 +15,11 @@ import {
   CHECKPOINT_CHAINS,
   getPlatformBuildDir,
   validateCheckpointChain,
-} from 'build-infra/lib/constants'
+} from 'node-smol-packages-build-infra/lib/constants'
 import {
   getAssetPlatformArch,
   parsePlatformArch,
-} from 'build-infra/lib/platform-mappings'
+} from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { detectLibc } from '@socketsecurity/lib-stable/releases/socket-btm'

@@ -23,11 +23,11 @@ import { fileURLToPath } from 'node:url'
 import {
   getBuildMode,
   SMOL_PRESSED_DATA_MAGIC_MARKER,
-} from 'build-infra/lib/constants'
+} from 'node-smol-packages-build-infra/lib/constants'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 
-import { execCommand } from 'bin-infra/test/helpers/test-utils'
+import { execCommand } from 'node-smol-packages-bin-infra/test/helpers/test-utils'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'

@@ -14,14 +14,17 @@ import process from 'node:process'
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
-import { checkDiskSpace, freeDiskSpace } from 'build-infra/lib/build-helpers'
-import { printError } from 'build-infra/lib/build-output'
-import { CHECKPOINTS } from 'build-infra/lib/constants'
-import { ensureEmscripten } from 'build-infra/lib/emscripten-installer'
-import { ensureToolInstalled } from 'build-infra/lib/tool-installer'
-import { getEmscriptenVersion } from 'build-infra/lib/version-helpers'
-import { runPipelineCli } from 'build-infra/lib/build-pipeline'
-import { generateSync as generateSyncShared } from 'build-infra/wasm-synced/generate-sync-phase'
+import {
+  checkDiskSpace,
+  freeDiskSpace,
+} from 'node-smol-packages-build-infra/lib/build-helpers'
+import { printError } from 'node-smol-packages-build-infra/lib/build-output'
+import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
+import { ensureEmscripten } from 'node-smol-packages-build-infra/lib/emscripten-installer'
+import { ensureToolInstalled } from 'node-smol-packages-build-infra/lib/tool-installer'
+import { getEmscriptenVersion } from 'node-smol-packages-build-infra/lib/version-helpers'
+import { runPipelineCli } from 'node-smol-packages-build-infra/lib/build-pipeline'
+import { generateSync as generateSyncShared } from 'node-smol-packages-build-infra/wasm-synced/generate-sync-phase'
 
 import {
   getBuildOutputPaths,

@@ -7,9 +7,9 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { buildBinSuitePackage } from 'bin-infra/lib/builder'
-import { errorMessage } from 'build-infra/lib/error-utils'
-import { ensureZstd } from 'build-infra/lib/zstd-init'
+import { buildBinSuitePackage } from 'node-smol-packages-bin-infra/lib/builder'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { ensureZstd } from 'node-smol-packages-build-infra/lib/zstd-init'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 const logger = getDefaultLogger()

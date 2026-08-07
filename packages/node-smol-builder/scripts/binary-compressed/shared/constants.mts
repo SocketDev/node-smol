@@ -20,4 +20,4 @@ export {
   SMOL_PRESSED_DATA_MAGIC_MARKER as MAGIC_MARKER,
   TOTAL_HEADER_SIZE_WITH_SMOL_CONFIG,
   TOTAL_HEADER_SIZE_WITHOUT_SMOL_CONFIG,
-} from 'build-infra/lib/constants'
+} from 'node-smol-packages-build-infra/lib/constants'

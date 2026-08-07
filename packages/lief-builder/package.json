@@ -1,5 +1,5 @@
 {
-  "name": "lief-builder",
+  "name": "node-smol-packages-lief-builder",
   "version": "0.0.0",
   "private": true,
   "description": "Builds LIEF library for binary format manipulation",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "build-infra": "workspace:0.0.0"
+    "node-smol-packages-build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

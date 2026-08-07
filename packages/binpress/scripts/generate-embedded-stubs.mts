@@ -27,16 +27,22 @@ import { downloadReleaseAsset } from '@socketsecurity/lib-stable/releases/github
 import { SOCKET_BTM_REPO } from '@socketsecurity/lib-stable/releases/socket-btm'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import { getBuildMode, getPlatformBuildDir } from 'build-infra/lib/constants'
+import {
+  getBuildMode,
+  getPlatformBuildDir,
+} from 'node-smol-packages-build-infra/lib/constants'
 // logTransientErrorHelp loaded lazily inside catch block below (see
 // curl-builder/scripts/build.mts for full rationale on the
 // http-request/convenience CJS/ESM interop crash).
-import { errorMessage } from 'build-infra/lib/error-utils'
-import { getDownloadedDir, getFinalBinaryPath } from 'build-infra/lib/paths'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import {
+  getDownloadedDir,
+  getFinalBinaryPath,
+} from 'node-smol-packages-build-infra/lib/paths'
 import {
   getCurrentPlatformArch,
   isMusl,
-} from 'build-infra/lib/platform-mappings'
+} from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 const logger = getDefaultLogger()
 
@@ -160,7 +166,7 @@ async function downloadStub(
     // Log helpful messages if this is a transient GitHub/network error.
     try {
       const { logTransientErrorHelp } =
-        await import('build-infra/lib/github-error-utils')
+        await import('node-smol-packages-build-infra/lib/github-error-utils')
       await logTransientErrorHelp(e)
     } catch {
       // Hint module failed to load — original error already logged.

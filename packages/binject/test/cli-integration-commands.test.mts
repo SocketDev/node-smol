@@ -12,8 +12,8 @@ import path from 'node:path'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
-import { makeExecutable } from 'build-infra/lib/build-helpers'
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { MAX_NODE_BINARY_SIZE } from './helpers/constants.mts'
 import { getBinjectPath } from './helpers/paths.mts'

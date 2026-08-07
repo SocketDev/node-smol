@@ -9,10 +9,16 @@ import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { getFileSize } from 'build-infra/lib/build-helpers'
-import { computeBuildInputsFingerprint } from 'build-infra/lib/checkpoint-cache-key'
-import { createCheckpoint, shouldRun } from 'build-infra/lib/checkpoint-manager'
-import { CHECKPOINTS, nodeVersionRaw } from 'build-infra/lib/constants'
+import { getFileSize } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { computeBuildInputsFingerprint } from 'node-smol-packages-build-infra/lib/checkpoint-cache-key'
+import {
+  createCheckpoint,
+  shouldRun,
+} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
+import {
+  CHECKPOINTS,
+  nodeVersionRaw,
+} from 'node-smol-packages-build-infra/lib/constants'
 
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

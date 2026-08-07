@@ -13,7 +13,7 @@ import process from 'node:process'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
 
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { SMOL_FEATURES } from './lib/smol-features.mts'
 import { detectBundleFeatures } from './detect-bundle-features.mts'

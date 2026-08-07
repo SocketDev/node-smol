@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url'
 import {
   analyzePatchContent,
   checkPatchConflicts,
-} from 'build-infra/lib/patch-validator'
+} from 'node-smol-packages-build-infra/lib/patch-validator'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

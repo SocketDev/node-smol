@@ -14,21 +14,21 @@ import {
   formatDuration,
   getFileSize,
   writeCacheHash,
-} from 'build-infra/lib/build-helpers'
+} from 'node-smol-packages-build-infra/lib/build-helpers'
 import {
   computeBuildInputsFingerprint,
   formatStaleCheckpointMessage,
   isCheckpointFingerprintCurrent,
-} from 'build-infra/lib/checkpoint-cache-key'
-import { getCheckpointData } from 'build-infra/lib/checkpoint-manager'
+} from 'node-smol-packages-build-infra/lib/checkpoint-cache-key'
+import { getCheckpointData } from 'node-smol-packages-build-infra/lib/checkpoint-manager'
 import {
   CHECKPOINTS,
   NODE_VERSION,
   nodeVersionRaw,
-} from 'build-infra/lib/constants'
-import { getCurrentPlatformArch } from 'build-infra/lib/platform-mappings'
-import { verifyNodeChecksum } from 'build-infra/lib/version-helpers'
-import { errorMessage } from 'build-infra/lib/error-utils'
+} from 'node-smol-packages-build-infra/lib/constants'
+import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { verifyNodeChecksum } from 'node-smol-packages-build-infra/lib/version-helpers'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 

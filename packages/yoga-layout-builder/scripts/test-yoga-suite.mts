@@ -16,8 +16,8 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { ensureToolInstalled } from 'build-infra/lib/tool-installer'
-import { errorMessage } from 'build-infra/lib/error-utils'
+import { ensureToolInstalled } from 'node-smol-packages-build-infra/lib/tool-installer'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
 import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

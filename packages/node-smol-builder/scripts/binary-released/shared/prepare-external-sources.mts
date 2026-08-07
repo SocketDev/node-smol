@@ -16,8 +16,8 @@ import { ADDITIONS_SOURCE_PATCHED_DIR } from './paths.mts'
 import { generateVendoredGypi } from './prepare-gypi.mts'
 import { copySmolAiArtifacts } from './prepare-smol-ai.mts'
 import { EXTERNAL_SOURCES } from './prepare-vendored-sources.mts'
-import { errorMessage } from 'build-infra/lib/error-utils'
-import { applyPatch } from 'build-infra/lib/patch-validator'
+import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { applyPatch } from 'node-smol-packages-build-infra/lib/patch-validator'
 import {
   BIN_INFRA_DIR,
   BINJECT_DIR,

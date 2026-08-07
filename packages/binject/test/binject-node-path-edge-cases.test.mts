@@ -10,7 +10,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { makeExecutable } from 'build-infra/lib/build-helpers'
+import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 

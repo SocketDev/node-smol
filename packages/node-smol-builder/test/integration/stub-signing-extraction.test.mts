@@ -19,7 +19,7 @@ import {
   SMOL_PRESSED_DATA_MAGIC_MARKER,
   TOTAL_HEADER_SIZE_WITH_SMOL_CONFIG,
   TOTAL_HEADER_SIZE_WITHOUT_SMOL_CONFIG,
-} from 'build-infra/lib/constants'
+} from 'node-smol-packages-build-infra/lib/constants'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getSocketDlxDir } from '@socketsecurity/lib-stable/paths/socket'
@@ -29,7 +29,7 @@ import {
   MACHO_SECTION_PRESSED_DATA,
   MACHO_SEGMENT_NODE_SEA,
   MACHO_SEGMENT_SMOL,
-} from 'bin-infra/test/helpers/segment-names'
+} from 'node-smol-packages-bin-infra/test/helpers/segment-names'
 import { getLatestFinalBinary } from '../paths.mts'
 
 const IS_MACOS = os.platform() === 'darwin'

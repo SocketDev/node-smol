@@ -10,9 +10,12 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { BUILD_STAGES, getPlatformBuildDir } from 'build-infra/lib/constants'
-import { createPrebuiltApi } from 'build-infra/lib/ensure-prebuilt'
-import { getAssetPlatformArch } from 'build-infra/lib/platform-mappings'
+import {
+  BUILD_STAGES,
+  getPlatformBuildDir,
+} from 'node-smol-packages-build-infra/lib/constants'
+import { createPrebuiltApi } from 'node-smol-packages-build-infra/lib/ensure-prebuilt'
+import { getAssetPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
 
 import { detectLibc } from '@socketsecurity/lib-stable/releases/socket-btm'
 
