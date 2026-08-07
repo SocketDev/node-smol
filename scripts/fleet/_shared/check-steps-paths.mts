@@ -503,6 +503,20 @@ export function buildPathsAndSupplyChainSteps(): CheckStep[] {
       run('node', [
         'scripts/fleet/check/baseline-catalog-deps-are-covered.mts',
       ]),
+    // The downstream half of the same contract: a catalog entry that DOES
+    // resolve can still name a version the committed pnpm-lock.yaml never
+    // locked. The bundle merges its fleet-managed workspace keys into
+    // pnpm-workspace.yaml at hydrate time, so a thin member's on-disk catalog
+    // outruns the lockfile beside it in git and the next --frozen-lockfile
+    // install dies — ERR_PNPM_LOCKFILE_CONFIG_MISMATCH on a drifted pin, `no
+    // integrity for <pkg>@<ver>` on a moved one. That broke six repos on the
+    // thin conversion, and three of the four bad commits were invisible
+    // against the committed workspace file alone.
+    () =>
+      run('node', [
+        'scripts/fleet/check/bundle-catalog-pins-are-locked.mts',
+        '--quiet',
+      ]),
     // Every static bare-specifier import in a .claude/hooks/{fleet,repo} file
     // must resolve to a package.json dependencies/devDependencies entry — the
     // general form of the baseline-catalog-deps-are-covered incident above

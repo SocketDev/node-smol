@@ -2,8 +2,10 @@
  * @file The fleet's one `pnpm-lock.yaml` reader. It turns the lockfile into a
  *   resolved-package graph: every resolved version grouped by package name, the
  *   production edges between resolved packages, the importer roots those edges
- *   start from, the closure that walk reaches, and every dependency the
- *   importers DECLARE with the specifier each one wrote. What the graph MEANS
+ *   start from, the closure that walk reaches, every entry of the top-level
+ *   `catalogs:` block with the specifier it was written from, and every
+ *   dependency the importers DECLARE with the specifier each one wrote. What
+ *   the graph MEANS
  *   stays with each caller — the dedup gate reads cross-major families out of
  *   it, the range-consolidation analyzer reads duplicate families and their
  *   consumers.
@@ -61,6 +63,15 @@ const IMPORTER_KEY_RE = /^ {2}\S.*:\s*$/
 // A 6-space `<name>: <value>` entry with an inline value — a snapshot's
 // resolved child, or a `packages:` entry's declared peer range.
 const NESTED_ENTRY_RE = /^ {6}(?!\s)'?([^'\n]+?)'?:\s*(.+)$/
+// A 2-space `<catalogName>:` key inside the top-level `catalogs:` block —
+// `default` for the unnamed catalog, otherwise the named one.
+const CATALOG_NAME_RE = /^ {2}(?!\s)'?([^'\n]+?)'?:\s*$/
+// A 4-space `<dep>:` key inside one named catalog — its `specifier:` and
+// `version:` sit on the 6-space lines below it.
+const CATALOG_DEP_RE = /^ {4}(?!\s)'?([^'\n]+?)'?:\s*$/
+// The 6-space `specifier:` / `version:` lines under one catalog dep — the
+// DECLARED workspace-catalog value and the version pnpm resolved it to.
+const CATALOG_FIELD_RE = /^ {6}(?!\s)(specifier|version):\s*(.+)$/
 
 export interface PnpmDepPath {
   name: string
@@ -84,7 +95,22 @@ export interface PnpmNestedEntry {
   value: string
 }
 
+// One entry of the lockfile's top-level `catalogs:` block: which catalog it
+// belongs to (`default` for the unnamed one), the dependency name, the
+// SPECIFIER the workspace catalog declared when the lockfile was written, and
+// the concrete VERSION pnpm resolved that specifier to. pnpm records only the
+// catalog entries some importer actually references, so this is the used
+// subset of the workspace catalog, not all of it.
+export interface PnpmLockfileCatalogEntry {
+  catalog: string
+  name: string
+  specifier: string
+  version: string
+}
+
 export interface PnpmLockfileGraph {
+  // Every entry of the top-level `catalogs:` block, in file order.
+  catalogEntries: readonly PnpmLockfileCatalogEntry[]
   // Resolved dep path → the resolved dep paths of its production children.
   consumerEdges: Map<string, Set<string>>
   // Every dependency every importer declares, all kinds, with its specifier.
@@ -349,6 +375,79 @@ export function collectProductionRootsFromDeclarations(
 }
 
 /**
+ * Read the top-level `catalogs:` block into one entry per dependency. pnpm
+ * writes it at fixed indents — 2 spaces for the catalog name, 4 for the
+ * dependency, 6 for its `specifier:`/`version:` — so the same line scan the
+ * rest of this module uses reads it. An entry missing either field is dropped:
+ * a half-written record has nothing a caller can compare against. Returns an
+ * empty list when the lockfile carries no `catalogs:` block, which is the
+ * normal shape for a workspace that declares no catalog.
+ */
+export function collectLockfileCatalogEntries(
+  lines: readonly string[],
+): readonly PnpmLockfileCatalogEntry[] {
+  const entries: PnpmLockfileCatalogEntry[] = []
+  let inCatalogs = false
+  let catalog: string | undefined
+  let name: string | undefined
+  let specifier: string | undefined
+  let version: string | undefined
+  const flush = () => {
+    if (
+      catalog !== undefined &&
+      name !== undefined &&
+      specifier !== undefined &&
+      version !== undefined
+    ) {
+      entries.push({ catalog, name, specifier, version })
+    }
+    name = undefined
+    specifier = undefined
+    version = undefined
+  }
+  for (let i = 0, { length } = lines; i < length; i += 1) {
+    const line = lines[i] ?? ''
+    if (line === 'catalogs:') {
+      inCatalogs = true
+      continue
+    }
+    if (!inCatalogs) {
+      continue
+    }
+    // A new unindented top-level key ends the block. A blank line does not —
+    // pnpm separates catalogs with one.
+    if (/^\S/.test(line)) {
+      flush()
+      inCatalogs = false
+      continue
+    }
+    const field = CATALOG_FIELD_RE.exec(line)
+    if (field) {
+      const value = stripYamlQuotes(field[2]!.trim())
+      if (field[1] === 'specifier') {
+        specifier = value
+      } else {
+        version = stripPnpmPeerSuffix(value)
+      }
+      continue
+    }
+    const dep = CATALOG_DEP_RE.exec(line)
+    if (dep) {
+      flush()
+      name = dep[1]!.trim()
+      continue
+    }
+    const named = CATALOG_NAME_RE.exec(line)
+    if (named) {
+      flush()
+      catalog = named[1]!.trim()
+    }
+  }
+  flush()
+  return entries
+}
+
+/**
  * Every importer's PRODUCTION dependency root, read straight from lockfile
  * text.
  */
@@ -470,6 +569,7 @@ export function parsePnpmLockfileText(text: string): PnpmLockfileGraph {
   const importerProductionRoots =
     collectProductionRootsFromDeclarations(importerDeclarations)
   return {
+    catalogEntries: collectLockfileCatalogEntries(lines),
     consumerEdges,
     importerDeclarations,
     importerProductionRoots,
