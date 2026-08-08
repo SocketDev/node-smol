@@ -30,7 +30,7 @@ import { parseArgs } from 'node:util'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { isMainModule } from '../fleet/_shared/is-main-module.mts'
-import { runCapture, runInherit } from '../fleet/publish-infra/shared.mts'
+import { runCapture, runInherit } from '../fleet/registry-infra/shared.mts'
 import { loadSocketWheelhouseConfig, REPO_ROOT } from './paths.mts'
 
 const logger = getDefaultLogger()

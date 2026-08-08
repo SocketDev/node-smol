@@ -22,11 +22,11 @@ import { pathToFileURL } from 'node:url'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { REPO_ROOT } from '../fleet/paths.mts'
-import { uploadNpmPackage } from '../fleet/publish-infra/npm/publish-command.mts'
-import { isAlreadyPublished } from '../fleet/publish-infra/npm/registry.mts'
-import { listStagedPackages } from '../fleet/publish-infra/npm/shared.mts'
-import { verifyStagedEntry } from '../fleet/publish-infra/npm/staged.mts'
-import { runInherit } from '../fleet/publish-infra/shared.mts'
+import { uploadNpmPackage } from '../fleet/registry-infra/npm/publish-command.mts'
+import { isAlreadyPublished } from '../fleet/registry-infra/npm/registry.mts'
+import { listStagedPackages } from '../fleet/registry-infra/npm/shared.mts'
+import { verifyStagedEntry } from '../fleet/registry-infra/npm/staged.mts'
+import { runInherit } from '../fleet/registry-infra/shared.mts'
 
 const logger = getDefaultLogger()
 
