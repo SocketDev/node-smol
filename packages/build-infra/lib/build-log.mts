@@ -38,7 +38,7 @@ export async function getLastLogLines(
   const logPath = getBuildLogPath(buildDir)
   try {
     const content = await fs.readFile(logPath, 'utf8')
-    const allLines = content.split('\n')
+    const allLines = content.split(/\r?\n/)
     return allLines.slice(-lines).join('\n')
   } catch {
     return undefined

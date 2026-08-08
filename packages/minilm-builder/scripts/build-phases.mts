@@ -50,7 +50,7 @@ export async function runPythonScript(scriptName, scriptArgs, options = {}) {
       'Python script produced no output. Expected JSON lines on stdout.',
     )
   }
-  const lines = result.stdout.split('\n').filter(Boolean)
+  const lines = result.stdout.split(/\r?\n/).filter(Boolean)
   const results = []
 
   for (let i = 0, { length } = lines; i < length; i += 1) {

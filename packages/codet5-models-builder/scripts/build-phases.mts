@@ -132,7 +132,7 @@ export async function convertToOnnx(ctx) {
 
   // Parse JSON output from convert.py
   if (convertResult.stdout) {
-    const lines = convertResult.stdout.trim().split('\n')
+    const lines = convertResult.stdout.trim().split(/\r?\n/)
     for (let i = 0, { length } = lines; i < length; i += 1) {
       const line = lines[i]
       if (!line) {

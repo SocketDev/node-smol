@@ -61,7 +61,7 @@ export async function activateEmscriptenSDK() {
         { stdio: 'pipe' },
       )
 
-      const envLines = envOutput.split('\n')
+      const envLines = envOutput.split(/\r?\n/)
       for (let i = 0, { length } = envLines; i < length; i += 1) {
         const line = envLines[i]
         // ^(EMSDK|EM_\w+|PATH): env var name; =: separator; (.*): value to end of line
@@ -82,7 +82,7 @@ export async function activateEmscriptenSDK() {
         { stdio: 'pipe' },
       )
 
-      const envLines = envOutput.split('\n')
+      const envLines = envOutput.split(/\r?\n/)
       for (let i = 0, { length } = envLines; i < length; i += 1) {
         const line = envLines[i]
         // ^(EMSDK|EM_\w+|PATH): env var name; =: separator; (.*): value to end of line

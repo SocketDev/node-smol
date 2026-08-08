@@ -40,7 +40,7 @@ describe('docker/build.sh drift check', () => {
 
   it('emitted script starts with the DO-NOT-EDIT marker', () => {
     const emitted = emitDockerBuildScript()
-    expect(emitted.split('\n')[1]).toMatch(/DO NOT EDIT/)
+    expect(emitted.split(/\r?\n/)[1]).toMatch(/DO NOT EDIT/)
   })
 
   it('emitted script invokes cmake', () => {

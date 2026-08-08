@@ -71,7 +71,7 @@ export function checkLiveStubs(): { ok: boolean; hits: string[] } {
     for (let fi = 0, { length: flen } = files; fi < flen; fi += 1) {
       const file = files[fi]!
       const text = readFileSync(file, 'utf8')
-      const lines = text.split('\n')
+      const lines = text.split(/\r?\n/)
       for (let li = 0, { length: llen } = lines; li < llen; li += 1) {
         const line = lines[li]!
         // Skip doc comments that historically reference the stub

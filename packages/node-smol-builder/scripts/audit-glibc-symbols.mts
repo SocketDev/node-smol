@@ -100,7 +100,7 @@ export function parseObjdumpOutput(text: string): SymbolRow[] {
   const rows: SymbolRow[] = []
   // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
-  for (const line of text.split('\n')) {
+  for (const line of text.split(/\r?\n/)) {
     const match = pattern.exec(line)
     if (!match) {
       continue

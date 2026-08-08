@@ -59,7 +59,7 @@ export async function cleanBuilder(packageName, options = {}) {
   let { packageDir } = options
   if (!packageDir) {
     // Auto-detect from caller's location (typically scripts/clean.mts)
-    const stackLines = new Error().stack?.split('\n') || []
+    const stackLines = new Error().stack?.split(/\r?\n/) || []
     const callerUrl =
       stackLines.length > 2
         ? stackLines[2].match(/\(([^)]+)\)/)?.[1]

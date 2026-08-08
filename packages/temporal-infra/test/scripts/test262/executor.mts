@@ -25,7 +25,7 @@ export function loadAllowlist(filePath: string): string[] {
     return []
   }
   return readFileSync(filePath, 'utf8')
-    .split('\n')
+    .split(/\r?\n/)
     .map(line => line.trim())
     .filter(line => line.length > 0 && !line.startsWith('#'))
 }

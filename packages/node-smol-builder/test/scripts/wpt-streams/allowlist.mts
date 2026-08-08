@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs'
 export function loadAllowlist(allowlistPath: string): Map<string, string> {
   const map = new Map<string, string>()
   const raw = readFileSync(allowlistPath, 'utf8')
-  const lines = raw.split('\n')
+  const lines = raw.split(/\r?\n/)
   for (let i = 0, { length } = lines; i < length; i += 1) {
     const rawLine = lines[i]!
     const line = rawLine.trim()

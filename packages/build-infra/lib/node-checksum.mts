@@ -92,7 +92,7 @@ export async function fetchNodeChecksum(
 export function parseShasums(text: string): Record<string, string> {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the map prototype-free but changes its inferred type.
   const out = { __proto__: null } as unknown as Record<string, string>
-  const lines = text.split('\n')
+  const lines = text.split(/\r?\n/)
   for (let i = 0, { length } = lines; i < length; i += 1) {
     const line = lines[i]!.trim()
     if (!line || line.startsWith('#')) {

@@ -87,7 +87,7 @@ export function parseUcd(
   predicate: (property: string) => boolean,
 ): Range[] {
   const out: Range[] = []
-  const lines = text.split('\n')
+  const lines = text.split(/\r?\n/)
   for (let i = 0, { length } = lines; i < length; i += 1) {
     const raw = lines[i]
     const hashIdx = raw.indexOf('#')

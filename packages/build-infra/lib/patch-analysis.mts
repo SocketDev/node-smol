@@ -146,7 +146,7 @@ export function parsePatchFileModifications(
   content: string,
 ): Map<string, PatchLineRange[]> {
   const fileModifications = new Map<string, PatchLineRange[]>()
-  const lines = content.split('\n')
+  const lines = content.split(/\r?\n/)
 
   let currentFile: string | undefined
   let i = 0

@@ -245,7 +245,7 @@ export async function cleanAppleDoubleFiles(dir) {
         stdio: 'pipe',
       },
     )
-    const files = (result.stdout || '').split('\n').filter(Boolean)
+    const files = (result.stdout || '').split(/\r?\n/).filter(Boolean)
     return files.length
   } catch {
     return 0

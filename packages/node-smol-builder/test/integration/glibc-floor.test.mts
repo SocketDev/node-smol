@@ -84,7 +84,7 @@ describe.skipIf(process.platform !== 'linux' || !GLIBC_FLOOR_RAW)(
       const offenders: Array<{ symbol: string; version: string }> = []
 
       // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
-      for (const line of text.split('\n')) {
+      for (const line of text.split(/\r?\n/)) {
         const match = pattern.exec(line)
         if (!match) {
           continue

@@ -176,7 +176,7 @@ export function parseChecksumFile(content) {
 
   // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
-  for (const line of content.split('\n')) {
+  for (const line of content.split(/\r?\n/)) {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith('#')) {
       continue

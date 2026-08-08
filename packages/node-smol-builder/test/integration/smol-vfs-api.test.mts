@@ -110,7 +110,7 @@ describe.skipIf(skipTests)('node:smol-vfs api surface', () => {
 
     const members = new Map<string, string>()
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
-    for (const line of stdout.split('\n')) {
+    for (const line of stdout.split(/\r?\n/)) {
       const m = /^member:([^=]+)=(.*)$/.exec(line)
       if (m) {
         members.set(m[1]!, m[2]!)

@@ -147,7 +147,7 @@ export function parseExportShape(stdout: string): Map<string, string> {
   const shape = new Map<string, string>()
   // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
-  for (const line of stdout.split('\n')) {
+  for (const line of stdout.split(/\r?\n/)) {
     // `^export:` — line starts with literal "export:"
     // `([^=]+)` — capture group 1: the export name (one or more non-`=` chars)
     // `=` — literal separator between name and value

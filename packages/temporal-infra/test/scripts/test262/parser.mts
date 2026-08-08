@@ -73,7 +73,7 @@ export function parseList(yaml: string, key: string): string[] | undefined {
   )
   if (blockMatch) {
     return blockMatch[1]
-      .split('\n')
+      .split(/\r?\n/)
       .map(line => line.replace(/^[ \t]*-\s*/, '').trim())
       .filter(Boolean)
   }

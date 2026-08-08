@@ -325,7 +325,7 @@ export function composeWptScript(testFile: string, relPath: string): string {
 
   // Parse META: script= directives from the leading comment block.
   const metaScripts: string[] = []
-  const lines = content.split('\n')
+  const lines = content.split(/\r?\n/)
   for (let i = 0, { length } = lines; i < length; i += 1) {
     const line = lines[i]!
     const match = line.match(/^\/\/\s*META:\s*script=(.+)$/)
@@ -393,7 +393,7 @@ export async function runTestFile(
     // Try to parse the JSON result line from stdout. The epilogue prints
     // exactly one, but META/test output may precede it.
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier
-    for (const line of stdout.trim().split('\n')) {
+    for (const line of stdout.trim().split(/\r?\n/)) {
       try {
         // JSON.parse returns `any`; the shape is an invariant of the writer
         // in this repo, and a malformed file throws in the surrounding

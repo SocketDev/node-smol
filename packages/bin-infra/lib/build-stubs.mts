@@ -190,7 +190,7 @@ export async function downloadPrebuiltStub(
       stdio: 'pipe',
     })
     const files = listResult.stdout
-      .split('\n')
+      .split(/\r?\n/)
       .filter(Boolean)
       .map(f => f.trim())
 

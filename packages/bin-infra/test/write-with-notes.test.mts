@@ -203,7 +203,7 @@ describe.skipIf(!existsSync(BINJECT_BIN) || process.platform === 'win32')(
         expect(result.code).toBe(0)
 
         // Parse section headers for .note.* sections
-        const lines = result.stdout.split('\n')
+        const lines = result.stdout.split(/\r?\n/)
         const noteSections = lines.filter(line => line.includes('.note.'))
 
         for (let i = 0, { length } = noteSections; i < length; i += 1) {

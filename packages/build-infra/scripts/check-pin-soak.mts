@@ -67,7 +67,7 @@ const findings: PinFinding[] = []
 export function auditDockerfiles() {
   const fromRe = /^\s*FROM\s+\S+@sha256:[a-f0-9]{64}/
   for (const file of walk(REPO_ROOT, p => /Dockerfile(\.[^/]+)?$/.test(p))) {
-    const lines = readFileSync(file, 'utf8').split('\n')
+    const lines = readFileSync(file, 'utf8').split(/\r?\n/)
     for (let i = 0, { length } = lines; i < length; i += 1) {
       const line = lines[i]
       if (line === undefined || !fromRe.test(line)) {
@@ -143,7 +143,7 @@ export function auditGitmodules() {
   if (!existsSync(file)) {
     return
   }
-  const lines = readFileSync(file, 'utf8').split('\n')
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/)
   for (let i = 0, { length } = lines; i < length; i += 1) {
     const submoduleMatch = lines[i]?.match(/^\[submodule "([^"]+)"\]$/)
     const submoduleName = submoduleMatch?.[1]
@@ -159,7 +159,7 @@ export function auditPnpmWorkspace() {
   if (!existsSync(file)) {
     return
   }
-  const lines = readFileSync(file, 'utf8').split('\n')
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/)
   for (let i = 0, { length } = lines; i < length; i += 1) {
     const annotation = parseAnnotation(lines[i])
     if (annotation === undefined) {
@@ -186,7 +186,7 @@ export function auditWorkflows() {
     /^\s*-?\s*uses:\s*([^@\s]+)@([a-f0-9]{40})\s*#\s*[^(]+\((\d{4}-\d{2}-\d{2})\)/
   const root = path.join(REPO_ROOT, '.github')
   for (const file of walk(root, p => /\.ya?ml$/.test(p))) {
-    const lines = readFileSync(file, 'utf8').split('\n')
+    const lines = readFileSync(file, 'utf8').split(/\r?\n/)
     for (let i = 0, { length } = lines; i < length; i += 1) {
       const match = lines[i]?.match(usesPinRe)
       if (!match) {

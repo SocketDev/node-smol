@@ -274,7 +274,7 @@ export function createWasmTestHelpers(config) {
       }
 
       const content = await fs.readFile(syncJsPath, 'utf8')
-      const lines = content.split('\n')
+      const lines = content.split(/\r?\n/)
 
       for (let i = 0, { length } = lines; i < length; i += 1) {
         const line = lines[i]

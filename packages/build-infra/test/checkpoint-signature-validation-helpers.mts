@@ -51,7 +51,7 @@ export function validateCreateCheckpointCall(
   fileContent: string,
   filePath: string,
 ): CreateCheckpointCallError[] {
-  const lines = fileContent.split('\n')
+  const lines = fileContent.split(/\r?\n/)
   const errors: CreateCheckpointCallError[] = []
 
   for (let i = 0; i < lines.length; i += 1) {

@@ -65,7 +65,7 @@ describe('createCheckpoint signature validation', () => {
         logger.fail(`${error.file}:${error.line}`)
         logger.fail(`  Error: ${error.error}`)
         logger.fail('  Context:')
-        const contextLines = error.context.split('\n')
+        const contextLines = error.context.split(/\r?\n/)
         for (
           let j = 0, { length: contextLength } = contextLines;
           j < contextLength;

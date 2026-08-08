@@ -165,7 +165,7 @@ export function processEvents(
       }
       // Handle newlines inside text payloads (e.g. code blocks).
       if (val === textType.CODE && payload.includes('\n')) {
-        const lines = payload.split('\n')
+        const lines = payload.split(/\r?\n/)
         for (let j = 0, { length: ll } = lines; j < ll; j += 1) {
           line += lines[j]
           if (j < ll - 1) {

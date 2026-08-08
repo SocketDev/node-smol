@@ -379,7 +379,7 @@ describe('audit reporting helpers', () => {
       },
       { detail: 'zero rows', kind: 'empty-map' },
     ])
-    const lines = rendered.split('\n')
+    const lines = rendered.split(/\r?\n/)
     expect(lines).toHaveLength(2)
     expect(lines[0]).toContain('unmapped-symbol bufferX')
     expect(lines[0]).toContain('no row covers it')
