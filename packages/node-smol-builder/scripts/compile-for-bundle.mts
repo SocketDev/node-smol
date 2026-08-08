@@ -31,7 +31,7 @@ import crypto from 'node:crypto'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
 
@@ -222,5 +222,5 @@ if (import.meta.url === toFileUrl(process.argv[1])) {
 }
 
 export function toFileUrl(p: string | undefined): string {
-  return p ? new URL(`file://${path.resolve(p)}`).href : ''
+  return p ? pathToFileURL(path.resolve(p)).href : ''
 }

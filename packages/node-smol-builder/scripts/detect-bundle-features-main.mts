@@ -9,6 +9,7 @@
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { pathToFileURL } from 'node:url'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
@@ -34,7 +35,7 @@ export function pathToFileURLString(p: string | undefined): string {
   if (!p) {
     return ''
   }
-  return new URL(`file://${path.resolve(p)}`).href
+  return pathToFileURL(path.resolve(p)).href
 }
 
 async function main(): Promise<void> {
