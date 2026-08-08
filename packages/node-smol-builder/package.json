@@ -1,5 +1,5 @@
 {
-  "name": "node-smol-packages-node-smol-builder",
+  "name": "node-smol-builder",
   "version": "0.0.0",
   "private": true,
   "description": "Optimized Node.js binaries with SEA support and Socket security patches",
