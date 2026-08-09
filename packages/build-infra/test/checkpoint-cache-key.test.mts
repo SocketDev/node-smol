@@ -26,7 +26,10 @@ describe('checkpoint-cache-key', () => {
       )
       const additionsDir = path.join(tempDir, 'additions')
       await fs.mkdir(additionsDir, { recursive: true })
-      await fs.writeFile(path.join(additionsDir, 'a.js'), 'console.log(1)')
+      await fs.writeFile(
+        path.join(additionsDir, 'example.js'),
+        'console.log(1)',
+      )
 
       try {
         const first = computeBuildInputsFingerprint({
@@ -52,7 +55,7 @@ describe('checkpoint-cache-key', () => {
       )
       const additionsDir = path.join(tempDir, 'additions')
       await fs.mkdir(additionsDir, { recursive: true })
-      const filePath = path.join(additionsDir, 'a.js')
+      const filePath = path.join(additionsDir, 'example.js')
       await fs.writeFile(filePath, 'console.log(1)')
 
       try {

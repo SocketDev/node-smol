@@ -49,7 +49,7 @@ const leakPaths = [
   '/snapshot/../../etc/shadow',
   '/snapshot/../../../.ssh/id_rsa',
   '/snapshot/node_modules/../../etc/passwd',
-  '/snapshot/a/../../../etc/hosts',
+  '/snapshot/example/../../../etc/hosts',
   '/snapshot/..',
   '/snapshot/../',
 ]

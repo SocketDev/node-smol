@@ -124,7 +124,9 @@ describe('vFS Path Handling', () => {
     })
 
     it('should return true for nested paths', () => {
-      expect(isVFSPrefixPath('/snapshot/a/b/c/d.js')).toBeTruthy()
+      expect(
+        isVFSPrefixPath('/snapshot/alpha/beta/gamma/example.js'),
+      ).toBeTruthy()
     })
 
     it('should return false for /sea paths', () => {
@@ -174,7 +176,9 @@ describe('vFS Path Handling', () => {
       expect(toVFSPath('/snapshot/node_modules/foo/index.js')).toBe(
         'node_modules/foo/index.js',
       )
-      expect(toVFSPath('/snapshot/a/b/c/d.js')).toBe('a/b/c/d.js')
+      expect(toVFSPath('/snapshot/alpha/beta/gamma/example.js')).toBe(
+        'alpha/beta/gamma/example.js',
+      )
     })
 
     it('should return undefined for non-VFS paths', () => {

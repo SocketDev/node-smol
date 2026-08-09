@@ -88,7 +88,7 @@ describe('interpret', () => {
     // Skipped results count toward summary.total but go to skipped
     // bucket — not allowed/disallowed — and do NOT flip passed.
     const s = interpret(
-      [{ skip: true, file: 'x.js', reason: 'async (not yet supported)' }],
+      [{ skip: true, file: 'example.js', reason: 'async (not yet supported)' }],
       [],
       0,
     )

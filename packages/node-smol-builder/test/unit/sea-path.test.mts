@@ -132,7 +132,9 @@ describe('sEA Path Handling', () => {
 
     it('should extract key from nested path', () => {
       expect(getSeaAssetKey('/sea/data/file.txt')).toBe('data/file.txt')
-      expect(getSeaAssetKey('/sea/a/b/c/d.json')).toBe('a/b/c/d.json')
+      expect(getSeaAssetKey('/sea/alpha/beta/gamma/example.json')).toBe(
+        'alpha/beta/gamma/example.json',
+      )
     })
 
     it('should handle trailing slashes', () => {
@@ -221,7 +223,7 @@ describe('sEA Path Handling', () => {
 
       // Traversal in middle of path
       expect(getSeaAssetKey('/sea/foo/../bar')).toBeUndefined()
-      expect(getSeaAssetKey('/sea/a/b/../c')).toBeUndefined()
+      expect(getSeaAssetKey('/sea/alpha/beta/../gamma')).toBeUndefined()
 
       // Multiple traversals
       expect(getSeaAssetKey('/sea/../../etc/passwd')).toBeUndefined()

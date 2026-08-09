@@ -89,8 +89,12 @@ describe(readNotarizeCredentialsFromEnv, () => {
         'example-p8-contents',
       )
 
-      const mode = statSync(credentials.keyPath).mode & 0o777
-      expect(mode).toBe(0o600)
+      // Windows has no POSIX modes: chmod(0o600) reads back as 0o666 there,
+      // so the tightened-permissions assertion is POSIX-only.
+      if (process.platform !== 'win32') {
+        const mode = statSync(credentials.keyPath).mode & 0o777
+        expect(mode).toBe(0o600)
+      }
 
       safeDeleteSync(path.dirname(credentials.keyPath))
     } finally {

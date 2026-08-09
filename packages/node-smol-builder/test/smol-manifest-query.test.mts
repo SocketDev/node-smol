@@ -129,12 +129,14 @@ describe('smol-manifest query and analysis', () => {
       const content = JSON.stringify({
         lockfileVersion: 3,
         packages: {
-          'node_modules/a/node_modules/b/node_modules/c': { version: '1.0.0' },
+          'node_modules/alpha/node_modules/beta/node_modules/gamma': {
+            version: '1.0.0',
+          },
         },
       })
 
       const result = parseLockfile(content, 'npm', 'npm')
-      expect(result.packages[0].name).toBe('c')
+      expect(result.packages[0].name).toBe('gamma')
     })
 
     it('should parse git dependencies (P0.3)', () => {
