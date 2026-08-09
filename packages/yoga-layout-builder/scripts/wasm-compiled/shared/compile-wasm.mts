@@ -10,7 +10,7 @@ import path from 'node:path'
 import {
   formatDuration,
   getFileSize,
-} from 'node-smol-packages-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-helpers'
 
 import { which } from '@socketsecurity/lib-stable/bin/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'

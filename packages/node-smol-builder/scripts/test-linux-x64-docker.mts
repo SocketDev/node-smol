@@ -16,7 +16,7 @@
  *     docker buildx, which is slower but always available
  */
 
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 import { existsSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'

@@ -24,13 +24,13 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import {
   checkDiskSpace,
   freeDiskSpace,
-} from 'node-smol-packages-build-infra/lib/build-helpers'
-import { printError } from 'node-smol-packages-build-infra/lib/build-output'
-import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
-import { ensureEmscripten } from 'node-smol-packages-build-infra/lib/emscripten-installer'
-import { ensureToolInstalled } from 'node-smol-packages-build-infra/lib/tool-installer'
-import { getEmscriptenVersion } from 'node-smol-packages-build-infra/lib/version-helpers'
-import { runPipelineCli } from 'node-smol-packages-build-infra/lib/build-pipeline'
+} from 'local-build-infra/lib/build-helpers'
+import { printError } from 'local-build-infra/lib/build-output'
+import { CHECKPOINTS } from 'local-build-infra/lib/constants'
+import { ensureEmscripten } from 'local-build-infra/lib/emscripten-installer'
+import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
+import { getEmscriptenVersion } from 'local-build-infra/lib/version-helpers'
+import { runPipelineCli } from 'local-build-infra/lib/build-pipeline'
 
 import {
   getBindingsPaths,

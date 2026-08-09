@@ -8,7 +8,7 @@ import path from 'node:path'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { escapeRegExp } from '@socketsecurity/lib-stable/regexps/escape'
-import { nodeVersionRaw } from 'node-smol-packages-build-infra/lib/constants'
+import { nodeVersionRaw } from 'local-build-infra/lib/constants'
 
 import { describe, expect, it } from 'vitest'
 

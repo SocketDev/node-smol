@@ -7,7 +7,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 // "SMFG" (Smol conFiG)
 const SMOL_CONFIG_MAGIC = 0x53_4d_46_47

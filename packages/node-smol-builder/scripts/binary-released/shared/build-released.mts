@@ -30,27 +30,27 @@ import {
   needsCacheRebuild,
   saveBuildLog,
   smokeTestBinary,
-} from 'node-smol-packages-build-infra/lib/build-helpers'
-import { printError } from 'node-smol-packages-build-infra/lib/build-output'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+} from 'local-build-infra/lib/build-helpers'
+import { printError } from 'local-build-infra/lib/build-output'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 import {
   computeBuildInputsFingerprint,
   formatStaleCheckpointMessage,
   isCheckpointFingerprintCurrent,
-} from 'node-smol-packages-build-infra/lib/checkpoint-cache-key'
+} from 'local-build-infra/lib/checkpoint-cache-key'
 import {
   getCheckpointData,
   hasCheckpoint,
   restoreCheckpoint,
   shouldRun,
-} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
+} from 'local-build-infra/lib/checkpoint-manager'
 import {
   CHECKPOINT_CHAINS,
   CHECKPOINTS,
   nodeVersionRaw,
   validateCheckpointChain,
-} from 'node-smol-packages-build-infra/lib/constants'
-import { appendCCRemapFlags } from 'node-smol-packages-build-infra/lib/path-remap-flags'
+} from 'local-build-infra/lib/constants'
+import { appendCCRemapFlags } from 'local-build-infra/lib/path-remap-flags'
 import colors from 'yoctocolors-cjs'
 import process from 'node:process'
 
@@ -61,8 +61,8 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { LOG_SYMBOLS } from '@socketsecurity/lib-stable/logger/symbols'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import { getBuildPaths as getDawnBuildPaths } from 'node-smol-packages-dawn-builder/scripts/paths'
-import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { getBuildPaths as getDawnBuildPaths } from 'local-dawn-builder/scripts/paths'
+import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { copyBuildAdditions } from './copy-additions.mts'
 import { PATCHES_SOURCE_PATCHED_DIR } from './paths.mts'

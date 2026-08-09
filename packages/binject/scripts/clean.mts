@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 import {
   runCommand as runCommandRaw,
   selectMakefile,
-} from 'node-smol-packages-bin-infra/lib/builder'
+} from 'local-bin-infra/lib/builder'
 
 const runCommand = runCommandRaw as (
   command: string,
@@ -21,7 +21,7 @@ const runCommand = runCommandRaw as (
 ) => Promise<void>
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const packageRoot = path.join(__dirname, '..')

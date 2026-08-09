@@ -13,17 +13,17 @@ import { fileURLToPath } from 'node:url'
 import {
   runCommand as runCommandRaw,
   selectMakefile,
-} from 'node-smol-packages-bin-infra/lib/builder'
+} from 'local-bin-infra/lib/builder'
 
 const runCommand = runCommandRaw as (
   command: string,
   args: string[],
   cwd?: string | undefined,
 ) => Promise<void>
-import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
-import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
-import { ensureLief } from 'node-smol-packages-lief-builder/lib/ensure-lief'
+import { getBuildMode } from 'local-build-infra/lib/constants'
+import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
+import { ensureLief } from 'local-lief-builder/lib/ensure-lief'
 
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getCI } from '@socketsecurity/lib-stable/env/ci'

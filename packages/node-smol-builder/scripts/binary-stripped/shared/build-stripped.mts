@@ -20,10 +20,10 @@ import {
   exec,
   getFileSize,
   smokeTestBinary,
-} from 'node-smol-packages-build-infra/lib/build-helpers'
-import { printError } from 'node-smol-packages-build-infra/lib/build-output'
-import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
-import { ensureToolInstalled } from 'node-smol-packages-build-infra/lib/tool-installer'
+} from 'local-build-infra/lib/build-helpers'
+import { printError } from 'local-build-infra/lib/build-output'
+import { CHECKPOINTS } from 'local-build-infra/lib/constants'
+import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
 import colors from 'yoctocolors-cjs'
 
 import { whichSync } from '@socketsecurity/lib-stable/bin/which'

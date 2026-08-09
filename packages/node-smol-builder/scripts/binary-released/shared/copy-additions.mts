@@ -11,7 +11,7 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { ADDITIONS_SOURCE_PATCHED_DIR, PACKAGE_ROOT } from './paths.mts'
 import { MONOREPO_PACKAGE_SOURCES } from './prepare-external-sources.mts'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 const logger = getDefaultLogger()
 

@@ -39,8 +39,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { getBuildMode } from 'local-build-infra/lib/constants'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 import colors from 'yoctocolors-cjs'
 import process from 'node:process'
 

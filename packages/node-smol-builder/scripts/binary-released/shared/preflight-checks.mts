@@ -11,19 +11,19 @@ import {
   checkNetworkConnectivity,
   checkPythonVersion,
   exec,
-} from 'node-smol-packages-build-infra/lib/build-helpers'
-import { printError } from 'node-smol-packages-build-infra/lib/build-output'
+} from 'local-build-infra/lib/build-helpers'
+import { printError } from 'local-build-infra/lib/build-output'
 import {
   ensureGccVersion,
   getGccInstructions,
-} from 'node-smol-packages-build-infra/lib/compiler-installer'
+} from 'local-build-infra/lib/compiler-installer'
 import {
   ensureAllToolsInstalled,
   ensurePackageManagerAvailable,
   getInstallInstructions,
   getPackageManagerInstructions,
-} from 'node-smol-packages-build-infra/lib/tool-installer'
-import { getMinPythonVersion } from 'node-smol-packages-build-infra/lib/version-helpers'
+} from 'local-build-infra/lib/tool-installer'
+import { getMinPythonVersion } from 'local-build-infra/lib/version-helpers'
 
 import { whichSync } from '@socketsecurity/lib-stable/bin/which'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

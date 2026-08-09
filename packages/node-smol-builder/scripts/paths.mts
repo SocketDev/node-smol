@@ -19,11 +19,8 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import {
-  BUILD_STAGES,
-  CHECKPOINTS,
-} from 'node-smol-packages-build-infra/lib/constants'
-import { getAssetPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { BUILD_STAGES, CHECKPOINTS } from 'local-build-infra/lib/constants'
+import { getAssetPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { getSocketHomePath } from '@socketsecurity/lib-stable/paths/socket'
 
@@ -386,7 +383,7 @@ export function getSharedBuildPaths() {
 // Sibling packages that own their own scripts/paths.mts (dawn-builder,
 // yoga-layout-builder) get their PACKAGE_ROOT imported here; siblings
 // without a canonical paths.mts are re-derived (no other owner exists).
-import { PACKAGE_ROOT as YOGA_LAYOUT_BUILDER_DIR_FROM_OWNER } from 'node-smol-packages-yoga-layout-builder/scripts/paths'
+import { PACKAGE_ROOT as YOGA_LAYOUT_BUILDER_DIR_FROM_OWNER } from 'local-yoga-layout-builder/scripts/paths'
 
 export const YOGA_LAYOUT_BUILDER_DIR = YOGA_LAYOUT_BUILDER_DIR_FROM_OWNER
 

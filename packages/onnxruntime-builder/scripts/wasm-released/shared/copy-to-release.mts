@@ -7,8 +7,8 @@
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getFileSize } from 'node-smol-packages-build-infra/lib/build-helpers'
-import { printError } from 'node-smol-packages-build-infra/lib/build-output'
+import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { printError } from 'local-build-infra/lib/build-output'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

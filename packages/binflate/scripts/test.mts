@@ -10,13 +10,10 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import {
-  runCommand,
-  selectMakefile,
-} from 'node-smol-packages-bin-infra/lib/builder'
-import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
-import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { runCommand, selectMakefile } from 'local-bin-infra/lib/builder'
+import { getBuildMode } from 'local-build-infra/lib/constants'
+import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getCI } from '@socketsecurity/lib-stable/env/ci'

@@ -4,7 +4,7 @@
  * Generates synchronous wrapper for WASM module.
  */
 
-import { generateSync as generateSyncShared } from 'node-smol-packages-build-infra/wasm-synced/generate-sync-phase'
+import { generateSync as generateSyncShared } from 'local-build-infra/wasm-synced/generate-sync-phase'
 
 /**
  * Generate synchronous wrapper for ONNX Runtime WASM.

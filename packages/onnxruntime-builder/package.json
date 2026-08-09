@@ -22,8 +22,8 @@
     "@socketsecurity/lib-stable": "catalog:",
     "acorn": "catalog:",
     "acorn-walk": "catalog:",
-    "magic-string": "catalog:",
-    "local-build-infra": "workspace:0.0.0"
+    "local-build-infra": "workspace:0.0.0",
+    "magic-string": "catalog:"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

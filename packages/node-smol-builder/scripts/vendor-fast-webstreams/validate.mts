@@ -16,8 +16,8 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
-import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
+import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'

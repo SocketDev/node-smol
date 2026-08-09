@@ -26,7 +26,7 @@ import {
   getBinjectPath,
   getBinpressPath,
 } from './helpers/paths.mts'
-import { MACHO_SEGMENT_SMOL } from 'node-smol-packages-bin-infra/test/helpers/segment-names'
+import { MACHO_SEGMENT_SMOL } from 'local-bin-infra/test/helpers/segment-names'
 
 const logger = getDefaultLogger()
 

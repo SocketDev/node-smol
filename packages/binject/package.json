@@ -24,8 +24,8 @@
     "@dotenvx/dotenvx": "catalog:",
     "@types/adm-zip": "catalog:",
     "adm-zip": "catalog:",
+    "local-node-smol-builder": "workspace:0.0.0",
     "tar": "catalog:",
-    "vitest": "catalog:",
-    "local-node-smol-builder": "workspace:0.0.0"
+    "vitest": "catalog:"
   }
 }

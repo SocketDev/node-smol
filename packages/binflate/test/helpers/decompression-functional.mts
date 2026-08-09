@@ -7,7 +7,7 @@
 import crypto from 'node:crypto'
 import { promises as fs } from 'node:fs'
 
-import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-helpers'
 
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 

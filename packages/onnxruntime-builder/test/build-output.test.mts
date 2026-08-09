@@ -10,7 +10,7 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { createWasmTestHelpers } from 'node-smol-packages-build-infra/lib/test/helpers'
+import { createWasmTestHelpers } from 'local-build-infra/lib/test/helpers'
 
 import { isObject } from '@socketsecurity/lib-stable/objects/predicates'
 

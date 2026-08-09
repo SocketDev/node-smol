@@ -6,10 +6,10 @@ import { fileURLToPath } from 'node:url'
 import {
   createCheckpoint,
   shouldRun,
-} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
-import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
-import { getPythonCommand } from 'node-smol-packages-build-infra/lib/python-installer'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+} from 'local-build-infra/lib/checkpoint-manager'
+import { CHECKPOINTS } from 'local-build-infra/lib/constants'
+import { getPythonCommand } from 'local-build-infra/lib/python-installer'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { which } from '@socketsecurity/lib-stable/bin/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'

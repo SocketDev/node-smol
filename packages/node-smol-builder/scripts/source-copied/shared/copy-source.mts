@@ -10,13 +10,13 @@ import path from 'node:path'
 import {
   cleanCheckpoint,
   createCheckpoint,
-} from 'node-smol-packages-build-infra/lib/build-helpers'
-import { printError } from 'node-smol-packages-build-infra/lib/build-output'
+} from 'local-build-infra/lib/build-helpers'
+import { printError } from 'local-build-infra/lib/build-output'
 import {
   getCheckpointData,
   shouldRun,
-} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
-import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
+} from 'local-build-infra/lib/checkpoint-manager'
+import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

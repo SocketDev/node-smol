@@ -20,9 +20,9 @@ import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
-import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
-import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { getBuildMode } from 'local-build-infra/lib/constants'
+import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

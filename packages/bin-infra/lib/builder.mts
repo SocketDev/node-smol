@@ -10,24 +10,24 @@ import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import { getFileSize } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { getFileSize } from 'local-build-infra/lib/build-helpers'
 import {
   createCheckpoint,
   shouldRun,
-} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
+} from 'local-build-infra/lib/checkpoint-manager'
 import {
   BUILD_STAGES,
   CHECKPOINT_CHAINS,
   CHECKPOINTS,
   getBuildMode,
   getPlatformBuildDir,
-} from 'node-smol-packages-build-infra/lib/constants'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+} from 'local-build-infra/lib/constants'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 import {
   getCurrentPlatformArch,
   parsePlatformArch,
-} from 'node-smol-packages-build-infra/lib/platform-mappings'
-import { runCommand } from 'node-smol-packages-build-infra/lib/script-runner'
+} from 'local-build-infra/lib/platform-mappings'
+import { runCommand } from 'local-build-infra/lib/script-runner'
 
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

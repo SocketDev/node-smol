@@ -11,7 +11,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { runSetupToolchain } from 'node-smol-packages-build-infra/lib/setup-build-toolchain'
+import { runSetupToolchain } from 'local-build-infra/lib/setup-build-toolchain'
 
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

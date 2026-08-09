@@ -5,7 +5,7 @@
  * test code across builder packages (onnxruntime-builder, yoga-layout-builder).
  *
  * Usage: import { createWasmTestHelpers } from
- * 'node-smol-packages-build-infra/lib/test/helpers' const helpers =
+ * 'local-build-infra/lib/test/helpers' const helpers =
  * createWasmTestHelpers({ wasmDir, wasmName: 'ort', ... })
  * helpers.testWasmMagicNumber()
  */

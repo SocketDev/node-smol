@@ -5,7 +5,7 @@
  *   the home of reusable parsing logic and pushed it past the file-size cap.
  */
 
-import { SMOL_PRESSED_DATA_MAGIC_MARKER } from 'node-smol-packages-build-infra/lib/constants'
+import { SMOL_PRESSED_DATA_MAGIC_MARKER } from 'local-build-infra/lib/constants'
 
 export interface SmolSegment {
   content: Buffer

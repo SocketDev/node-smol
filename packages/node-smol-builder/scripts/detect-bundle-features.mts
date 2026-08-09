@@ -27,7 +27,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import * as acorn from 'acorn'
 import * as walk from 'acorn-walk'
 
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 

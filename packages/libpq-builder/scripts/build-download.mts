@@ -11,17 +11,17 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { checkBuildSourceFlag } from 'node-smol-packages-build-infra/lib/build-env'
+import { checkBuildSourceFlag } from 'local-build-infra/lib/build-env'
 import {
   BUILD_STAGES,
   CHECKPOINTS,
   getPlatformBuildDir,
-} from 'node-smol-packages-build-infra/lib/constants'
-import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
-import { verifyReleaseChecksum } from 'node-smol-packages-build-infra/lib/release-checksums/core'
-import { extractTarball } from 'node-smol-packages-build-infra/lib/tarball-utils'
-import { getSubmoduleVersion } from 'node-smol-packages-build-infra/lib/version-helpers'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+} from 'local-build-infra/lib/constants'
+import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
+import { verifyReleaseChecksum } from 'local-build-infra/lib/release-checksums/core'
+import { extractTarball } from 'local-build-infra/lib/tarball-utils'
+import { getSubmoduleVersion } from 'local-build-infra/lib/version-helpers'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

@@ -19,8 +19,8 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
-import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
+import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { getBuildMode } from 'local-build-infra/lib/constants'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 
@@ -31,11 +31,11 @@ import {
   MACHO_LC_SEGMENT_OFFSET,
   MACHO_LOAD_COMMAND,
   MACHO_MAGIC,
-} from 'node-smol-packages-bin-infra/test/helpers/binary-format-constants'
+} from 'local-bin-infra/test/helpers/binary-format-constants'
 import {
   codeSignBinary,
   execCommand,
-} from 'node-smol-packages-bin-infra/test/helpers/test-utils'
+} from 'local-bin-infra/test/helpers/test-utils'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'

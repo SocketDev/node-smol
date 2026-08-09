@@ -5,10 +5,10 @@ import process from 'node:process'
 import {
   createCheckpoint,
   shouldRun,
-} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
-import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
-import { getPythonCommand } from 'node-smol-packages-build-infra/lib/python-installer'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+} from 'local-build-infra/lib/checkpoint-manager'
+import { CHECKPOINTS } from 'local-build-infra/lib/constants'
+import { getPythonCommand } from 'local-build-infra/lib/python-installer'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import platformPkg from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

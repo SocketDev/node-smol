@@ -9,7 +9,7 @@
 
 import path from 'node:path'
 
-import { ensureSubmodule } from 'node-smol-packages-build-infra/lib/submodule-init'
+import { ensureSubmodule } from 'local-build-infra/lib/submodule-init'
 
 /**
  * Ensure the cJSON upstream tree is materialized.

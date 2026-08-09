@@ -30,7 +30,7 @@ import { safeDeleteSync } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { readPackageJson } from '@socketsecurity/lib-stable/packages/read'
 import process from 'node:process'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import type { EditablePackageJson } from '@socketsecurity/lib-stable/packages/types'
 

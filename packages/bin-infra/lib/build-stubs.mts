@@ -15,20 +15,20 @@ import { fileURLToPath } from 'node:url'
 import {
   createCheckpoint,
   shouldRun,
-} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
+} from 'local-build-infra/lib/checkpoint-manager'
 import {
   CHECKPOINT_CHAINS,
   CHECKPOINTS,
   getBuildMode,
   getPlatformBuildDir,
-} from 'node-smol-packages-build-infra/lib/constants'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+} from 'local-build-infra/lib/constants'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 // logTransientErrorHelp loaded lazily inside catch block below (see
 // curl-builder/scripts/build.mts for full rationale on the
 // http-request/convenience CJS/ESM interop crash).
-import { tarSupportsNoAbsoluteNames } from 'node-smol-packages-build-infra/lib/platform-mappings'
-import { verifyReleaseChecksum } from 'node-smol-packages-build-infra/lib/release-checksums/core'
-import { ensureCurl } from 'node-smol-packages-curl-builder/lib/ensure-curl'
+import { tarSupportsNoAbsoluteNames } from 'local-build-infra/lib/platform-mappings'
+import { verifyReleaseChecksum } from 'local-build-infra/lib/release-checksums/core'
+import { ensureCurl } from 'local-curl-builder/lib/ensure-curl'
 
 import { envAsBoolean } from '@socketsecurity/lib-stable/env/boolean'
 import { getCI } from '@socketsecurity/lib-stable/env/ci'
@@ -221,7 +221,7 @@ export async function downloadPrebuiltStub(
     logger.info(`Failed to download prebuilt stub: ${errorMessage(e)}`)
     try {
       const { logTransientErrorHelp } =
-        await import('node-smol-packages-build-infra/lib/github-error-utils')
+        await import('local-build-infra/lib/github-error-utils')
       await logTransientErrorHelp(e)
     } catch {
       // Hint module failed to load — original error already logged.
@@ -424,7 +424,7 @@ async function main() {
     logger.fail(`Stub build failed: ${errorMessage(e)}`)
     try {
       const { logTransientErrorHelp } =
-        await import('node-smol-packages-build-infra/lib/github-error-utils')
+        await import('local-build-infra/lib/github-error-utils')
       await logTransientErrorHelp(e)
     } catch {
       // Hint module failed to load — original error already logged.

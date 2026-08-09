@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest'
 import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 
-import { SMOL_PRESSED_DATA_MAGIC_MARKER } from 'node-smol-packages-build-infra/lib/constants'
+import { SMOL_PRESSED_DATA_MAGIC_MARKER } from 'local-build-infra/lib/constants'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -21,7 +21,7 @@ import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 import {
   MACHO_SECTION_PRESSED_DATA,
   MACHO_SEGMENT_SMOL,
-} from 'node-smol-packages-bin-infra/test/helpers/segment-names'
+} from 'local-bin-infra/test/helpers/segment-names'
 import {
   extractCompressedData,
   isCodeSigned,

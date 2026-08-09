@@ -7,8 +7,8 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { cleanBuilder } from 'node-smol-packages-build-infra/lib/clean-builder'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { cleanBuilder } from 'local-build-infra/lib/clean-builder'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 

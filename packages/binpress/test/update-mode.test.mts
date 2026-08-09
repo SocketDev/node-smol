@@ -21,9 +21,9 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
-import { getPlatformBuildDir } from 'node-smol-packages-build-infra/lib/constants'
-import { getCurrentPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { getPlatformBuildDir } from 'local-build-infra/lib/constants'
+import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -31,7 +31,7 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import {
   codeSignBinary,
   execCommand,
-} from 'node-smol-packages-bin-infra/test/helpers/test-utils'
+} from 'local-bin-infra/test/helpers/test-utils'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

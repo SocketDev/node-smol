@@ -8,7 +8,7 @@
 export {
   MAX_NODE_BINARY_SIZE,
   MAX_VFS_SIZE,
-} from 'node-smol-packages-build-infra/lib/constants'
+} from 'local-build-infra/lib/constants'
 
 /**
  * Maximum SEA blob size binject accepts.

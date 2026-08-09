@@ -12,13 +12,13 @@ import process from 'node:process'
 import {
   formatDuration,
   getFileSize,
-} from 'node-smol-packages-build-infra/lib/build-helpers'
-import { printError } from 'node-smol-packages-build-infra/lib/build-output'
-import { ensureEmscripten } from 'node-smol-packages-build-infra/lib/emscripten-installer'
+} from 'local-build-infra/lib/build-helpers'
+import { printError } from 'local-build-infra/lib/build-output'
+import { ensureEmscripten } from 'local-build-infra/lib/emscripten-installer'
 import {
   appendCCRemapFlags,
   getCCRemapFlagsString,
-} from 'node-smol-packages-build-infra/lib/path-remap-flags'
+} from 'local-build-infra/lib/path-remap-flags'
 
 import { whichSync } from '@socketsecurity/lib-stable/bin/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'

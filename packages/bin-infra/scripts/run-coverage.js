@@ -20,9 +20,7 @@ const { getDefaultLogger } = require('@socketsecurity/lib-stable/logger')
 const { spawn } = require('@socketsecurity/lib-stable/spawn')
 const process = require('node:process')
 
-const {
-  errorMessage,
-} = require('node-smol-packages-build-infra/lib/error-utils')
+const { errorMessage } = require('local-build-infra/lib/error-utils')
 
 const logger = getDefaultLogger()
 const PACKAGES_DIR = path.resolve(__dirname, '../..')

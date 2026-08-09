@@ -25,9 +25,9 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
-    "octokit": "catalog:",
-    "vitest": "catalog:",
     "local-bin-stub-builder": "workspace:0.0.0",
-    "local-lief-builder": "workspace:0.0.0"
+    "local-lief-builder": "workspace:0.0.0",
+    "octokit": "catalog:",
+    "vitest": "catalog:"
   }
 }

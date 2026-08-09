@@ -18,13 +18,13 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-helpers'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 
 import { getBinjectPath } from './helpers/paths.mts'
 import { execCommand } from './helpers/exec-command.mts'
-import { MACHO_SEGMENT_NODE_SEA } from 'node-smol-packages-bin-infra/test/helpers/segment-names'
+import { MACHO_SEGMENT_NODE_SEA } from 'local-bin-infra/test/helpers/segment-names'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const TIMEOUT_30S = tolerantTimeout(30_000)

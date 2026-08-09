@@ -18,13 +18,13 @@ import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-helpers'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getSocketDlxDir } from '@socketsecurity/lib-stable/paths/socket'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import { MACHO_SEGMENT_NODE_SEA } from 'node-smol-packages-bin-infra/test/helpers/segment-names'
+import { MACHO_SEGMENT_NODE_SEA } from 'local-bin-infra/test/helpers/segment-names'
 import { runBinject } from '../helpers/binject.mts'
 import { getLatestFinalBinary } from '../paths.mts'
 

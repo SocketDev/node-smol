@@ -9,8 +9,8 @@ import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { MAX_NODE_BINARY_SIZE } from 'node-smol-packages-build-infra/lib/constants'
-import { loadAllTools } from 'node-smol-packages-build-infra/lib/pinned-versions'
+import { MAX_NODE_BINARY_SIZE } from 'local-build-infra/lib/constants'
+import { loadAllTools } from 'local-build-infra/lib/pinned-versions'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const packageDir = path.join(__dirname, '..')

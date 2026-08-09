@@ -10,7 +10,7 @@ import path from 'node:path'
 import AdmZip from 'adm-zip'
 import { extract } from 'tar'
 
-import { getDownloadedDir } from 'node-smol-packages-build-infra/lib/paths'
+import { getDownloadedDir } from 'local-build-infra/lib/paths'
 
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { httpRequest } from '@socketsecurity/lib-stable/http-request/request'

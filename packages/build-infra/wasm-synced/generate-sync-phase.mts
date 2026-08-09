@@ -11,8 +11,8 @@ import path from 'node:path'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { hasKeys } from '@socketsecurity/lib-stable/objects/predicates'
-import { getFileSize } from 'node-smol-packages-build-infra/lib/build-helpers'
-import { generateWasmSyncWrapper } from 'node-smol-packages-build-infra/wasm-synced/wasm-sync-wrapper'
+import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { generateWasmSyncWrapper } from 'local-build-infra/wasm-synced/wasm-sync-wrapper'
 
 const logger = getDefaultLogger()
 

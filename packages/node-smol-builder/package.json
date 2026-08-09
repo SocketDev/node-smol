@@ -30,11 +30,11 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "yoctocolors-cjs": "catalog:",
     "local-bin-infra": "workspace:0.0.0",
     "local-build-infra": "workspace:0.0.0",
     "local-dawn-builder": "workspace:0.0.0",
-    "local-yoga-layout-builder": "workspace:0.0.0"
+    "local-yoga-layout-builder": "workspace:0.0.0",
+    "yoctocolors-cjs": "catalog:"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

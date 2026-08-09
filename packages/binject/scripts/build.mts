@@ -7,12 +7,12 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { buildBinSuitePackage } from 'node-smol-packages-bin-infra/lib/builder'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { buildBinSuitePackage } from 'local-bin-infra/lib/builder'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
-import { ensureLibdeflate } from 'node-smol-packages-build-infra/lib/libdeflate-init'
-import { ensureZstd } from 'node-smol-packages-build-infra/lib/zstd-init'
-import { ensureLief } from 'node-smol-packages-lief-builder/lib/ensure-lief'
+import { ensureLibdeflate } from 'local-build-infra/lib/libdeflate-init'
+import { ensureZstd } from 'local-build-infra/lib/zstd-init'
+import { ensureLief } from 'local-lief-builder/lib/ensure-lief'
 
 import { ensureCjson } from './ensure-cjson.mts'
 

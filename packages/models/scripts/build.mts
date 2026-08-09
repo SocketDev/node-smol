@@ -28,11 +28,11 @@ import process from 'node:process'
 import {
   cleanCheckpoint,
   createCheckpoint,
-} from 'node-smol-packages-build-infra/lib/checkpoint-manager'
-import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
-import { checkModelBuildPrerequisites } from 'node-smol-packages-build-infra/lib/model-build-helpers'
-import { getPythonCommand } from 'node-smol-packages-build-infra/lib/python-installer'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+} from 'local-build-infra/lib/checkpoint-manager'
+import { CHECKPOINTS } from 'local-build-infra/lib/constants'
+import { checkModelBuildPrerequisites } from 'local-build-infra/lib/model-build-helpers'
+import { getPythonCommand } from 'local-build-infra/lib/python-installer'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { readJson } from '@socketsecurity/lib-stable/fs/read-json'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'

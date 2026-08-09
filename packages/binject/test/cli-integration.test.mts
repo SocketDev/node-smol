@@ -9,14 +9,14 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
-import { getPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
+import { getPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
-import { getBuildPaths as getNodeSmolBuildPaths } from 'node-smol-packages-node-smol-builder/scripts/paths'
+import { getBuildPaths as getNodeSmolBuildPaths } from 'local-node-smol-builder/scripts/paths'
 
 import { MAX_NODE_BINARY_SIZE } from './helpers/constants.mts'
 import { getBinjectPath } from './helpers/paths.mts'

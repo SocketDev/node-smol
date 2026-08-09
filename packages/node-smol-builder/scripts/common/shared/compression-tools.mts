@@ -18,8 +18,8 @@ import process from 'node:process'
 import {
   getDownloadedDir,
   getFinalBinaryPath,
-} from 'node-smol-packages-build-infra/lib/paths'
-import { getPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+} from 'local-build-infra/lib/paths'
+import { getPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { envAsBoolean } from '@socketsecurity/lib-stable/env/boolean'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -124,7 +124,7 @@ export async function downloadToolIfMissing(tool, platform, arch, libc) {
   } catch (e) {
     try {
       const { logTransientErrorHelp } =
-        await import('node-smol-packages-build-infra/lib/github-error-utils')
+        await import('local-build-infra/lib/github-error-utils')
       await logTransientErrorHelp(e)
     } catch {
       // Hint module failed to load — original error already logged.

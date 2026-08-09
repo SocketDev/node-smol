@@ -12,7 +12,7 @@ import {
   spawn,
   spawnSync,
 } from '@socketsecurity/lib-stable/process/spawn/child'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { isOnAcPower } from '../../../scripts/fleet/power-state.mts'
 

@@ -6,11 +6,8 @@
 import path from 'node:path'
 import process from 'node:process'
 
-import {
-  BUILD_STAGES,
-  getBuildMode,
-} from 'node-smol-packages-build-infra/lib/constants'
-import { getPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { BUILD_STAGES, getBuildMode } from 'local-build-infra/lib/constants'
+import { getPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -18,7 +15,7 @@ import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 import {
   RESOURCE_SMOL_VFS_BLOB,
   RESOURCE_SMOL_VFS_CONFIG,
-} from 'node-smol-packages-bin-infra/test/helpers/segment-names'
+} from 'local-bin-infra/test/helpers/segment-names'
 
 import { PACKAGE_ROOT } from '../../scripts/paths.mts'
 

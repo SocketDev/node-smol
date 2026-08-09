@@ -13,8 +13,8 @@
  * (int4 -> prod, int8 -> dev) per scripts/build.mts:70-71.
  */
 
-import { createPrebuiltApi } from 'node-smol-packages-build-infra/lib/ensure-prebuilt'
-import { getAssetPlatformArch } from 'node-smol-packages-build-infra/lib/platform-mappings'
+import { createPrebuiltApi } from 'local-build-infra/lib/ensure-prebuilt'
+import { getAssetPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { detectLibc } from '@socketsecurity/lib-stable/releases/socket-btm'
 

@@ -22,9 +22,9 @@ describe('node-smol package', () => {
         path.join(nodeSmolBuilderDir, 'package.json'),
       )
 
-      // Private-package identity law: unscoped <repo>-<dir-path> at 0.0.0, so
-      // the name itself states this package never ships.
-      expect(pkgJson.name).toBe('node-smol-packages-node-smol-builder')
+      // Private-package identity law: `local-<own directory name>` at 0.0.0,
+      // so the name itself states this package never ships.
+      expect(pkgJson.name).toBe('local-node-smol-builder')
       expect(pkgJson.version).toMatch(/^\d+\.\d+\.\d+$/)
       expect(pkgJson.license).toBe('MIT')
       expect(pkgJson.description).toContain('Node.js')

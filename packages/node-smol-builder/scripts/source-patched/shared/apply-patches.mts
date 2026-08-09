@@ -7,14 +7,14 @@
 import { existsSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
-import { createCheckpoint } from 'node-smol-packages-build-infra/lib/build-helpers'
-import { shouldRun } from 'node-smol-packages-build-infra/lib/checkpoint-manager'
-import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
+import { createCheckpoint } from 'local-build-infra/lib/build-helpers'
+import { shouldRun } from 'local-build-infra/lib/checkpoint-manager'
+import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 import {
   applyPatch,
   validatePatch,
-} from 'node-smol-packages-build-infra/lib/patch-validator'
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+} from 'local-build-infra/lib/patch-validator'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { glob } from '@socketsecurity/lib-stable/globs/match'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

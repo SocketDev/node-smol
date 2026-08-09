@@ -7,8 +7,8 @@
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getFileSize } from 'node-smol-packages-build-infra/lib/build-helpers'
-import { ensureToolInstalled } from 'node-smol-packages-build-infra/lib/tool-installer'
+import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
 
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'

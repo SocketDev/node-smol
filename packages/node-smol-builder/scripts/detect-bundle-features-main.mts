@@ -14,7 +14,7 @@ import { pathToFileURL } from 'node:url'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
 
-import { errorMessage } from 'node-smol-packages-build-infra/lib/error-utils'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { SMOL_FEATURES } from './lib/smol-features.mts'
 import { detectBundleFeatures } from './detect-bundle-features.mts'

@@ -21,10 +21,10 @@ import {
   exec,
   getFileSize,
   smokeTestBinary,
-} from 'node-smol-packages-build-infra/lib/build-helpers'
-import { printError } from 'node-smol-packages-build-infra/lib/build-output'
-import { CHECKPOINTS } from 'node-smol-packages-build-infra/lib/constants'
-import { adHocSign } from 'node-smol-packages-build-infra/lib/sign'
+} from 'local-build-infra/lib/build-helpers'
+import { printError } from 'local-build-infra/lib/build-output'
+import { CHECKPOINTS } from 'local-build-infra/lib/constants'
+import { adHocSign } from 'local-build-infra/lib/sign'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

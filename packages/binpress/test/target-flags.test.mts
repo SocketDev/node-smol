@@ -21,8 +21,8 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { makeExecutable } from 'node-smol-packages-build-infra/lib/build-helpers'
-import { getBuildMode } from 'node-smol-packages-build-infra/lib/constants'
+import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { getBuildMode } from 'local-build-infra/lib/constants'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
