@@ -1,5 +1,5 @@
 {
-  "name": "node-smol-packages-models",
+  "name": "local-models",
   "version": "0.0.0",
   "private": true,
   "description": "Models for Socket CLI (MiniLM-L6, CodeT5)",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "node-smol-packages-build-infra": "workspace:0.0.0"
+    "local-build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

@@ -1,5 +1,5 @@
 {
-  "name": "node-smol-packages-onnxruntime-builder",
+  "name": "local-onnxruntime-builder",
   "version": "0.0.0",
   "private": true,
   "description": "Custom ONNX Runtime WASM build optimized for Socket CLI",
@@ -23,7 +23,7 @@
     "acorn": "catalog:",
     "acorn-walk": "catalog:",
     "magic-string": "catalog:",
-    "node-smol-packages-build-infra": "workspace:0.0.0"
+    "local-build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

@@ -1,5 +1,5 @@
 {
-  "name": "node-smol-packages-binject",
+  "name": "local-binject",
   "version": "0.0.0",
   "private": true,
   "description": "Binary resource injection tool",
@@ -15,17 +15,17 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "node-smol-packages-bin-infra": "workspace:0.0.0",
-    "node-smol-packages-build-infra": "workspace:0.0.0",
-    "node-smol-packages-glibc-shims-infra": "workspace:0.0.0",
-    "node-smol-packages-lief-builder": "workspace:0.0.0"
+    "local-bin-infra": "workspace:0.0.0",
+    "local-build-infra": "workspace:0.0.0",
+    "local-glibc-shims-infra": "workspace:0.0.0",
+    "local-lief-builder": "workspace:0.0.0"
   },
   "devDependencies": {
     "@dotenvx/dotenvx": "catalog:",
     "@types/adm-zip": "catalog:",
     "adm-zip": "catalog:",
-    "node-smol-packages-node-smol-builder": "workspace:0.0.0",
     "tar": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "local-node-smol-builder": "workspace:0.0.0"
   }
 }

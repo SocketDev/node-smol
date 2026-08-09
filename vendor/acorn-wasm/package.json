@@ -1,5 +1,5 @@
 {
-  "name": "node-smol-vendor-acorn-wasm",
+  "name": "local-acorn-wasm",
   "version": "0.0.0",
   "private": true,
   "type": "module",

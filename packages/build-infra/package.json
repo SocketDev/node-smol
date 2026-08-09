@@ -1,5 +1,5 @@
 {
-  "name": "node-smol-packages-build-infra",
+  "name": "local-build-infra",
   "version": "0.0.0",
   "private": true,
   "description": "Shared build infrastructure for building third-party dependencies from source",

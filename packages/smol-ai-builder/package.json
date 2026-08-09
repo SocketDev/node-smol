@@ -1,5 +1,5 @@
 {
-  "name": "node-smol-packages-smol-ai-builder",
+  "name": "local-smol-ai-builder",
   "version": "0.0.0",
   "private": true,
   "description": "Builds the llama.cpp-backed smol_ai.node N-API module",
@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "node-smol-packages-ai-infra": "workspace:0.0.0",
-    "node-smol-packages-build-infra": "workspace:0.0.0"
+    "local-ai-infra": "workspace:0.0.0",
+    "local-build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",

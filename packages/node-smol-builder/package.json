@@ -1,5 +1,5 @@
 {
-  "name": "node-smol-packages-node-smol-builder",
+  "name": "local-node-smol-builder",
   "version": "0.0.0",
   "private": true,
   "description": "Optimized Node.js binaries with SEA support and Socket security patches",
@@ -30,11 +30,11 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "node-smol-packages-bin-infra": "workspace:0.0.0",
-    "node-smol-packages-build-infra": "workspace:0.0.0",
-    "node-smol-packages-dawn-builder": "workspace:0.0.0",
-    "node-smol-packages-yoga-layout-builder": "workspace:0.0.0",
-    "yoctocolors-cjs": "catalog:"
+    "yoctocolors-cjs": "catalog:",
+    "local-bin-infra": "workspace:0.0.0",
+    "local-build-infra": "workspace:0.0.0",
+    "local-dawn-builder": "workspace:0.0.0",
+    "local-yoga-layout-builder": "workspace:0.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

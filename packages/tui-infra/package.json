@@ -1,5 +1,5 @@
 {
-  "name": "node-smol-packages-tui-infra",
+  "name": "local-tui-infra",
   "version": "0.0.0",
   "private": true,
   "description": "Source-only C++ TUI primitives (render loop + Yoga binding + mouse parser) for embedding into node-smol-builder as the `node:smol-tui` builtin. No binary release; consumers compile inline via additions/source-patched. Lockstep with socket-stuie's TS upstream (OpenTUI fork).",
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@socketsecurity/lib-stable": "catalog:",
-    "node-smol-packages-build-infra": "workspace:0.0.0"
+    "local-build-infra": "workspace:0.0.0"
   },
   "devDependencies": {
     "@types/node": "catalog:"
