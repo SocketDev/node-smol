@@ -11,6 +11,7 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { UPSTREAM_PATH } from 'local-node-smol-builder/scripts/paths'
 import {
   TEST262_HARNESS_DIR,
   TEST262_ROOT,
@@ -20,6 +21,18 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export { TEST262_HARNESS_DIR, TEST262_ROOT, TEST262_TEST_DIR }
+
+/**
+ * Include dirs a translation unit in this package needs to compile against the
+ * Node checkout, inherited from the builder's UPSTREAM_PATH rather than rebuilt
+ * here. Node's own headers reach V8 and libuv by these three roots, so a
+ * standalone syntax check needs all three to resolve `node_internals.h`.
+ */
+export const NODE_UPSTREAM_INCLUDE_DIRS: readonly string[] = [
+  path.join(UPSTREAM_PATH, 'src'),
+  path.join(UPSTREAM_PATH, 'deps', 'v8', 'include'),
+  path.join(UPSTREAM_PATH, 'deps', 'uv', 'include'),
+]
 
 /**
  * Package root: packages/promise-infra/

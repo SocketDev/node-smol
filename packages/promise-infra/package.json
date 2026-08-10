@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "local-node-smol-builder": "workspace:0.0.0",
     "vitest": "catalog:"
   }
 }

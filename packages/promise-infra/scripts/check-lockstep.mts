@@ -2,8 +2,8 @@
 
 /**
  * @file Lockstep audit for the promise-infra keyed combinators.
- *   The contract has two halves, and both are static-checkable, so both are
- *   checked here rather than trusted:
+ *   The contract has three parts, each checkable without a full build, so each
+ *   is checked here rather than trusted:
  *
  *   1. Invariant anchors. Each of the six spec invariants is carried by a specific
  *      mechanism in keyed_combinators.cc. A refactor that drops one leaves the
@@ -15,16 +15,24 @@
  *      separate files agree: the source is listed in the node.gyp patch, the
  *      binding name is in NODE_BUILTIN_BINDINGS and in the external-reference
  *      list, and something requires the bootstrap installer. Miss one and the
- *      failure surfaces hours into a build, or as a snapshot link error. Exit
- *      codes: 0 — both checks pass. 1 — at least one failed. Run via: pnpm
- *      --filter promise-infra run check:lockstep
+ *      failure surfaces hours into a build, or as a snapshot link error.
+ *   3. It compiles. The anchor scan reads the file as text, so it passes on a file
+ *      that cannot build — which is what happened here. A syntax-only run
+ *      catches that in seconds, and skips loudly when the Node checkout or a
+ *      compiler is absent. Exit codes: 0 — every check passed or skipped. 1 —
+ *      at least one failed. Run via: pnpm --filter promise-infra run
+ *      check:lockstep
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
+import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
+
+import { NODE_UPSTREAM_INCLUDE_DIRS } from '../lib/paths.mts'
 
 const logger = getDefaultLogger()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -160,47 +168,169 @@ export function checkRegistration(): {
   return { ok: missing.length === 0, missing }
 }
 
-// ── Run all checks ──────────────────────────────────────────────────
-
-let failed = false
-
-logger.info('promise-infra lockstep audit')
-logger.info('')
-
-logger.info('Check 1/2: spec invariant anchors')
-const invariantResult = checkInvariantAnchors()
-if (invariantResult.ok) {
-  logger.success(`  all ${INVARIANT_ANCHORS.length} invariant anchors present`)
-} else {
-  failed = true
-  logger.error(`  ${invariantResult.missing.length} invariant anchor(s) gone:`)
-  const missing = invariantResult.missing
-  for (let i = 0, { length } = missing; i < length; i += 1) {
-    const entry = missing[i]!
-    logger.error(`    ${entry.name} — ${entry.fix}`)
+/**
+ * Every flag the standalone syntax check needs. `NODE_WANT_INTERNALS` is the
+ * gate Node puts its internal helpers behind, so without it
+ * `FIXED_ONE_BYTE_STRING` and `ExternalReferenceRegistry` read as undeclared
+ * and the run fails for a reason that has nothing to do with this file.
+ */
+export function compileArgs(): string[] {
+  const includes: string[] = []
+  for (let i = 0, { length } = NODE_UPSTREAM_INCLUDE_DIRS; i < length; i += 1) {
+    includes.push('-I', NODE_UPSTREAM_INCLUDE_DIRS[i]!)
   }
+  return [
+    '-std=c++20',
+    '-fsyntax-only',
+    '-DNODE_WANT_INTERNALS=1',
+    ...includes,
+    IMPL_PATH,
+  ]
 }
 
-logger.info('')
-logger.info('Check 2/2: native binding registration')
-const registrationResult = checkRegistration()
-if (registrationResult.ok) {
-  logger.success('  smol_promise is wired in every patch that must carry it')
-} else {
-  failed = true
-  logger.error(
-    `  ${registrationResult.missing.length} wiring file(s) missing the binding:`,
+export interface CompileResult {
+  status: 'passed' | 'failed' | 'skipped'
+  detail: string
+}
+
+/**
+ * The fields a rejected spawn carries that this check reads. `code` is the
+ * discriminator: a string errno such as 'ENOENT' for a binary that is not
+ * there, a number for a process that ran and exited nonzero.
+ */
+export interface SpawnFailure {
+  code: number | string | undefined
+  stderr: string | undefined
+  stdout: string | undefined
+}
+
+export function isSpawnFailure(value: unknown): value is SpawnFailure {
+  return typeof value === 'object' && value !== null && 'code' in value
+}
+
+/**
+ * Check 3: the translation unit actually compiles.
+ *
+ * The anchor scan above reads the file as text, so it passes just as happily on
+ * a file that cannot build — which is exactly what happened: six calls to
+ * `v8::Context::GetIsolate()` survived here after V8 removed the accessor, and
+ * every static check stayed green. A syntax-only run costs seconds and is the
+ * only check that would have caught it.
+ *
+ * Skips, loudly, when the Node checkout or a C++ compiler is absent: a fresh
+ * clone has no submodule, and a skip that says so beats a red that means
+ * "you have not run the build yet".
+ */
+export async function checkCompiles(): Promise<CompileResult> {
+  const missingIncludes = NODE_UPSTREAM_INCLUDE_DIRS.filter(
+    dir => !existsSync(dir),
   )
-  const missing = registrationResult.missing
-  for (let i = 0, { length } = missing; i < length; i += 1) {
-    const entry = missing[i]!
-    logger.error(`    ${entry.patch} — ${entry.fix}`)
+  if (missingIncludes.length) {
+    return {
+      status: 'skipped',
+      detail: `Node headers absent (${missingIncludes.length} of ${NODE_UPSTREAM_INCLUDE_DIRS.length} include dirs missing) — run the builder's upstream checkout to enable this check`,
+    }
+  }
+  // `xcrun` puts the macOS SDK on the include path; a bare clang++ from
+  // homebrew finds no SDK and fails on <cstdlib>, which looks like a source
+  // error and is not one.
+  const compiler = process.platform === 'darwin' ? 'xcrun' : 'c++'
+  const args =
+    process.platform === 'darwin'
+      ? ['clang++', ...compileArgs()]
+      : compileArgs()
+  try {
+    await spawn(compiler, args)
+    return { status: 'passed', detail: 'keyed_combinators.cc compiles clean' }
+  } catch (e) {
+    // spawn rejects on ANY nonzero exit, so the two outcomes arrive down the
+    // same path and must be told apart by `code`: the string 'ENOENT' means no
+    // such binary, a NUMBER means the compiler ran and rejected the source.
+    // Treating both as "skipped" is how a real compile error reads as "no
+    // compiler installed" — measured, and the reason this branch is explicit.
+    if (isSpawnFailure(e) && e.code === 'ENOENT') {
+      return {
+        status: 'skipped',
+        detail: `no C++ compiler on PATH (tried \`${compiler}\`) — install one to enable this check`,
+      }
+    }
+    const diagnostics = isSpawnFailure(e) ? e.stderr || e.stdout || '' : ''
+    return {
+      status: 'failed',
+      detail: diagnostics.trim() || errorMessage(e),
+    }
   }
 }
 
-logger.info('')
-if (failed) {
-  logger.error('lockstep audit FAILED')
-  process.exit(1)
+// ── Run all checks ──────────────────────────────────
+
+/**
+ * Run every check and report. Exits nonzero when one FAILED; a SKIPPED check
+ * is reported and does not fail the audit.
+ */
+export async function main(): Promise<void> {
+  let failed = false
+
+  logger.info('promise-infra lockstep audit')
+  logger.info('')
+
+  logger.info('Check 1/3: spec invariant anchors')
+  const invariantResult = checkInvariantAnchors()
+  if (invariantResult.ok) {
+    logger.success(
+      `  all ${INVARIANT_ANCHORS.length} invariant anchors present`,
+    )
+  } else {
+    failed = true
+    logger.error(
+      `  ${invariantResult.missing.length} invariant anchor(s) gone:`,
+    )
+    const missing = invariantResult.missing
+    for (let i = 0, { length } = missing; i < length; i += 1) {
+      const entry = missing[i]!
+      logger.error(`    ${entry.name} — ${entry.fix}`)
+    }
+  }
+
+  logger.info('')
+  logger.info('Check 2/3: native binding registration')
+  const registrationResult = checkRegistration()
+  if (registrationResult.ok) {
+    logger.success('  smol_promise is wired in every patch that must carry it')
+  } else {
+    failed = true
+    logger.error(
+      `  ${registrationResult.missing.length} wiring file(s) missing the binding:`,
+    )
+    const missing = registrationResult.missing
+    for (let i = 0, { length } = missing; i < length; i += 1) {
+      const entry = missing[i]!
+      logger.error(`    ${entry.patch} — ${entry.fix}`)
+    }
+  }
+
+  logger.info('')
+  logger.info('Check 3/3: the translation unit compiles')
+  const compileResult = await checkCompiles()
+  if (compileResult.status === 'passed') {
+    logger.success(`  ${compileResult.detail}`)
+  } else if (compileResult.status === 'skipped') {
+    logger.warn(`  SKIPPED — ${compileResult.detail}`)
+  } else {
+    failed = true
+    logger.error('  keyed_combinators.cc does not compile:')
+    logger.error(compileResult.detail)
+  }
+
+  logger.info('')
+  if (failed) {
+    logger.error('lockstep audit FAILED')
+    process.exit(1)
+  }
+  logger.success('lockstep audit PASSED')
 }
-logger.success('lockstep audit PASSED')
+
+main().catch((e: unknown) => {
+  logger.error(`lockstep audit could not run: ${errorMessage(e)}`)
+  process.exitCode = 1
+})
