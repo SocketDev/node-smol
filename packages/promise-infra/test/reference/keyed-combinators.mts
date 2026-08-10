@@ -30,9 +30,22 @@ type Capability = {
   reject: Settler
 }
 
-type ExecutorConstructor = new (
-  executor: (resolve: Settler, reject: Settler) => void,
-) => unknown
+/**
+ * A Promise-like host: the `new C(executor)` NewPromiseCapability calls, plus
+ * the `resolve` GetPromiseResolve reads. `resolve` stays `unknown` because a
+ * host carrying a non-callable one is one of the TypeError paths under test, so
+ * a narrower type here would hide the case rather than describe it.
+ */
+type PromiseHost = {
+  new (executor: (resolve: Settler, reject: Settler) => void): unknown
+  resolve?: unknown | undefined
+}
+
+/**
+ * What `installKeyedCombinators` writes onto a host: one dictionary argument,
+ * and a `this` the combinator reads as the host constructor.
+ */
+export type KeyedCombinator = (this: unknown, dictionary: unknown) => unknown
 
 type SharedState = {
   remaining: number
@@ -40,19 +53,37 @@ type SharedState = {
   resolve: Settler
 }
 
-type Thenable = {
-  then: (onFulfilled: Settler, onRejected: Settler) => unknown
+/**
+ * A value a property can be read off. Every value this module handles arrives
+ * as `unknown`, and this narrowing is what makes a keyed read legal without a
+ * type assertion.
+ */
+function isObjectLike(value: unknown): value is Record<string, unknown> {
+  if (value === null) {
+    return false
+  }
+  return typeof value === 'function' || typeof value === 'object'
 }
 
 /**
- * NewPromiseCapability(C). A non-constructor `C` throws here rather than
- * rejecting, because the spec spells this step with `?` — the capability
- * whose reject would carry the error does not exist yet.
+ * The callable half of IsConstructor(C). A callable that is not a constructor
+ * passes here and throws from `new C(executor)` instead, which is where the
+ * spec's step 2 throws it.
  */
-export function newPromiseCapability(constructor: unknown): Capability {
+function isPromiseHost(value: unknown): value is PromiseHost {
+  return typeof value === 'function'
+}
+
+/**
+ * NewPromiseCapability(C). `new C(executor)` throws for a callable that is not
+ * a constructor, and `runKeyed` lets that propagate rather than rejecting:
+ * the spec spells this step with `?`, so the capability whose reject would
+ * carry the error does not exist yet.
+ */
+export function newPromiseCapability(constructor: PromiseHost): Capability {
   let resolve: Settler | undefined
   let reject: Settler | undefined
-  const promise = new (constructor as ExecutorConstructor)((res, rej) => {
+  const promise = new constructor((res, rej) => {
     if (resolve !== undefined || reject !== undefined) {
       throw new TypeError(
         'Promise capability executor was already invoked: a constructor may call its executor only once',
@@ -95,34 +126,30 @@ export function enumerableOwnKeys(dictionary: object): string[] {
  * caller learns to reject rather than propagate.
  */
 function performKeyed(
-  constructor: unknown,
+  constructor: PromiseHost,
   capability: Capability,
   input: unknown,
   kind: Combinator,
 ): void {
   // GetPromiseResolve(C) — read once, before the key walk, so no getter can
   // observe the iteration.
-  const promiseResolve = (constructor as { resolve?: unknown | undefined })
-    .resolve
+  const promiseResolve = constructor.resolve
   if (typeof promiseResolve !== 'function') {
     throw new TypeError(
       'Promise keyed combinator needs a callable `resolve`: `this.resolve` is not a function',
     )
   }
-  if (
-    input === null ||
-    (typeof input !== 'object' && typeof input !== 'function')
-  ) {
+  if (!isObjectLike(input)) {
     throw new TypeError(
       'Promise keyed combinator needs an object: the argument is a dictionary of promises, not a primitive or an iterable',
     )
   }
-  const dictionary = input as object
+  const dictionary = input
 
   // Plain assignment onto a null-prototype object IS
   // CreateDataPropertyOrThrow: with no prototype there is no inherited
   // setter to intercept the write, `__proto__` included.
-  const result = Object.create(null) as Record<string, unknown>
+  const result: Record<string, unknown> = Object.create(null)
 
   // The counter starts at 1, and the loop's own decrement lands only after
   // the walk ends. A dictionary of already-settled promises would otherwise
@@ -138,8 +165,10 @@ function performKeyed(
   const keys = enumerableOwnKeys(dictionary)
   for (let i = 0, { length } = keys; i < length; i += 1) {
     const key = keys[i]!
-    const value = (dictionary as Record<string, unknown>)[key]
-    const nextPromise = Reflect.apply(promiseResolve, constructor, [value])
+    const value = dictionary[key]
+    const nextPromise: unknown = Reflect.apply(promiseResolve, constructor, [
+      value,
+    ])
 
     // One record per key, and for allSettledKeyed BOTH handlers close over
     // it. A thenable that calls its fulfill and its reject callback
@@ -171,7 +200,7 @@ function performKeyed(
 
     // Invoke(nextPromise, "then", …) — a read plus a call, so a subclass
     // that overrides `then` is honored.
-    const then = (nextPromise as Partial<Thenable> | null)?.then
+    const then = isObjectLike(nextPromise) ? nextPromise['then'] : undefined
     if (typeof then !== 'function') {
       throw new TypeError(
         'Promise keyed combinator needs a callable `then` on each resolved value',
@@ -191,6 +220,14 @@ function runKeyed(
   input: unknown,
   kind: Combinator,
 ): unknown {
+  // The non-callable half of the same step 2: a primitive `this` has no
+  // `new C(executor)` to call at all. It throws outside the try below for the
+  // reason NewPromiseCapability does, there is no capability yet.
+  if (!isPromiseHost(constructor)) {
+    throw new TypeError(
+      'Promise keyed combinator needs a constructor `this`: the receiver is not callable, so it has no `new C(executor)`',
+    )
+  }
   const capability = newPromiseCapability(constructor)
   // IfAbruptRejectPromise: past the capability, every failure settles the
   // returned promise instead of propagating, so a caller that wrote
@@ -221,16 +258,14 @@ export function allSettledKeyedReference(
  * (lib/internal/socketsecurity/polyfills/promise-keyed.js) does the same
  * thing with the native functions, and the same absent-only check.
  */
-export function installKeyedCombinators(target: object): void {
-  const entries: Array<
-    [string, (this: unknown, dictionary: unknown) => unknown]
-  > = [
+export function installKeyedCombinators(target: Record<string, unknown>): void {
+  const entries: Array<[string, KeyedCombinator]> = [
     ['allKeyed', allKeyedReference],
     ['allSettledKeyed', allSettledKeyedReference],
   ]
   for (let i = 0, { length } = entries; i < length; i += 1) {
     const [name, fn] = entries[i]!
-    if ((target as Record<string, unknown>)[name] !== undefined) {
+    if (target[name] !== undefined) {
       continue
     }
     Object.defineProperty(fn, 'name', {

@@ -20,8 +20,23 @@ import {
   enumerableOwnKeys,
   installKeyedCombinators,
 } from '../reference/keyed-combinators.mts'
+import type { KeyedCombinator } from '../reference/keyed-combinators.mts'
 
 type Dictionary = Record<string, unknown>
+
+/**
+ * Every combinator here returns `unknown`, because a Promise-like host may hand
+ * back anything. These two predicates are how a test narrows that safely: a
+ * type assertion would claim the shape, a predicate checks it and throws when
+ * the claim is wrong, which is itself a failing test rather than a silent pass.
+ */
+function isDictionary(value: unknown): value is Dictionary {
+  return typeof value === 'object' && value !== null
+}
+
+function isKeyedCombinator(value: unknown): value is KeyedCombinator {
+  return typeof value === 'function'
+}
 
 /**
  * A Promise-like host whose `resolve` can be swapped out. Instances are
@@ -66,7 +81,13 @@ function allSettledKeyed(
 }
 
 async function settledKeys(result: unknown): Promise<Dictionary> {
-  return (await result) as Dictionary
+  const settled = await result
+  if (!isDictionary(settled)) {
+    throw new TypeError(
+      'expected the combinator to resolve with a dictionary result',
+    )
+  }
+  return settled
 }
 
 describe('invariant: the result object has a null prototype', () => {
@@ -114,8 +135,8 @@ describe('invariant: remaining starts at 1 and drops after the key walk', () => 
     const combined = allKeyed({
       settledKey: Promise.resolve('settled-value'),
       pendingKey: pending,
-    }) as unknown as Promise<Dictionary>
-    void combined.then(() => {
+    })
+    void Promise.resolve(combined).then(() => {
       combinatorSettled = true
     })
 
@@ -125,7 +146,7 @@ describe('invariant: remaining starts at 1 and drops after the key walk', () => 
     expect(combinatorSettled).toBe(false)
 
     releasePending!('pending-value')
-    const result = await combined
+    const result = await settledKeys(combined)
     expect(result).toEqual({
       settledKey: 'settled-value',
       pendingKey: 'pending-value',
@@ -148,7 +169,7 @@ describe('invariant: own enumerable keys only', () => {
 
   it('skips an inherited enumerable key', async () => {
     const parent = { inheritedKey: 'inherited-value' }
-    const dictionary = Object.create(parent) as Dictionary
+    const dictionary: Dictionary = Object.create(parent)
     dictionary['ownKey'] = 'own-value'
     const result = await settledKeys(allKeyed(dictionary))
     expect(Object.keys(result)).toEqual(['ownKey'])
@@ -205,7 +226,7 @@ describe('invariant: allSettledKeyed shares alreadyCalled between handlers', () 
     const combined = allSettledKeyed(
       { doubleKey: 'double-settling', pendingKey: pending },
       DoubleSettlingHost,
-    ) as PromiseLike<Dictionary>
+    )
 
     let combinatorSettled = false
     void Promise.resolve(combined).then(() => {
@@ -219,7 +240,7 @@ describe('invariant: allSettledKeyed shares alreadyCalled between handlers', () 
     expect(combinatorSettled).toBe(false)
 
     releasePending!('pending-value')
-    const result = (await combined) as Dictionary
+    const result = await settledKeys(combined)
     expect(Object.keys(result)).toEqual(['doubleKey', 'pendingKey'])
     expect(result['doubleKey']).toEqual({
       status: 'fulfilled',
@@ -230,14 +251,13 @@ describe('invariant: allSettledKeyed shares alreadyCalled between handlers', () 
 
 describe('invariant: name and length are observable', () => {
   it('installs each combinator with name and length 1', () => {
-    const target = {} as Dictionary
+    const target: Dictionary = {}
     installKeyedCombinators(target)
-    const allKeyedFn = Reflect.get(target, 'allKeyed') as unknown as (
-      d: unknown,
-    ) => unknown
-    const allSettledFn = Reflect.get(target, 'allSettledKeyed') as unknown as (
-      d: unknown,
-    ) => unknown
+    const allKeyedFn = target['allKeyed']
+    const allSettledFn = target['allSettledKeyed']
+    if (!isKeyedCombinator(allKeyedFn) || !isKeyedCombinator(allSettledFn)) {
+      throw new TypeError('expected both combinators to install as functions')
+    }
     expect(allKeyedFn.name).toBe('allKeyed')
     expect(allKeyedFn.length).toBe(1)
     expect(allSettledFn.name).toBe('allSettledKeyed')
@@ -245,7 +265,7 @@ describe('invariant: name and length are observable', () => {
   })
 
   it('installs with the builtin-method descriptor', () => {
-    const target = {} as Dictionary
+    const target: Dictionary = {}
     installKeyedCombinators(target)
     const descriptor = Object.getOwnPropertyDescriptor(target, 'allKeyed')
     expect(descriptor?.enumerable).toBe(false)
@@ -257,7 +277,7 @@ describe('invariant: name and length are observable', () => {
     // A future V8 that ships the proposal wins: its version is the one
     // test262 and the ecosystem track.
     const existing = () => 'native-wins'
-    const target = { allKeyed: existing } as Dictionary
+    const target: Dictionary = { allKeyed: existing }
     installKeyedCombinators(target)
     expect(target['allKeyed']).toBe(existing)
   })
