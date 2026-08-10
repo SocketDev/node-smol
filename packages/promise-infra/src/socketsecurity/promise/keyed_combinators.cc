@@ -6,6 +6,9 @@
 // travels as a callback `data` object.
 
 #include "keyed_combinators.h"
+// The isolate comes from `Isolate::GetCurrent()`, never `context->GetIsolate()`:
+// V8 removed that accessor, and no upstream Node source calls it any more. Every
+// path here runs inside a V8 callback, so a current isolate is always entered.
 
 #include "node.h"
 #include "node_binding.h"
@@ -128,7 +131,7 @@ static bool WriteCount(Local<Context> context,
                        Local<Private> slot,
                        int32_t value) {
   return holder
-      ->SetPrivate(context, slot, Integer::New(context->GetIsolate(), value))
+      ->SetPrivate(context, slot, Integer::New(Isolate::GetCurrent(), value))
       .IsJust();
 }
 
@@ -180,7 +183,7 @@ static bool NewPromiseCapability(Local<Context> context,
                                  Local<Value> constructor,
                                  Local<Object>* out_capability,
                                  Local<Value>* out_promise) {
-  Isolate* isolate = context->GetIsolate();
+  Isolate* isolate = Isolate::GetCurrent();
   if (!constructor->IsObject() || !constructor.As<Object>()->IsConstructor()) {
     ThrowTypeError(isolate,
                    "Promise keyed combinator called on a non-constructor: "
@@ -243,7 +246,7 @@ static bool NewPromiseCapability(Local<Context> context,
 
 static Local<Function> CapabilityResolve(Local<Context> context,
                                         Local<Object> capability) {
-  Isolate* isolate = context->GetIsolate();
+  Isolate* isolate = Isolate::GetCurrent();
   return capability->GetPrivate(context, SlotCapabilityResolve(isolate))
       .ToLocalChecked()
       .As<Function>();
@@ -251,7 +254,7 @@ static Local<Function> CapabilityResolve(Local<Context> context,
 
 static Local<Function> CapabilityReject(Local<Context> context,
                                         Local<Object> capability) {
-  Isolate* isolate = context->GetIsolate();
+  Isolate* isolate = Isolate::GetCurrent();
   return capability->GetPrivate(context, SlotCapabilityReject(isolate))
       .ToLocalChecked()
       .As<Function>();
@@ -381,7 +384,7 @@ static bool PerformKeyed(Local<Context> context,
                          Local<Object> capability,
                          Local<Value> input,
                          Combinator kind) {
-  Isolate* isolate = context->GetIsolate();
+  Isolate* isolate = Isolate::GetCurrent();
 
   // GetPromiseResolve(C) — read `C.resolve` ONCE, before the key walk, and
   // reuse it for every key. Reading it per key would let a getter observe
@@ -634,7 +637,7 @@ void Initialize(Local<Object> target,
                 Local<Value> /* unused */,
                 Local<Context> context,
                 void* /* priv */) {
-  Isolate* isolate = context->GetIsolate();
+  Isolate* isolate = Isolate::GetCurrent();
   SetKeyedCombinator(
       context, target, FIXED_ONE_BYTE_STRING(isolate, "allKeyed"), AllKeyed);
   SetKeyedCombinator(context,
