@@ -79,7 +79,7 @@ const toolSchema = Type.Object(
           asset: Type.String(),
           integrity: Type.String({
             description:
-              'SRI hash (sha256-<base64>). Use checksumToIntegrity/integrityToChecksum from @socketsecurity/lib/integrity to convert if a hex digest is all you have.',
+              'SRI hash format: `sha<algorithm>-<base64>` where algorithm is 256, 384, or 512. If you have a hex digest, encode it as base64 and prepend the algorithm with a hyphen (e.g., sha256-<base64>).',
             pattern: '^sha(256|384|512)-[A-Za-z0-9+/]+=*$',
           }),
           source: Type.Optional(Type.String()),
