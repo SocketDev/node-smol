@@ -29,9 +29,9 @@ keeps its own implementation.
 
 ## The six invariants
 
-Each one is a spec detail a naive port drops, and each is checked twice - by
-`scripts/check-lockstep.mts` (the mechanism is still in the C++) and by
-`test/unit/keyed-combinators.test.mts` (the behavior is still correct):
+Each one is a spec detail a naive port drops, and each is checked twice.
+`scripts/check-lockstep.mts` asserts the mechanism is still in the C++, and
+`test/unit/keyed-combinators.test.mts` asserts the behavior is still correct:
 
 | Invariant                           | Mechanism                                                                                                                                                                                                                                                             |
 | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -90,4 +90,4 @@ exercised.
 ## Naming
 
 Per the `*-infra` convention: source-only utility packages, no release
-pipeline. Matches `temporal-infra` (the C++ Temporal port) and `bin-infra`.
+pipeline. Matches `bin-infra` and `temporal-infra`, the C++ Temporal port.
