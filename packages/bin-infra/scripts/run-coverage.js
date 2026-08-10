@@ -17,7 +17,7 @@ const path = require('node:path')
 
 const { joinAnd } = require('@socketsecurity/lib-stable')
 const { getDefaultLogger } = require('@socketsecurity/lib-stable/logger')
-const { spawn } = require('@socketsecurity/lib-stable/spawn')
+const { spawn } = require('@socketsecurity/lib-stable/process/spawn/child')
 const process = require('node:process')
 
 const { errorMessage } = require('local-build-infra/lib/error-utils')
