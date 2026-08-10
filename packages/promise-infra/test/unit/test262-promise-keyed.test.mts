@@ -74,7 +74,9 @@ describe('isKeyedSubsetPath', () => {
     // A future sibling directory whose name merely starts with `allKeyed`
     // must not join this gate by accident.
     expect(
-      isKeyedSubsetPath('test/built-ins/Promise/allKeyedSomethingElse/x.js'),
+      isKeyedSubsetPath(
+        'test/built-ins/Promise/allKeyedSomethingElse/example.js',
+      ),
     ).toBe(false)
   })
 
