@@ -29,6 +29,7 @@ import {
   BIN_INFRA_DIR,
   BINJECT_DIR,
   BUILD_INFRA_DIR,
+  PROMISE_INFRA_DIR,
   TEMPORAL_INFRA_DIR,
 } from '../../paths.mts'
 
@@ -86,6 +87,9 @@ export async function collectBuildSourceFiles(phase, platform, arch) {
     // entry silently dropping them out of the hash.
     path.join(TEMPORAL_INFRA_DIR, 'src', 'socketsecurity', 'temporal'),
     path.join(TEMPORAL_INFRA_DIR, 'include', 'temporal_rs'),
+    // promise-infra ships one source tree: the keyed promise combinators
+    // compiled into libnode as the smol_promise binding.
+    path.join(PROMISE_INFRA_DIR, 'src', 'socketsecurity', 'promise'),
   ]
 
   for (let i = 0, { length } = sourcePackageDirs; i < length; i += 1) {

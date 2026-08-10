@@ -1,15 +1,16 @@
 # @node-versions: v26.1.0
-# @description: Load locale polyfills for small-icu builds
+# @description: Load bootstrap polyfills (small-icu locales, keyed promise combinators)
 #
 --- a/lib/internal/bootstrap/node.js
 +++ b/lib/internal/bootstrap/node.js
-@@ -71,6 +71,9 @@
+@@ -71,6 +71,10 @@
  const {
    validateInteger,
  } = require('internal/validators');
 +
 +// Socket Security: Load locale polyfills for small-icu builds.
 +require('internal/socketsecurity/polyfills/locale-compare');
++require('internal/socketsecurity/polyfills/promise-keyed');
  const {
    constants: {
      kExitCode,

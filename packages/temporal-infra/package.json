@@ -6,7 +6,8 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    "./lib/paths": "./lib/paths.mts"
+    "./lib/paths": "./lib/paths.mts",
+    "./test/scripts/test262/*": "./test/scripts/test262/*.mts"
   },
   "scripts": {
     "check:lockstep": "node scripts/check-lockstep.mts",

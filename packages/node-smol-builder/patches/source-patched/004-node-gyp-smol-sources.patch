@@ -109,7 +109,7 @@
          # Thin LTO for node_main.cc and linker (scoped to node_exe)
          ['node_with_ltcg=="true"', {
            'msvs_settings': {
-@@ -971,16 +1020,460 @@
+@@ -971,16 +1020,466 @@
            ],
            'dependencies': [
              'deps/ncrypto/ncrypto.gyp:ncrypto',
@@ -160,6 +160,12 @@
 +            'src/socketsecurity/util/util_binding.cc',
 +            # Socket Security: smol-primordial binding (frozen primordials).
 +            'src/socketsecurity/primordial/primordial_binding.cc',
++            # Socket Security: promise-infra keyed combinators
++            # (tc39/proposal-await-dictionary). Installed onto the Promise
++            # constructor by lib/internal/socketsecurity/polyfills/
++            # promise-keyed.js at bootstrap, and only when V8 has not
++            # shipped them itself.
++            'src/socketsecurity/promise/keyed_combinators.cc',
 +            # Socket Security: smol-versions-native binding (semver C++ impl).
 +            'src/socketsecurity/versions/versions.cc',
 +            'src/socketsecurity/versions/versions_binding.cc',
@@ -572,7 +578,7 @@
            'sources': [
              '<@(node_quic_sources)',
            ],
-@@ -1399,6 +1890,13 @@
+@@ -1399,6 +1896,13 @@
          'NODE_ARCH="<(target_arch)"',
          'NODE_PLATFORM="<(OS)"',
          'NODE_WANT_INTERNALS=1',
@@ -586,7 +592,7 @@
        ],
  
        'sources': [ '<@(node_cctest_sources)' ],
-@@ -1436,7 +1934,7 @@
+@@ -1436,7 +1940,7 @@
          }, {
            'sources!': [ '<@(node_cctest_openssl_sources)' ],
          }],
@@ -595,7 +601,7 @@
            'defines': [
              'HAVE_QUIC=1',
            ],
-@@ -1478,8 +1976,26 @@
+@@ -1478,8 +1982,26 @@
              'Dbghelp.lib',
              'winmm.lib',
              'Ws2_32.lib',
@@ -622,7 +628,7 @@
          # Avoid excessive LTO
          ['enable_lto=="true"', {
            'ldflags': [ '-fno-lto' ],
-@@ -1551,8 +2067,26 @@
+@@ -1551,8 +2073,26 @@
              'Dbghelp.lib',
              'winmm.lib',
              'Ws2_32.lib',
@@ -649,7 +655,7 @@
          # Avoid excessive LTO
          ['enable_lto=="true"', {
            'ldflags': [ '-fno-lto' ],
-@@ -1776,6 +2310,24 @@
+@@ -1776,6 +2316,24 @@
              'Ws2_32.lib',
            ],
          }],

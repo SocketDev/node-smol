@@ -403,6 +403,7 @@ export const GLIBC_SHIMS_INFRA_DIR = path.join(
   '..',
   'glibc-shims-infra',
 )
+export const PROMISE_INFRA_DIR = path.join(PACKAGE_ROOT, '..', 'promise-infra')
 export const TEMPORAL_INFRA_DIR = path.join(
   PACKAGE_ROOT,
   '..',

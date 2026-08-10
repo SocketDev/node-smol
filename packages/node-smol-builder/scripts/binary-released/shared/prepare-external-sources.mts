@@ -29,6 +29,7 @@ import {
   LSQUIC_INFRA_DIR,
   NODE_SMOL_AI_PACKAGE_DIR,
   PACKAGE_ROOT,
+  PROMISE_INFRA_DIR,
   TEMPORAL_INFRA_DIR,
   TUI_INFRA_DIR,
 } from '../../paths.mts'
@@ -117,6 +118,15 @@ export const MONOREPO_PACKAGE_SOURCES = [
       'keystore-infra',
     ),
     relativeTo: path.join('src', 'socketsecurity', 'keystore-infra'),
+  },
+  // promise-infra: the keyed promise combinators from
+  // tc39/proposal-await-dictionary as a native binding. The bootstrap
+  // installer that puts them on `Promise` lives with the other polyfills at
+  // lib/internal/socketsecurity/polyfills/promise-keyed.js and is wired by
+  // patch 002.
+  {
+    from: path.join(PROMISE_INFRA_DIR, 'src', 'socketsecurity', 'promise'),
+    relativeTo: path.join('src', 'socketsecurity', 'promise'),
   },
   {
     from: path.join(TEMPORAL_INFRA_DIR, 'src', 'socketsecurity', 'temporal'),

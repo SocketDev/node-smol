@@ -11,7 +11,7 @@
 #
 --- a/src/node_external_reference.h
 +++ b/src/node_external_reference.h
-@@ -144,12 +144,49 @@ class ExternalReferenceRegistry {
+@@ -144,12 +144,50 @@ class ExternalReferenceRegistry {
  #define EXTERNAL_REFERENCE_BINDING_LIST_QUIC(V)
  #endif
  
@@ -54,6 +54,7 @@
 +  V(smol_manifest_native)                                                      \
 +  V(smol_power)                                                                \
 +  V(smol_primordial)                                                           \
++  V(smol_promise)                                                              \
 +  V(smol_util)                                                                 \
 +  V(smol_versions_native)                                                      \
 +  V(smol_vfs)                                                                  \

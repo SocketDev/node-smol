@@ -172,18 +172,21 @@
 	ignore = dirty
 	shallow = true
 # no-release-tag: tc39/test262 publishes no version tags; the conformance corpus is consumed at a pinned commit SHA
-# test262-9b127c19 (2025-05-30) sha256:3458736def3058cb253e065eaa0261b08a87eb93bb2671cbb316656d7c3e3d23
+# test262-3655e746 (2026-08-10) sha256:2d36d6affd4d527f5022c55c486a86ae499e02eb88182b76b5463958db49094d
 [submodule "packages/temporal-infra/upstream/test262"]
-	ref = 9b127c190cd418b2451c556784aae3d0ac7e9bcf
+	ref = 3655e7464de3d52643ecddd4b5f9f4f3e7f62398
 	path = packages/temporal-infra/test/fixtures/test262
 	url = https://github.com/tc39/test262.git
 	ignore = dirty
 	shallow = true
 	# Honored by scripts/git-partial-submodule.mts (vanilla git ignores
-	# this field). test262 is a ~270 MB corpus; runner only walks the
-	# Temporal subsets + the shared harness/.
-	sparse-checkout = test/built-ins/Temporal/ test/intl402/Temporal/ harness/
-	verify = pnpm --filter temporal-infra test262:temporal
+	# this field). test262 is a ~270 MB corpus; the runners only walk the
+	# Temporal subsets, the keyed promise combinators, and the shared
+	# harness/.
+	sparse-checkout = test/built-ins/Temporal/ test/intl402/Temporal/ test/built-ins/Promise/ harness/
+	# One field, both consumers: the parser is single-valued, and the sparse
+	# pattern is only proven when every runner that reads it passes.
+	verify = pnpm --filter temporal-infra test262:temporal && pnpm --filter promise-infra test262:promise-keyed
 # lsquic-4.6.2
 # lsquic-v4.6.2 (2026-04-20) sha256:f8cb90fb327eb91597c23163bf596c0d1882560be35b661d9ba84891cc461735
 [submodule "packages/lsquic-infra/upstream/lsquic"]
