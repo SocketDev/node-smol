@@ -114,7 +114,7 @@ describe('invariant: remaining starts at 1 and drops after the key walk', () => 
     const combined = allKeyed({
       settledKey: Promise.resolve('settled-value'),
       pendingKey: pending,
-    }) as Promise<Dictionary>
+    }) as unknown as Promise<Dictionary>
     void combined.then(() => {
       combinatorSettled = true
     })
@@ -157,7 +157,7 @@ describe('invariant: own enumerable keys only', () => {
   it('skips a symbol key', async () => {
     const exampleSymbol = Symbol('example-symbol')
     const dictionary: Dictionary = { stringKey: 'string-value' }
-    dictionary[exampleSymbol as unknown as string] = 'symbol-value'
+    Reflect.set(dictionary, exampleSymbol, 'symbol-value')
     const result = await settledKeys(allKeyed(dictionary))
     expect(Object.keys(result)).toEqual(['stringKey'])
     expect(Object.getOwnPropertySymbols(result)).toEqual([])
@@ -232,8 +232,12 @@ describe('invariant: name and length are observable', () => {
   it('installs each combinator with name and length 1', () => {
     const target = {} as Dictionary
     installKeyedCombinators(target)
-    const allKeyedFn = target['allKeyed'] as (d: unknown) => unknown
-    const allSettledFn = target['allSettledKeyed'] as (d: unknown) => unknown
+    const allKeyedFn = Reflect.get(target, 'allKeyed') as unknown as (
+      d: unknown,
+    ) => unknown
+    const allSettledFn = Reflect.get(target, 'allSettledKeyed') as unknown as (
+      d: unknown,
+    ) => unknown
     expect(allKeyedFn.name).toBe('allKeyed')
     expect(allKeyedFn.length).toBe(1)
     expect(allSettledFn.name).toBe('allSettledKeyed')
@@ -268,9 +272,9 @@ describe('invariant: TypeError paths', () => {
 
   it('rejects, not throws, when `resolve` is not callable', async () => {
     class UncallableResolveHost extends ExampleHost {
-      static override resolve = 'not-a-function' as unknown as (
-        value: unknown,
-      ) => unknown
+      // A non-callable `resolve` is the point of the test, so the field is
+      // typed as unknown rather than narrowed to a callable it is not.
+      static override resolve: unknown = 'not-a-function'
     }
     const combined = allKeyed({ exampleKey: 1 }, UncallableResolveHost)
     await expect(Promise.resolve(combined)).rejects.toThrow(TypeError)
