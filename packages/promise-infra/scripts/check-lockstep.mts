@@ -31,6 +31,7 @@ import { fileURLToPath } from 'node:url'
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
+import { isSpawnExitError } from '@socketsecurity/lib-stable/process/spawn/errors'
 
 import { NODE_UPSTREAM_INCLUDE_DIRS } from '../lib/paths.mts'
 
@@ -194,18 +195,12 @@ export interface CompileResult {
 }
 
 /**
- * The fields a rejected spawn carries that this check reads. `code` is the
- * discriminator: a string errno such as 'ENOENT' for a binary that is not
- * there, a number for a process that ran and exited nonzero.
+ * A spawn's captured output, as a string. The stream fields are untyped on the
+ * error, so anything that is not already a string reads as empty rather than
+ * being stringified into `[object Object]`.
  */
-export interface SpawnFailure {
-  code: number | string | undefined
-  stderr: string | undefined
-  stdout: string | undefined
-}
-
-export function isSpawnFailure(value: unknown): value is SpawnFailure {
-  return typeof value === 'object' && value !== null && 'code' in value
+export function asText(value: unknown): string {
+  return typeof value === 'string' ? value : ''
 }
 
 /**
@@ -243,18 +238,18 @@ export async function checkCompiles(): Promise<CompileResult> {
     await spawn(compiler, args)
     return { status: 'passed', detail: 'keyed_combinators.cc compiles clean' }
   } catch (e) {
-    // spawn rejects on ANY nonzero exit, so the two outcomes arrive down the
-    // same path and must be told apart by `code`: the string 'ENOENT' means no
-    // such binary, a NUMBER means the compiler ran and rejected the source.
-    // Treating both as "skipped" is how a real compile error reads as "no
-    // compiler installed" — measured, and the reason this branch is explicit.
-    if (isSpawnFailure(e) && e.code === 'ENOENT') {
+    // spawn rejects on ANY nonzero exit, so both outcomes arrive down this one
+    // path and must be told apart: isSpawnExitError is true only when the
+    // process RAN and exited nonzero, false for a binary that is not there.
+    // Collapsing the two is how a real compile error reads as "no compiler
+    // installed" — measured, which is why the branch is explicit.
+    if (!isSpawnExitError(e)) {
       return {
         status: 'skipped',
         detail: `no C++ compiler on PATH (tried \`${compiler}\`) — install one to enable this check`,
       }
     }
-    const diagnostics = isSpawnFailure(e) ? e.stderr || e.stdout || '' : ''
+    const diagnostics = asText(e.stderr) || asText(e.stdout)
     return {
       status: 'failed',
       detail: diagnostics.trim() || errorMessage(e),
