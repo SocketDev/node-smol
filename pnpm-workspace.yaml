@@ -287,6 +287,7 @@ packages:
   - .config/fleet/oxlint-plugin/fleet/*
   - '.claude/hooks/repo/*'
   - '.config/repo/oxlint-plugin/*'
+enableGlobalVirtualStore: true
 autoInstallPeers: true
 
 # Opt out of pnpm's packageManager-version self-check. CI installs pnpm from
