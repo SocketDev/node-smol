@@ -245,6 +245,7 @@
 	ref = e935a1b57eb859db0d00c522e198711a3f313a25
 # full-checkout: ai-infra compiles the complete CPU backend
 # no-release-tag: llama.cpp tags are rolling single-number build tags such as b9940 with no versioned release lines; the content hash above anchors the pin
+# llama.cpp-b9940
 # llama.cpp-b9940 (2026-07-09) sha256:f3c0f8e2e9e21d527952042d71274e4f79b14bc0fe799144eb671c7163ef0f6d
 [submodule "packages/ai-infra/upstream/llama.cpp"]
 	path = packages/ai-infra/upstream/llama.cpp
