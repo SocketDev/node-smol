@@ -52,19 +52,61 @@ Fully isolated by mode + platform-arch, so concurrent builds don't collide:
 - `--build-only=<name>` - build to a stage but skip checkpoint creation
   (for Depot CI). Same valid set as above.
 
+## Linker choice
+
+Linux release links with **gold**, and that is a size decision rather than a
+speed one. `001-common-gypi-lto.patch` passes `-fuse-ld=gold` with
+`-Wl,--icf=safe`, so byte-identical functions fold into one copy. `safe` is the
+mode that preserves function-pointer identity, which V8 depends on because it
+compares code pointers.
+
+**mold was measured and rejected** (2026-08-12). It is the faster linker by a
+wide margin on ordinary links, but it loses here on two counts:
+
+- Its `--icf=safe` cannot fold anything under GCC. mold's own manual states the
+  mode needs a compiler that emits `.llvm_addrsig`, which Clang does and GCC
+  does not, and `setup-build-toolchain.mts` installs `gcc` for Linux. Switching
+  the linker would therefore trade binary size, the metric this package exists
+  to minimize, for link speed.
+- The speed it would win is already masked. The release build is an LTO build
+  (`-flto=4 -ffat-lto-objects` for GCC), and on an LTO link most of the wall
+  time is the compiler's LTO backend generating code rather than the linker
+  resolving symbols. mold makes symbol resolution fast; it does not make LTO
+  codegen fast.
+
+There is also no build to speed up other than the release one: the pipeline runs
+`ninja -C out/Release` and no `out/Debug` path exists, so the debug-edit-rebuild
+cycle mold is designed for is not part of this build.
+
+**Reversal condition:** move the Linux release build to Clang. With
+`.llvm_addrsig` available, mold folds properly, so it becomes speed _and_ size
+with nothing traded, and the patch already takes the ThinLTO path for Clang. That
+change alters the optimizer, so it needs binary-size and startup numbers against
+the current GCC baseline before it ships.
+
+**The number that would settle a re-examination:** the share of total build time
+spent in the final link edge. `out/Release/.ninja_log` records per-edge start and
+end times, so the node binary's edge gives it directly.
+
 ## Usage patterns
 
-```text
-pnpm build                                          # smol binary only
-postject smol-binary NODE_SEA_BLOB app.blob         # smol + SEA
-pnpm build --prod                                   # production build
+The binary build lives in the builder package, so it is invoked through that
+package rather than from the root. Root `pnpm build` builds the fleet hook
+bundle, not the binary.
 
-node scripts/load.mts build-custom-node             # normal build
-node scripts/load.mts build-custom-node --clean     # force fresh build
-node scripts/load.mts build-custom-node --yes       # auto-yes to prompts
-node scripts/load.mts build-custom-node --verify    # verify after build
-node scripts/load.mts build-custom-node --test      # build + smoke tests
-node scripts/load.mts build-custom-node --test-full # build + full tests
+```text
+# Binary build. The package is named local-node-smol-builder, per the fleet's
+# `local-<dir>` rule for a private package.
+pnpm --filter local-node-smol-builder run build           # dev build
+pnpm --filter local-node-smol-builder run build --prod    # production, LTO
+pnpm --filter local-node-smol-builder run build --dev     # development mode
+pnpm --filter local-node-smol-builder run clean           # drop the cache first
+
+# Resume or stop at a phase (same valid set as the flags above).
+pnpm --filter local-node-smol-builder run build --from-checkpoint=binary-stripped
+pnpm --filter local-node-smol-builder run build --stop-at=binary-released
+
+postject smol-binary NODE_SEA_BLOB app.blob               # smol + SEA
 ```
 
 ## Binary size optimization strategy
