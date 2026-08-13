@@ -60,33 +60,11 @@ speed one. `001-common-gypi-lto.patch` passes `-fuse-ld=gold` with
 mode that preserves function-pointer identity, which V8 depends on because it
 compares code pointers.
 
-**mold was measured and rejected** (2026-08-12). It is the faster linker by a
-wide margin on ordinary links, but it loses here on two counts:
-
-- Its `--icf=safe` cannot fold anything under GCC. mold's own manual states the
-  mode needs a compiler that emits `.llvm_addrsig`, which Clang does and GCC
-  does not, and `setup-build-toolchain.mts` installs `gcc` for Linux. Switching
-  the linker would therefore trade binary size, the metric this package exists
-  to minimize, for link speed.
-- The speed it would win is already masked. The release build is an LTO build
-  (`-flto=4 -ffat-lto-objects` for GCC), and on an LTO link most of the wall
-  time is the compiler's LTO backend generating code rather than the linker
-  resolving symbols. mold makes symbol resolution fast; it does not make LTO
-  codegen fast.
-
-There is also no build to speed up other than the release one: the pipeline runs
-`ninja -C out/Release` and no `out/Debug` path exists, so the debug-edit-rebuild
-cycle mold is designed for is not part of this build.
-
-**Reversal condition:** move the Linux release build to Clang. With
-`.llvm_addrsig` available, mold folds properly, so it becomes speed _and_ size
-with nothing traded, and the patch already takes the ThinLTO path for Clang. That
-change alters the optimizer, so it needs binary-size and startup numbers against
-the current GCC baseline before it ships.
-
-**The number that would settle a re-examination:** the share of total build time
-spent in the final link edge. `out/Release/.ninja_log` records per-edge start and
-end times, so the node binary's edge gives it directly.
+Do not swap this linker without reading entry 1 of the
+[build performance journal](../../perf/build-performance-journal.md). mold was
+evaluated and rejected there: its `--icf=safe` cannot fold under GCC, so the swap
+trades binary size for link speed that the LTO link already masks. The entry
+carries the reversal condition and the one measurement that would reopen it.
 
 ## Usage patterns
 
