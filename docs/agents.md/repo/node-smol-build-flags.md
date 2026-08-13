@@ -61,7 +61,7 @@ mode that preserves function-pointer identity, which V8 depends on because it
 compares code pointers.
 
 Do not swap this linker without reading entry 1 of the
-[build performance journal](../../perf/build-performance-journal.md). mold was
+[build performance journal](../../perf/build-journal.md). mold was
 evaluated and rejected there: its `--icf=safe` cannot fold under GCC, so the swap
 trades binary size for link speed that the LTO link already masks. The entry
 carries the reversal condition and the one measurement that would reopen it.
