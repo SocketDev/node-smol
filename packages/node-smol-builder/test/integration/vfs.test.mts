@@ -1,4 +1,4 @@
-// Split into sibling files along describe-block seams to satisfy the 1000-line hard cap.
+// Split into sibling files at describe-block boundaries to satisfy the 1000-line hard cap.
 // Each sibling file carries its own beforeAll/afterAll for testTmpDir setup/teardown.
 //
 // vfs-sea-tar.test.mts              — SEA fuse, TAR archive creation, dual injection

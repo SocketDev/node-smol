@@ -415,11 +415,14 @@ export function loadPythonVersions(
 ): {
   // oxlint-disable-next-line socket/prefer-refined-record -- JSON document
   PYTHON_PACKAGE_EXTRAS: Record<string, string[]>
+  // oxlint-disable-next-line socket/prefer-refined-record -- JSON document
   PYTHON_VERSIONS: Record<string, string>
 } {
   const tools = loadExternalTools(options || {})
 
+  // oxlint-disable-next-line socket/prefer-refined-record -- JSON document
   const versions: Record<string, string> = {}
+  // oxlint-disable-next-line socket/prefer-refined-record -- JSON document
   const extras: Record<string, string[]> = {}
 
   // Loop variable is destructured.
