@@ -41,7 +41,9 @@ export const UPSTREAM_PATH = path.join(PACKAGE_ROOT, 'upstream/node')
 
 // Phase dependencies: each checkpoint lists the checkpoints whose sources
 // feed its cumulative cache hash.
-const PHASE_DEPS: Partial<Record<string, string[]>> = {
+const PHASE_DEPS: Partial<
+  Record<(typeof CHECKPOINTS)[keyof typeof CHECKPOINTS], string[]>
+> = {
   [CHECKPOINTS.SOURCE_COPIED]: [CHECKPOINTS.SOURCE_COPIED],
   [CHECKPOINTS.SOURCE_PATCHED]: [
     CHECKPOINTS.SOURCE_COPIED,

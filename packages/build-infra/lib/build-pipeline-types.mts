@@ -27,6 +27,10 @@ export interface PipelineBuildPaths {
  * The package.json fields the pipeline reads.
  */
 export interface PipelinePackageJson {
+  // A package.json document shape: sources are keyed by whatever name a
+  // package declares, and the map round-trips to JSON on disk — the honest
+  // shape for a document, per prefer-refined-record's own JSON exemption.
+  // oxlint-disable-next-line socket/prefer-refined-record -- JSON document
   sources?: Record<string, PipelineSourceMeta> | undefined
   version?: string | undefined
   [key: string]: unknown
@@ -110,6 +114,9 @@ export interface PipelineContext {
   paths: PipelineBuildPaths
   platformArch: string
   sharedPaths: PipelineBuildPaths | undefined
+  // The run manifest serializes to disk as JSON, so a Map would not
+  // round-trip without a replacer; the record is the honest document shape.
+  // oxlint-disable-next-line socket/prefer-refined-record -- JSON document
   sources: Record<string, PipelineSourceMeta>
   toolVersions: Record<string, string>
 }

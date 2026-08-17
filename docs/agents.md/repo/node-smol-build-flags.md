@@ -87,6 +87,17 @@ pnpm --filter local-node-smol-builder run build --stop-at=binary-released
 postject smol-binary NODE_SEA_BLOB app.blob               # smol + SEA
 ```
 
+The usage flags beyond mode selection:
+
+- `--clean` wipes the checkpoint cache before building, so a stale intermediate
+  can never ride into a release. Without it, the build resumes from the newest
+  checkpoint on disk.
+- `--verify` runs the checksum verification pass over the downloaded Node
+  source and the checkpoint chain before compiling, and fails the build on a
+  mismatch rather than compiling bytes nobody checked.
+- `--test` runs the binary's smoke tests after the link; `--test-full` runs
+  the extended suite. A build without either flag stops at the Final copy.
+
 ## Binary size optimization strategy
 
 <details><summary>Binary size optimization strategy</summary>

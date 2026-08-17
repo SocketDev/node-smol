@@ -41,7 +41,11 @@ export interface LoadExternalToolsOptions {
 
 /**
  * Tool-name → configuration map merged from external-tools.json files.
+ * A JSON document shape — the map round-trips to external-tools.json on disk
+ * and a Map would not serialize without a replacer, so the record is the
+ * honest shape for it.
  */
+// oxlint-disable-next-line socket/prefer-refined-record -- JSON doc
 export type ExternalToolsMap = Record<string, ExternalTool>
 
 /**
@@ -231,6 +235,7 @@ export const PYTHON_VERSIONS = (() => {
  * Format: { packageName: ['extra1', 'extra2'] }
  */
 export const PYTHON_PACKAGE_EXTRAS = (() => {
+  // oxlint-disable-next-line socket/prefer-refined-record -- JSON document
   const extras: Record<string, string[]> = {}
   // Loop variable is destructured.
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
@@ -408,6 +413,7 @@ export function getToolVersion(
 export function loadPythonVersions(
   options?: LoadExternalToolsOptions | undefined,
 ): {
+  // oxlint-disable-next-line socket/prefer-refined-record -- JSON document
   PYTHON_PACKAGE_EXTRAS: Record<string, string[]>
   PYTHON_VERSIONS: Record<string, string>
 } {

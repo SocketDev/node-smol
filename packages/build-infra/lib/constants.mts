@@ -256,8 +256,9 @@ export function getEmsdkSearchPaths(
   platform: string = process.platform,
 ): string[] {
   return (
-    (EMSDK_SEARCH_PATHS as Record<string, string[]>)[platform] ||
-    EMSDK_SEARCH_PATHS.linux
+    (EMSDK_SEARCH_PATHS as Partial<Record<NodeJS.Platform, string[]>>)[
+      platform
+    ] || EMSDK_SEARCH_PATHS.linux
   )
 }
 

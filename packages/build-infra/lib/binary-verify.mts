@@ -105,7 +105,7 @@ export async function staticVerifyBinary(
 
     // Verify architecture if specified
     if (arch) {
-      const archPatterns: Partial<Record<string, RegExp>> = {
+      const archPatterns: Partial<Record<'arm64' | 'x64', RegExp>> = {
         arm64: /arm64|aarch64/i,
         x64: /x86[-_]64|x64|amd64/i,
       }
