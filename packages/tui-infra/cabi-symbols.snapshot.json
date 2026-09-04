@@ -1,0 +1,1206 @@
+{
+  "files": {
+    "crates/stuie-cabi/src/audio_decoder.rs": "1e80b44f93f5f44ff3f73bd9bfc6d36c5fdbe7298f096e963ac299951d01867a",
+    "crates/stuie-cabi/src/buffer.rs": "d91b9ab3c3241b7258b1fd443050c90906263bbbef92c9c8fa4b387defb309dd",
+    "crates/stuie-cabi/src/cabi.rs": "7c4670114a6a77e7c22d3c57b9104638de8797184ed921dd08a2e9c4776909a9",
+    "crates/stuie-cabi/src/edit_buffer.rs": "865cfe5eec0267f59dbc8a684e99ee6ff96d157534cf0013d392466844a0e8ec",
+    "crates/stuie-cabi/src/handles.rs": "926472bf1e98baf2747cf4243e8c0b2d37e9dde8a70df92771204435f80576e8",
+    "crates/stuie-cabi/src/lib.rs": "be7fd5d6dd92278a25685acafe81407db07926eb89400ebc07148e3ece313e7a",
+    "crates/stuie-cabi/src/span_feed.rs": "ba11047a84c51fe7871c4a754ee8e624259bad8b77fc913b93b93da962b14cb0",
+    "crates/stuie-cabi/src/syntax_style.rs": "5ba15c76d674615d147b6eb7eb96140373c80c892045f804eaf42bc75d36a86c",
+    "crates/stuie-cabi/src/text_buffer.rs": "1a50901ef337f1eb996ead3b1fed4b62dab53a7cfb4dabdbe965670f1a55cc19",
+    "crates/stuie-cabi/src/text_view.rs": "c5a2715c4e0d5ed252311cb03dd769d4c908c85f32921f330edff1f04559198a"
+  },
+  "opentuiPin": "0c8c4f7cff2927e3df63a9757a45eff9a343611c",
+  "stuieCommit": "ae927afb9e8176dc4c7b642a1d8e638285df448a",
+  "symbols": [
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "attachNativeSpanFeed",
+      "signature": "pub extern \"C\" fn attachNativeSpanFeed(stream: *mut c_void) -> i32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/audio_decoder.rs",
+      "name": "audioDecoderClose",
+      "signature": "pub extern \"C\" fn audioDecoderClose(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/audio_decoder.rs",
+      "name": "audioDecoderDecode",
+      "signature": "pub extern \"C\" fn audioDecoderDecode( handle: u32, in_ptr: *const u8, in_len: u32, out_ptr: *mut f32, out_cap_frames: u32, ) -> i32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/audio_decoder.rs",
+      "name": "audioDecoderEnd",
+      "signature": "pub extern \"C\" fn audioDecoderEnd(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/audio_decoder.rs",
+      "name": "audioDecoderOpen",
+      "signature": "pub extern \"C\" fn audioDecoderOpen(format: u32, max_probe_bytes: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/audio_decoder.rs",
+      "name": "audioDecoderReset",
+      "signature": "pub extern \"C\" fn audioDecoderReset(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferClear",
+      "signature": "pub extern \"C\" fn bufferClear(handle: u32, color: *const u16)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferClearScissorRects",
+      "signature": "pub extern \"C\" fn bufferClearScissorRects(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferDrawBox",
+      "signature": "pub unsafe extern \"C\" fn bufferDrawBox( handle: u32, x: i32, y: i32, width: u32, height: u32, border_chars: *const u32, packed_options: u32, border_color: *const u16, bg_color: *const u16, title_color: *const u16, title_ptr: *const u8, title_len: u32, bottom_title_ptr: *const u8, bottom_title_len: u32, )",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferDrawChar",
+      "signature": "pub extern \"C\" fn bufferDrawChar( handle: u32, ch: u32, x: u32, y: u32, fg: *const u16, bg: *const u16, attributes: u32, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferDrawEditorView",
+      "signature": "pub extern \"C\" fn bufferDrawEditorView(handle: u32, view: u32, x: i32, y: i32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferDrawGrid",
+      "signature": "pub unsafe extern \"C\" fn bufferDrawGrid( handle: u32, border_chars: *const u32, border_fg: *const u16, border_bg: *const u16, column_offsets: *const i32, column_count: u32, row_offsets: *const i32, row_count: u32, options: *const ExternalGridDrawOptions, )",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferDrawText",
+      "signature": "pub extern \"C\" fn bufferDrawText( handle: u32, text_ptr: *const u8, text_len: u32, x: u32, y: u32, fg: *const u16, bg: *const u16, attributes: u32, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferDrawTextBufferView",
+      "signature": "pub extern \"C\" fn bufferDrawTextBufferView(handle: u32, view: u32, x: i32, y: i32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferFillRect",
+      "signature": "pub extern \"C\" fn bufferFillRect( handle: u32, x: i32, y: i32, width: u32, height: u32, bg: *const u16, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferGetAttributesPtr",
+      "signature": "pub extern \"C\" fn bufferGetAttributesPtr(handle: u32) -> *mut u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferGetBgPtr",
+      "signature": "pub extern \"C\" fn bufferGetBgPtr(handle: u32) -> *mut u16",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferGetCharPtr",
+      "signature": "pub extern \"C\" fn bufferGetCharPtr(handle: u32) -> *mut u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferGetFgPtr",
+      "signature": "pub extern \"C\" fn bufferGetFgPtr(handle: u32) -> *mut u16",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferGetId",
+      "signature": "pub extern \"C\" fn bufferGetId(handle: u32, out_ptr: *mut u8, max_len: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferGetRealCharSize",
+      "signature": "pub extern \"C\" fn bufferGetRealCharSize(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferPopScissorRect",
+      "signature": "pub extern \"C\" fn bufferPopScissorRect(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferPushScissorRect",
+      "signature": "pub extern \"C\" fn bufferPushScissorRect(handle: u32, x: i32, y: i32, width: u32, height: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferResize",
+      "signature": "pub extern \"C\" fn bufferResize(handle: u32, width: u32, height: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferSetCell",
+      "signature": "pub extern \"C\" fn bufferSetCell( handle: u32, x: i32, y: i32, cp: u32, fg: *const u16, bg: *const u16, attributes: u32, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferSetRespectAlpha",
+      "signature": "pub extern \"C\" fn bufferSetRespectAlpha(handle: u32, respect_alpha: bool)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "bufferWriteResolvedChars",
+      "signature": "pub extern \"C\" fn bufferWriteResolvedChars( handle: u32, out_ptr: *mut u8, out_len: u32, add_line_breaks: bool, ) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "createEditBuffer",
+      "signature": "pub extern \"C\" fn createEditBuffer(_width_method: u8) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "createEditorView",
+      "signature": "pub extern \"C\" fn createEditorView(edit_buffer: u32, width: u32, height: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "createNativeSpanFeed",
+      "signature": "pub unsafe extern \"C\" fn createNativeSpanFeed(options: *const u8) -> *mut c_void",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "createOptimizedBuffer",
+      "signature": "pub extern \"C\" fn createOptimizedBuffer( width: u32, height: u32, respect_alpha: bool, _width_method: u8, id_ptr: *const u8, id_len: u32, ) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "createRenderer",
+      "signature": "pub extern \"C\" fn createRenderer( width: u32, height: u32, _buffered_output_kind: u8, _remote_mode: u8, _feed_ptr: *const c_void, ) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "createSyntaxStyle",
+      "signature": "pub extern \"C\" fn createSyntaxStyle() -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "createTextBuffer",
+      "signature": "pub extern \"C\" fn createTextBuffer(_width_method: u8) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "createTextBufferView",
+      "signature": "pub extern \"C\" fn createTextBufferView(text_buffer: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "destroyEditBuffer",
+      "signature": "pub extern \"C\" fn destroyEditBuffer(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "destroyEditorView",
+      "signature": "pub extern \"C\" fn destroyEditorView(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "destroyNativeSpanFeed",
+      "signature": "pub extern \"C\" fn destroyNativeSpanFeed(stream: *mut c_void)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "destroyOptimizedBuffer",
+      "signature": "pub extern \"C\" fn destroyOptimizedBuffer(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "destroyRenderer",
+      "signature": "pub extern \"C\" fn destroyRenderer(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "destroySyntaxStyle",
+      "signature": "pub extern \"C\" fn destroySyntaxStyle(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "destroyTextBuffer",
+      "signature": "pub extern \"C\" fn destroyTextBuffer(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "destroyTextBufferView",
+      "signature": "pub extern \"C\" fn destroyTextBufferView(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "drawFrameBuffer",
+      "signature": "pub extern \"C\" fn drawFrameBuffer( target: u32, dest_x: i32, dest_y: i32, src: u32, sx: u32, sy: u32, sw: u32, sh: u32, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferCanRedo",
+      "signature": "pub extern \"C\" fn editBufferCanRedo(handle: u32) -> bool",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferCanUndo",
+      "signature": "pub extern \"C\" fn editBufferCanUndo(handle: u32) -> bool",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferClear",
+      "signature": "pub extern \"C\" fn editBufferClear(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferClearHistory",
+      "signature": "pub extern \"C\" fn editBufferClearHistory(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferDebugLogRope",
+      "signature": "pub extern \"C\" fn editBufferDebugLogRope(_handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferDeleteChar",
+      "signature": "pub extern \"C\" fn editBufferDeleteChar(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferDeleteCharBackward",
+      "signature": "pub extern \"C\" fn editBufferDeleteCharBackward(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferDeleteLine",
+      "signature": "pub extern \"C\" fn editBufferDeleteLine(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferDeleteRange",
+      "signature": "pub extern \"C\" fn editBufferDeleteRange( handle: u32, start_line: u32, start_col: u32, end_line: u32, end_col: u32, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferGetCursorPosition",
+      "signature": "pub unsafe extern \"C\" fn editBufferGetCursorPosition(handle: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferGetEOL",
+      "signature": "pub unsafe extern \"C\" fn editBufferGetEOL(handle: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferGetId",
+      "signature": "pub extern \"C\" fn editBufferGetId(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferGetLineStartOffset",
+      "signature": "pub extern \"C\" fn editBufferGetLineStartOffset(handle: u32, row: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferGetNextWordBoundary",
+      "signature": "pub unsafe extern \"C\" fn editBufferGetNextWordBoundary(handle: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferGetPrevWordBoundary",
+      "signature": "pub unsafe extern \"C\" fn editBufferGetPrevWordBoundary(handle: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferGetTextBuffer",
+      "signature": "pub extern \"C\" fn editBufferGetTextBuffer(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferGetTextRange",
+      "signature": "pub unsafe extern \"C\" fn editBufferGetTextRange( handle: u32, start_offset: u32, end_offset: u32, out: *mut u8, max_len: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferGetTextRangeByCoords",
+      "signature": "pub unsafe extern \"C\" fn editBufferGetTextRangeByCoords( handle: u32, start_row: u32, start_col: u32, end_row: u32, end_col: u32, out: *mut u8, max_len: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferGotoLine",
+      "signature": "pub extern \"C\" fn editBufferGotoLine(handle: u32, line: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferInsertChar",
+      "signature": "pub unsafe extern \"C\" fn editBufferInsertChar(handle: u32, data: *const u8, len: u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferInsertText",
+      "signature": "pub unsafe extern \"C\" fn editBufferInsertText(handle: u32, data: *const u8, len: u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferMoveCursorDown",
+      "signature": "pub extern \"C\" fn editBufferMoveCursorDown(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferMoveCursorLeft",
+      "signature": "pub extern \"C\" fn editBufferMoveCursorLeft(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferMoveCursorRight",
+      "signature": "pub extern \"C\" fn editBufferMoveCursorRight(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferMoveCursorUp",
+      "signature": "pub extern \"C\" fn editBufferMoveCursorUp(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferNewLine",
+      "signature": "pub extern \"C\" fn editBufferNewLine(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferOffsetToPosition",
+      "signature": "pub unsafe extern \"C\" fn editBufferOffsetToPosition( handle: u32, offset: u32, out: *mut u32, ) -> bool",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferPositionToOffset",
+      "signature": "pub extern \"C\" fn editBufferPositionToOffset(handle: u32, row: u32, col: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferRedo",
+      "signature": "pub unsafe extern \"C\" fn editBufferRedo(handle: u32, out: *mut u8, max_len: u32) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferReplaceText",
+      "signature": "pub unsafe extern \"C\" fn editBufferReplaceText(handle: u32, data: *const u8, len: u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferReplaceTextFromMem",
+      "signature": "pub extern \"C\" fn editBufferReplaceTextFromMem(handle: u32, mem_id: u16)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferSetCursor",
+      "signature": "pub extern \"C\" fn editBufferSetCursor(handle: u32, line: u32, col: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferSetCursorByOffset",
+      "signature": "pub extern \"C\" fn editBufferSetCursorByOffset(handle: u32, offset: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferSetCursorToLineCol",
+      "signature": "pub extern \"C\" fn editBufferSetCursorToLineCol(handle: u32, line: u32, col: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferSetText",
+      "signature": "pub unsafe extern \"C\" fn editBufferSetText(handle: u32, data: *const u8, len: u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferSetTextFromMem",
+      "signature": "pub extern \"C\" fn editBufferSetTextFromMem(handle: u32, mem_id: u16)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editBufferUndo",
+      "signature": "pub unsafe extern \"C\" fn editBufferUndo(handle: u32, out: *mut u8, max_len: u32) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewDeleteSelectedText",
+      "signature": "pub extern \"C\" fn editorViewDeleteSelectedText(view: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetCursor",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetCursor(view: u32, row_out: *mut u32, col_out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetEOL",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetEOL(view: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetLineInfo",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetLineInfo(view: u32, out: *mut u32, max_entries: u32) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetLogicalLineInfo",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetLogicalLineInfo( view: u32, out: *mut u32, max_entries: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetNextWordBoundary",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetNextWordBoundary(view: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetPrevWordBoundary",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetPrevWordBoundary(view: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetSelectedTextBytes",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetSelectedTextBytes( view: u32, out: *mut u8, max_len: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetSelection",
+      "signature": "pub extern \"C\" fn editorViewGetSelection(view: u32) -> u64",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetText",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetText(view: u32, out: *mut u8, max_len: u32) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetTextBufferView",
+      "signature": "pub extern \"C\" fn editorViewGetTextBufferView(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetTotalVirtualLineCount",
+      "signature": "pub extern \"C\" fn editorViewGetTotalVirtualLineCount(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetViewport",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetViewport(view: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetVirtualLineCount",
+      "signature": "pub extern \"C\" fn editorViewGetVirtualLineCount(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetVisualCursor",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetVisualCursor(view: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetVisualEOL",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetVisualEOL(view: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewGetVisualSOL",
+      "signature": "pub unsafe extern \"C\" fn editorViewGetVisualSOL(view: u32, out: *mut u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewIsValid",
+      "signature": "pub extern \"C\" fn editorViewIsValid(handle: u32) -> bool",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewMoveDownVisual",
+      "signature": "pub extern \"C\" fn editorViewMoveDownVisual(view: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewMoveUpVisual",
+      "signature": "pub extern \"C\" fn editorViewMoveUpVisual(view: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewResetLocalSelection",
+      "signature": "pub extern \"C\" fn editorViewResetLocalSelection(view: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewResetSelection",
+      "signature": "pub extern \"C\" fn editorViewResetSelection(view: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewSetCursorByOffset",
+      "signature": "pub extern \"C\" fn editorViewSetCursorByOffset(view: u32, offset: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewSetLocalSelection",
+      "signature": "pub extern \"C\" fn editorViewSetLocalSelection( view: u32, ax: i32, ay: i32, fx: i32, fy: i32, bg: *const u16, fg: *const u16, update_cursor: bool, follow_cursor: bool, ) -> bool",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewSetPlaceholderStyledText",
+      "signature": "pub unsafe extern \"C\" fn editorViewSetPlaceholderStyledText( handle: u32, records: *const u8, count: u32, )",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewSetScrollMargin",
+      "signature": "pub extern \"C\" fn editorViewSetScrollMargin(handle: u32, margin: f32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewSetSelection",
+      "signature": "pub extern \"C\" fn editorViewSetSelection( view: u32, start: u32, end: u32, bg: *const u16, fg: *const u16, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewSetTabIndicator",
+      "signature": "pub extern \"C\" fn editorViewSetTabIndicator(handle: u32, code_point: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewSetTabIndicatorColor",
+      "signature": "pub unsafe extern \"C\" fn editorViewSetTabIndicatorColor(handle: u32, color: *const u16)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewSetViewport",
+      "signature": "pub extern \"C\" fn editorViewSetViewport( view: u32, x: u32, y: u32, width: u32, height: u32, move_cursor: bool, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewSetViewportSize",
+      "signature": "pub extern \"C\" fn editorViewSetViewportSize(handle: u32, width: u32, height: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewSetWrapMode",
+      "signature": "pub extern \"C\" fn editorViewSetWrapMode(handle: u32, mode: u8)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewUpdateLocalSelection",
+      "signature": "pub extern \"C\" fn editorViewUpdateLocalSelection( view: u32, ax: i32, ay: i32, fx: i32, fy: i32, bg: *const u16, fg: *const u16, update_cursor: bool, follow_cursor: bool, ) -> bool",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "editorViewUpdateSelection",
+      "signature": "pub extern \"C\" fn editorViewUpdateSelection(view: u32, end: u32, bg: *const u16, fg: *const u16)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "encodeUnicode",
+      "signature": "pub unsafe extern \"C\" fn encodeUnicode( text_ptr: *const u8, text_len: u32, out_ptr: *mut u64, out_len: *mut u64, _width_method: u8, ) -> bool",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "freeUnicode",
+      "signature": "pub unsafe extern \"C\" fn freeUnicode(ptr: *mut EncodedChar, len: u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "getAllocatorStats",
+      "signature": "pub unsafe extern \"C\" fn getAllocatorStats(out: *mut u8)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "getArenaAllocatedBytes",
+      "signature": "pub extern \"C\" fn getArenaAllocatedBytes() -> u64",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "getBufferHeight",
+      "signature": "pub extern \"C\" fn getBufferHeight(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "getBufferWidth",
+      "signature": "pub extern \"C\" fn getBufferWidth(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "getBuildOptions",
+      "signature": "pub unsafe extern \"C\" fn getBuildOptions(out: *mut u8)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "getCurrentBuffer",
+      "signature": "pub extern \"C\" fn getCurrentBuffer(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "getNextBuffer",
+      "signature": "pub extern \"C\" fn getNextBuffer(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "getRenderStats",
+      "signature": "pub unsafe extern \"C\" fn getRenderStats(handle: u32, out: *mut u8)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "render",
+      "signature": "pub extern \"C\" fn render(handle: u32, force: bool) -> u8",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "resizeRenderer",
+      "signature": "pub extern \"C\" fn resizeRenderer(handle: u32, width: u32, height: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "setBackgroundColor",
+      "signature": "pub extern \"C\" fn setBackgroundColor(handle: u32, color: *const u16)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "setNativeEventCallback",
+      "signature": "pub unsafe extern \"C\" fn setNativeEventCallback(cb: *const std::os::raw::c_void)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "setRenderOffset",
+      "signature": "pub extern \"C\" fn setRenderOffset(handle: u32, offset: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "setUseThread",
+      "signature": "pub extern \"C\" fn setUseThread(handle: u32, use_thread: bool)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "streamClose",
+      "signature": "pub extern \"C\" fn streamClose(stream: *mut c_void) -> i32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "streamCommit",
+      "signature": "pub extern \"C\" fn streamCommit(stream: *mut c_void) -> i32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "streamCommitReserved",
+      "signature": "pub extern \"C\" fn streamCommitReserved(stream: *mut c_void, length: u32) -> i32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "streamDrainSpans",
+      "signature": "pub unsafe extern \"C\" fn streamDrainSpans( stream: *mut c_void, out: *mut u8, max_spans: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "streamGetStats",
+      "signature": "pub unsafe extern \"C\" fn streamGetStats(stream: *mut c_void, out: *mut u8) -> i32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "streamReserve",
+      "signature": "pub unsafe extern \"C\" fn streamReserve( stream: *mut c_void, min_len: u32, out_info: *mut u8, ) -> i32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "streamSetCallback",
+      "signature": "pub extern \"C\" fn streamSetCallback(stream: *mut c_void, callback: *const c_void)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "streamSetOptions",
+      "signature": "pub unsafe extern \"C\" fn streamSetOptions(stream: *mut c_void, options: *const u8) -> i32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "streamWrite",
+      "signature": "pub unsafe extern \"C\" fn streamWrite(stream: *mut c_void, data: *const u8, len: u32) -> i32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "syntaxStyleGetStyleCount",
+      "signature": "pub extern \"C\" fn syntaxStyleGetStyleCount(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "syntaxStyleRegister",
+      "signature": "pub unsafe extern \"C\" fn syntaxStyleRegister( handle: u32, name: *const u8, name_len: u32, fg: *const u16, bg: *const u16, attributes: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "syntaxStyleResolveByName",
+      "signature": "pub unsafe extern \"C\" fn syntaxStyleResolveByName( handle: u32, name: *const u8, name_len: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferAddHighlight",
+      "signature": "pub unsafe extern \"C\" fn textBufferAddHighlight(handle: u32, line: u32, highlight: *const u8)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferAddHighlightByCharRange",
+      "signature": "pub unsafe extern \"C\" fn textBufferAddHighlightByCharRange(handle: u32, highlight: *const u8)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferAppend",
+      "signature": "pub unsafe extern \"C\" fn textBufferAppend(handle: u32, data: *const u8, len: u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferAppendFromMemId",
+      "signature": "pub extern \"C\" fn textBufferAppendFromMemId(handle: u32, mem_id: u8)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferClear",
+      "signature": "pub extern \"C\" fn textBufferClear(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferClearAllHighlights",
+      "signature": "pub extern \"C\" fn textBufferClearAllHighlights(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferClearLineHighlights",
+      "signature": "pub extern \"C\" fn textBufferClearLineHighlights(handle: u32, line: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferClearMemRegistry",
+      "signature": "pub extern \"C\" fn textBufferClearMemRegistry(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferFreeLineHighlights",
+      "signature": "pub unsafe extern \"C\" fn textBufferFreeLineHighlights(ptr: *mut c_void, count: u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferGetByteSize",
+      "signature": "pub extern \"C\" fn textBufferGetByteSize(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferGetHighlightCount",
+      "signature": "pub extern \"C\" fn textBufferGetHighlightCount(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferGetLength",
+      "signature": "pub extern \"C\" fn textBufferGetLength(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferGetLineCount",
+      "signature": "pub extern \"C\" fn textBufferGetLineCount(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferGetLineHighlightsPtr",
+      "signature": "pub unsafe extern \"C\" fn textBufferGetLineHighlightsPtr( handle: u32, line: u32, out_count: *mut u32, ) -> *mut c_void",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferGetPlainText",
+      "signature": "pub unsafe extern \"C\" fn textBufferGetPlainText(handle: u32, out: *mut u8, max_len: u32) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferGetTabWidth",
+      "signature": "pub extern \"C\" fn textBufferGetTabWidth(handle: u32) -> u8",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferGetTextRange",
+      "signature": "pub unsafe extern \"C\" fn textBufferGetTextRange( handle: u32, start: u32, end: u32, out: *mut u8, max_len: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferGetTextRangeByCoords",
+      "signature": "pub unsafe extern \"C\" fn textBufferGetTextRangeByCoords( handle: u32, start_row: u32, start_col: u32, end_row: u32, end_col: u32, out: *mut u8, max_len: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferLoadFile",
+      "signature": "pub unsafe extern \"C\" fn textBufferLoadFile(handle: u32, path: *const u8, path_len: u32) -> bool",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferRegisterMemBuffer",
+      "signature": "pub unsafe extern \"C\" fn textBufferRegisterMemBuffer( handle: u32, data: *const u8, len: u32, _owned: bool, ) -> u16",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferRemoveHighlightsByRef",
+      "signature": "pub extern \"C\" fn textBufferRemoveHighlightsByRef(handle: u32, hl_ref: u16)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferReplaceMemBuffer",
+      "signature": "pub unsafe extern \"C\" fn textBufferReplaceMemBuffer( handle: u32, mem_id: u8, data: *const u8, len: u32, _owned: bool, ) -> bool",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferReset",
+      "signature": "pub extern \"C\" fn textBufferReset(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferResetDefaults",
+      "signature": "pub extern \"C\" fn textBufferResetDefaults(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferSetDefaultAttributes",
+      "signature": "pub unsafe extern \"C\" fn textBufferSetDefaultAttributes(handle: u32, attrs: *const u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferSetDefaultBg",
+      "signature": "pub extern \"C\" fn textBufferSetDefaultBg(handle: u32, bg: *const u16)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferSetDefaultFg",
+      "signature": "pub extern \"C\" fn textBufferSetDefaultFg(handle: u32, fg: *const u16)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferSetStyledText",
+      "signature": "pub unsafe extern \"C\" fn textBufferSetStyledText(handle: u32, records: *const u8, count: u32)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferSetSyntaxStyle",
+      "signature": "pub extern \"C\" fn textBufferSetSyntaxStyle(handle: u32, style: u32) -> bool",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferSetTabWidth",
+      "signature": "pub extern \"C\" fn textBufferSetTabWidth(handle: u32, width: u8)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferSetTextFromMem",
+      "signature": "pub extern \"C\" fn textBufferSetTextFromMem(handle: u32, mem_id: u8)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewGetLineInfo",
+      "signature": "pub unsafe extern \"C\" fn textBufferViewGetLineInfo( view: u32, out: *mut u32, max_entries: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewGetLogicalLineInfo",
+      "signature": "pub unsafe extern \"C\" fn textBufferViewGetLogicalLineInfo( view: u32, out: *mut u32, max_entries: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewGetPlainTextBytes",
+      "signature": "pub unsafe extern \"C\" fn textBufferViewGetPlainTextBytes( handle: u32, out: *mut u8, max_len: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewGetSelectedTextBytes",
+      "signature": "pub unsafe extern \"C\" fn textBufferViewGetSelectedTextBytes( handle: u32, out: *mut u8, max_len: u32, ) -> u32",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewGetSelection",
+      "signature": "pub extern \"C\" fn textBufferViewGetSelection(handle: u32) -> u64",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewGetVirtualLineCount",
+      "signature": "pub extern \"C\" fn textBufferViewGetVirtualLineCount(handle: u32) -> u32",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewIsValid",
+      "signature": "pub extern \"C\" fn textBufferViewIsValid(handle: u32) -> bool",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewMeasureForDimensions",
+      "signature": "pub extern \"C\" fn textBufferViewMeasureForDimensions(handle: u32, width: u32, height: u32) -> u64",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewResetLocalSelection",
+      "signature": "pub extern \"C\" fn textBufferViewResetLocalSelection(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewResetSelection",
+      "signature": "pub extern \"C\" fn textBufferViewResetSelection(handle: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewSetFirstLineOffset",
+      "signature": "pub extern \"C\" fn textBufferViewSetFirstLineOffset(handle: u32, offset: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewSetLocalSelection",
+      "signature": "pub extern \"C\" fn textBufferViewSetLocalSelection( handle: u32, ax: i32, ay: i32, fx: i32, fy: i32, bg: *const u16, fg: *const u16, ) -> bool",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewSetSelection",
+      "signature": "pub extern \"C\" fn textBufferViewSetSelection( handle: u32, start: u32, end: u32, bg: *const u16, fg: *const u16, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewSetTabIndicator",
+      "signature": "pub extern \"C\" fn textBufferViewSetTabIndicator(handle: u32, code_point: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewSetTabIndicatorColor",
+      "signature": "pub unsafe extern \"C\" fn textBufferViewSetTabIndicatorColor(handle: u32, color: *const u16)",
+      "unsafe": true
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewSetTruncate",
+      "signature": "pub extern \"C\" fn textBufferViewSetTruncate(handle: u32, truncate: bool)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewSetViewport",
+      "signature": "pub extern \"C\" fn textBufferViewSetViewport(handle: u32, x: u32, y: u32, width: u32, height: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewSetViewportSize",
+      "signature": "pub extern \"C\" fn textBufferViewSetViewportSize(handle: u32, width: u32, height: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewSetWrapMode",
+      "signature": "pub extern \"C\" fn textBufferViewSetWrapMode(handle: u32, mode: u8)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewSetWrapWidth",
+      "signature": "pub extern \"C\" fn textBufferViewSetWrapWidth(handle: u32, width: u32)",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewUpdateLocalSelection",
+      "signature": "pub extern \"C\" fn textBufferViewUpdateLocalSelection( handle: u32, ax: i32, ay: i32, fx: i32, fy: i32, bg: *const u16, fg: *const u16, ) -> bool",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "textBufferViewUpdateSelection",
+      "signature": "pub extern \"C\" fn textBufferViewUpdateSelection( handle: u32, end: u32, bg: *const u16, fg: *const u16, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "updateMemoryStats",
+      "signature": "pub extern \"C\" fn updateMemoryStats( _handle: u32, _heap_used: u32, _heap_total: u32, _array_buffers: u32, )",
+      "unsafe": false
+    },
+    {
+      "file": "crates/stuie-cabi/src/cabi.rs",
+      "name": "updateStats",
+      "signature": "pub extern \"C\" fn updateStats(handle: u32, time: f64, _fps: u32, _frame_callback_time: f64)",
+      "unsafe": false
+    }
+  ]
+}

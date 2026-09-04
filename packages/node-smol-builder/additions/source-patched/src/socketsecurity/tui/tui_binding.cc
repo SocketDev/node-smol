@@ -1,0 +1,3521 @@
+// doctrine: allow max-file-lines -- V8 binding glue that compiles only inside the full Node build; a blind split cannot be compile-verified in isolation.
+// node:smol-tui V8 binding glue.
+//
+// Five surfaces exposed to JS, all routed through `internalBinding('smol_tui')`:
+//
+//   1. ANSI emit       — constants + cold-path `std::string` builders +
+//                        hot-path Uint8Array writers (cursor, fg/bg RGB,
+//                        SGR attributes). Mirrors OpenTUI's `ansi.zig`.
+//   2. Mouse parser    — SGR + X10 ANSI decode, drag-state tracked. 1:1
+//                        port of socket-stuie/@opentui mouse-parser.ts.
+//   3. Renderer / cell — double-buffered cell-grid diff. Mirrors
+//                        OpenTUI's `renderer.zig` CliRenderer (Next/Prev
+//                        + diff + flush).
+//   4. Yoga layout     — direct C-API binding (yoga 3.2.1 pin) for
+//                        flexbox layout used by ink-style tui apps.
+//   5. Enum mirrors    — integer-valued objects so JS callers don't
+//                        hardcode the numeric values.
+//
+// Cross-cutting design choices:
+//
+//   * Handle registries. Stateful subsystems (mouse parser, renderer,
+//     yoga node) live in process-wide `unordered_map<uint32_t, T>` maps
+//     guarded by a mutex. JS holds opaque integer handles. Avoids the
+//     V8 ObjectWrap dance (no internal-field accessors, no per-isolate
+//     template installation) at the cost of one mutex acquire per call.
+//     For TUI workloads (one terminal, one parser, one renderer) the
+//     contention is zero.
+//
+//   * Pre-allocated Uint8Array IO. Hot-path writers and Renderer::Flush
+//     receive a Uint8Array + capacity from JS, write straight into the
+//     backing store via ArrayBuffer::GetBackingStore + ByteOffset
+//     arithmetic. No per-call allocation on either side; the JS layer
+//     reuses one buffer for the entire session.
+//
+//   * FastApi specialization. 32 hot-path entries are paired Slow +
+//     Fast:
+//     - ANSI writers (writeCursorPosition, writeFgRgb, writeBgRgb,
+//       writeAttributes) — called per cell per frame (4).
+//     - looksLikeMouseSequence — called once per terminal input chunk
+//       (1).
+//     - Renderer hot path (rendererResize, rendererInvalidate,
+//       rendererClear, rendererSet, rendererFillRect,
+//       rendererDrawText, rendererFlush) — called per
+//       frame / per-cell / per-glyph in the render loop (7). The flush
+//       in particular is the hottest call in the binding.
+//     - Yoga structural + setters + dirty mark (yogaCreateNode,
+//       yogaFreeNode, yogaInsertChild, yogaRemoveChild,
+//       yogaCalculateLayout, yogaMarkDirty, 14 yogaSet*) — called per
+//       element per layout pass (20).
+//
+//     The fast paths use ArrayBufferViewContents<uint8_t> for direct
+//     byte access (no Isolate handle, no HandleScope) and forward into
+//     the same C++ helpers the slow path uses. Slow path remains the
+//     fallback for non-monomorphic call sites.
+//
+//     Cold-path entries kept on SetMethod: lifecycle Create/Destroy/
+//     Reset (rare-call); ANSI cold builders that return std::string
+//     (V8 Fast API can't return fresh string handles); parseMouseOne
+//     and yogaGetComputedLayout (return JS objects; allocation makes
+//     Fast API unsuitable); rendererSize (returns object).
+//
+// Upstream pins (with exact commits — link → file → line where useful):
+//
+//   * Yoga 3.2.1
+//     https://github.com/facebook/yoga/tree/v3.2.1
+//     Submodule at packages/yoga-layout-builder/upstream/yoga/
+//     (SHA 042f5013152eb81c1552dec945b88f7b95ca350f).
+//
+//   * OpenTUI (Zig sources, vendored into socket-stuie's fork)
+//     packages/core/upstream/opentui/packages/core/src/zig/
+//       ansi.zig          — escape sequence emit (constants + writers)
+//       renderer.zig      — CliRenderer (Next/Prev + flush diff)
+//       buffer-methods.zig — Cell POD + grid helpers
+//     The tui-infra C++ port (include/tui/*.hpp + src/tui/*.cc) is the
+//     trimmed-down 1:1 in this tree.
+//
+//   * @opentui/core mouse parser (TypeScript)
+//     packages/core/src/parse/mouse-parser.ts
+//     The tui-infra MouseParser is a near-verbatim C++ port — SGR
+//     (ESC[<b;x;yM|m) and X10 (ESC[M<byte><x><y>) protocols, drag-state
+//     tracking, scroll mapping. See xterm(1) "Mouse Tracking" + xterm
+//     ctlseqs: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+//
+// JS↔C++ enum integer parity: numeric values come from the public Yoga
+// headers via `static_cast<int32_t>(YG*Enum::Value)`. If Yoga adds a
+// new entry to one of its enums in a future bump, the JS-side mirror
+// stays in sync because both pull from the same source.
+
+#include "tui/ansi.hpp"
+#include "tui/cell.hpp"
+#include "tui/handles.hpp"
+#include "tui/mouse.hpp"
+#include "tui/renderables.hpp"
+#include "tui/renderer.hpp"
+#include "tui/text_buffer.hpp"
+#include "tui/text_view.hpp"
+#include "tui/width.hpp"
+
+#include "yoga/Yoga.h"
+
+#include "node.h"
+#include "node_binding.h"
+#include "node_external_reference.h"
+#include "node_debug.h"
+#include "util-inl.h"
+#include "v8.h"
+#include "v8-fast-api-calls.h"
+
+#include <array>
+#include <cstring>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+namespace node {
+namespace socketsecurity {
+namespace tui {
+
+using node::ArrayBufferViewContents;
+using v8::Boolean;
+using v8::CFunction;
+using v8::Context;
+using v8::FastApiCallbackOptions;
+using v8::FunctionCallbackInfo;
+using v8::HandleScope;
+using v8::Integer;
+using v8::Isolate;
+using v8::Local;
+using v8::NewStringType;
+using v8::Null;
+using v8::Number;
+using v8::Object;
+using v8::String;
+using v8::Uint8Array;
+using v8::Uint16Array;
+using v8::Uint32Array;
+using v8::Value;
+
+namespace ti = ::tui;
+
+// ─── Section 1: ANSI emit ─────────────────────────────────────────────
+//
+// Mirrors OpenTUI ansi.zig (socket-stuie/@opentui/core fork). The cold-
+// path wrappers wrap `tui::CursorPosition` / `tui::SetFgRgb` /
+// `tui::SetBgRgb` (which return std::string) and surface them as JS
+// strings. Cold-path is for one-shot setup writes (banner, screen
+// switch), not the per-cell flush loop.
+//
+// Upstream reference (Zig source, equivalent functions):
+//   opentui/packages/core/src/zig/ansi.zig
+//     fn cursorPosition (CUP — ESC[<row>;<col>H)
+//     fn fgRgbTrue / fn bgRgbTrue (SGR truecolor — ESC[38;2;r;g;bm)
+// VT/xterm spec: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+//                #h2-CSI-Pn-_-Pn-H (CUP)
+//                #h2-Character-Attributes (SGR)
+
+static Local<String> NewOneByteString(Isolate* isolate, const char* literal) {
+  return String::NewFromOneByte(isolate,
+                                reinterpret_cast<const uint8_t*>(literal),
+                                NewStringType::kNormal,
+                                static_cast<int>(std::strlen(literal)))
+      .ToLocalChecked();
+}
+
+static void CursorPosition(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint16_t row = static_cast<uint16_t>(
+      args[0]->Uint32Value(context).FromMaybe(0));
+  uint16_t col = static_cast<uint16_t>(
+      args[1]->Uint32Value(context).FromMaybe(0));
+  // ANSI escape sequences are always pure ASCII (digits + brackets +
+  // semicolons + final letter). Skip V8's NewFromUtf8 high-bit scan
+  // by emitting via NewFromOneByte directly.
+  std::string seq = ti::CursorPosition(row, col);
+  args.GetReturnValue().Set(
+      String::NewFromOneByte(isolate,
+                             reinterpret_cast<const uint8_t*>(seq.data()),
+                             NewStringType::kNormal,
+                             static_cast<int>(seq.size()))
+          .ToLocalChecked());
+}
+
+static void SetFgRgb(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint8_t r = static_cast<uint8_t>(args[0]->Uint32Value(context).FromMaybe(0));
+  uint8_t g = static_cast<uint8_t>(args[1]->Uint32Value(context).FromMaybe(0));
+  uint8_t b = static_cast<uint8_t>(args[2]->Uint32Value(context).FromMaybe(0));
+  std::string seq = ti::SetFgRgb(r, g, b);
+  args.GetReturnValue().Set(
+      String::NewFromOneByte(isolate,
+                             reinterpret_cast<const uint8_t*>(seq.data()),
+                             NewStringType::kNormal,
+                             static_cast<int>(seq.size()))
+          .ToLocalChecked());
+}
+
+static void SetBgRgb(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint8_t r = static_cast<uint8_t>(args[0]->Uint32Value(context).FromMaybe(0));
+  uint8_t g = static_cast<uint8_t>(args[1]->Uint32Value(context).FromMaybe(0));
+  uint8_t b = static_cast<uint8_t>(args[2]->Uint32Value(context).FromMaybe(0));
+  std::string seq = ti::SetBgRgb(r, g, b);
+  args.GetReturnValue().Set(
+      String::NewFromOneByte(isolate,
+                             reinterpret_cast<const uint8_t*>(seq.data()),
+                             NewStringType::kNormal,
+                             static_cast<int>(seq.size()))
+          .ToLocalChecked());
+}
+
+// ─── Section 2: ANSI hot-path writers ─────────────────────────────────
+//
+// Caller passes a Uint8Array and a byte offset; we write directly into
+// the backing store. JS does no allocation per call. Returns the number
+// of bytes written. Out-of-bounds offsets or overshort buffers return
+// 0; the JS layer treats 0 as an overflow signal and grows.
+//
+// Mirrors the per-cell hot-path writers in OpenTUI:
+//   opentui/packages/core/src/zig/ansi.zig
+//     moveToOutput, fgColorOutput, bgColorOutput, applyAttributesOutputWriter
+//
+// kMaxCursorPositionLen / kMaxRgbSgrLen / kMaxAttrRunLen are defined in
+// include/tui/ansi.hpp. Sizing the JS-side Uint8Array to those bounds
+// means a single call can never overflow during normal use.
+
+static char* Uint8ArrayDataAt(Local<Uint8Array> arr, uint32_t offset,
+                              size_t required) {
+  size_t length = arr->ByteLength();
+  if (offset > length || length - offset < required) {
+    return nullptr;
+  }
+  auto store = arr->Buffer()->GetBackingStore();
+  return static_cast<char*>(store->Data()) + arr->ByteOffset() + offset;
+}
+
+static void WriteCursorPosition(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  if (!args[0]->IsUint8Array()) {
+    args.GetReturnValue().Set(Integer::New(isolate, 0));
+    return;
+  }
+  Local<Uint8Array> arr = args[0].As<Uint8Array>();
+  uint32_t offset = args[1]->Uint32Value(context).FromMaybe(0);
+  uint16_t row = static_cast<uint16_t>(
+      args[2]->Uint32Value(context).FromMaybe(0));
+  uint16_t col = static_cast<uint16_t>(
+      args[3]->Uint32Value(context).FromMaybe(0));
+  char* dst = Uint8ArrayDataAt(arr, offset, ti::kMaxCursorPositionLen);
+  if (!dst) {
+    args.GetReturnValue().Set(Integer::New(isolate, 0));
+    return;
+  }
+  size_t n = ti::WriteCursorPosition(dst, row, col);
+  args.GetReturnValue().Set(Integer::New(isolate, static_cast<int32_t>(n)));
+}
+
+// Fast path: V8 calls this when the receiver matches a known shape
+// (Uint8Array + ints monomorphic). Inlines the ANSI emit straight
+// into the JIT'd renderer flush loop — ~3-4 instructions per call
+// after register allocation, vs the dozen+ for the trampoline path.
+uint32_t FastWriteCursorPosition(Local<Value> receiver,
+                                 Local<Value> buffer_val,
+                                 uint32_t offset,
+                                 uint32_t row,
+                                 uint32_t col,
+                                 // NOLINTNEXTLINE(runtime/references)
+                                 FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.writeCursorPosition");
+  HandleScope scope(opts.isolate);
+  ArrayBufferViewContents<uint8_t> buf(buffer_val);
+  // Overflow-safe bounds check (same shape as slow path's Uint8ArrayDataAt).
+  if (offset > buf.length() ||
+      buf.length() - offset < ti::kMaxCursorPositionLen) {
+    return 0;
+  }
+  char* dst = reinterpret_cast<char*>(
+      const_cast<uint8_t*>(buf.data())) + offset;
+  return static_cast<uint32_t>(
+      ti::WriteCursorPosition(dst, static_cast<uint16_t>(row),
+                              static_cast<uint16_t>(col)));
+}
+
+static CFunction fast_write_cursor_position(
+    CFunction::Make(FastWriteCursorPosition));
+
+static void WriteFgRgb(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  if (!args[0]->IsUint8Array()) {
+    args.GetReturnValue().Set(Integer::New(isolate, 0));
+    return;
+  }
+  Local<Uint8Array> arr = args[0].As<Uint8Array>();
+  uint32_t offset = args[1]->Uint32Value(context).FromMaybe(0);
+  uint8_t r = static_cast<uint8_t>(args[2]->Uint32Value(context).FromMaybe(0));
+  uint8_t g = static_cast<uint8_t>(args[3]->Uint32Value(context).FromMaybe(0));
+  uint8_t b = static_cast<uint8_t>(args[4]->Uint32Value(context).FromMaybe(0));
+  char* dst = Uint8ArrayDataAt(arr, offset, ti::kMaxRgbSgrLen);
+  if (!dst) {
+    args.GetReturnValue().Set(Integer::New(isolate, 0));
+    return;
+  }
+  size_t n = ti::WriteFgRgb(dst, r, g, b);
+  args.GetReturnValue().Set(Integer::New(isolate, static_cast<int32_t>(n)));
+}
+
+uint32_t FastWriteFgRgb(Local<Value> receiver,
+                        Local<Value> buffer_val,
+                        uint32_t offset,
+                        uint32_t r,
+                        uint32_t g,
+                        uint32_t b,
+                        // NOLINTNEXTLINE(runtime/references)
+                        FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.writeFgRgb");
+  HandleScope scope(opts.isolate);
+  ArrayBufferViewContents<uint8_t> buf(buffer_val);
+  if (offset > buf.length() ||
+      buf.length() - offset < ti::kMaxRgbSgrLen) {
+    return 0;
+  }
+  char* dst = reinterpret_cast<char*>(
+      const_cast<uint8_t*>(buf.data())) + offset;
+  return static_cast<uint32_t>(
+      ti::WriteFgRgb(dst, static_cast<uint8_t>(r),
+                     static_cast<uint8_t>(g), static_cast<uint8_t>(b)));
+}
+
+static CFunction fast_write_fg_rgb(CFunction::Make(FastWriteFgRgb));
+
+static void WriteBgRgb(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  if (!args[0]->IsUint8Array()) {
+    args.GetReturnValue().Set(Integer::New(isolate, 0));
+    return;
+  }
+  Local<Uint8Array> arr = args[0].As<Uint8Array>();
+  uint32_t offset = args[1]->Uint32Value(context).FromMaybe(0);
+  uint8_t r = static_cast<uint8_t>(args[2]->Uint32Value(context).FromMaybe(0));
+  uint8_t g = static_cast<uint8_t>(args[3]->Uint32Value(context).FromMaybe(0));
+  uint8_t b = static_cast<uint8_t>(args[4]->Uint32Value(context).FromMaybe(0));
+  char* dst = Uint8ArrayDataAt(arr, offset, ti::kMaxRgbSgrLen);
+  if (!dst) {
+    args.GetReturnValue().Set(Integer::New(isolate, 0));
+    return;
+  }
+  size_t n = ti::WriteBgRgb(dst, r, g, b);
+  args.GetReturnValue().Set(Integer::New(isolate, static_cast<int32_t>(n)));
+}
+
+uint32_t FastWriteBgRgb(Local<Value> receiver,
+                        Local<Value> buffer_val,
+                        uint32_t offset,
+                        uint32_t r,
+                        uint32_t g,
+                        uint32_t b,
+                        // NOLINTNEXTLINE(runtime/references)
+                        FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.writeBgRgb");
+  HandleScope scope(opts.isolate);
+  ArrayBufferViewContents<uint8_t> buf(buffer_val);
+  if (offset > buf.length() ||
+      buf.length() - offset < ti::kMaxRgbSgrLen) {
+    return 0;
+  }
+  char* dst = reinterpret_cast<char*>(
+      const_cast<uint8_t*>(buf.data())) + offset;
+  return static_cast<uint32_t>(
+      ti::WriteBgRgb(dst, static_cast<uint8_t>(r),
+                     static_cast<uint8_t>(g), static_cast<uint8_t>(b)));
+}
+
+static CFunction fast_write_bg_rgb(CFunction::Make(FastWriteBgRgb));
+
+static void WriteAttributes(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  if (!args[0]->IsUint8Array()) {
+    args.GetReturnValue().Set(Integer::New(isolate, 0));
+    return;
+  }
+  Local<Uint8Array> arr = args[0].As<Uint8Array>();
+  uint32_t offset = args[1]->Uint32Value(context).FromMaybe(0);
+  uint8_t attrs = static_cast<uint8_t>(
+      args[2]->Uint32Value(context).FromMaybe(0));
+  char* dst = Uint8ArrayDataAt(arr, offset, ti::kMaxAttrRunLen);
+  if (!dst) {
+    args.GetReturnValue().Set(Integer::New(isolate, 0));
+    return;
+  }
+  size_t n = ti::WriteAttributes(dst, attrs);
+  args.GetReturnValue().Set(Integer::New(isolate, static_cast<int32_t>(n)));
+}
+
+uint32_t FastWriteAttributes(Local<Value> receiver,
+                             Local<Value> buffer_val,
+                             uint32_t offset,
+                             uint32_t attrs,
+                             // NOLINTNEXTLINE(runtime/references)
+                             FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.writeAttributes");
+  HandleScope scope(opts.isolate);
+  ArrayBufferViewContents<uint8_t> buf(buffer_val);
+  if (offset > buf.length() ||
+      buf.length() - offset < ti::kMaxAttrRunLen) {
+    return 0;
+  }
+  char* dst = reinterpret_cast<char*>(
+      const_cast<uint8_t*>(buf.data())) + offset;
+  return static_cast<uint32_t>(
+      ti::WriteAttributes(dst, static_cast<uint8_t>(attrs)));
+}
+
+static CFunction fast_write_attributes(CFunction::Make(FastWriteAttributes));
+
+// ─── Section 3: Mouse parser ──────────────────────────────────────────
+//
+// 1:1 surface for socket-stuie's @opentui mouse-parser.ts (TypeScript →
+// C++ port lives in src/tui/mouse.cc). Decodes the two terminal mouse
+// wire protocols:
+//
+//   SGR mode  (xterm 277+, the modern default):
+//     ESC [ < b ; x ; y M     (press / drag)
+//     ESC [ < b ; x ; y m     (release)
+//     b encodes button (low 2 bits) + modifiers (bits 2-4 = shift/alt/
+//     ctrl) + scroll/motion flags (bits 5-7).
+//
+//   X10 mode  (the legacy default):
+//     ESC [ M <byte> <x> <y>   (single press, no release info)
+//     Each of byte/x/y is a single byte with +32 offset; capped at
+//     coordinate 223. Mostly historical — still seen on tmux-in-tmux.
+//
+// xterm Control Sequences reference:
+//   https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//
+// The drag-state set (`mouse_buttons_pressed_` in MouseParser) turns SGR
+// press → motion → release wire events into DOWN → DRAG → DRAG_END +
+// DROP events on the JS side.
+//
+// Mouse parser handle registry. JS asks for an opaque uint32 handle via
+// createParser() and uses it on every parseOne()/reset()/destroyParser()
+// call. The registry is shared across all isolates in this process —
+// safe because each MouseParser is independent and lookups are guarded
+// by a mutex on the single registry. Handles never recycle; if a JS
+// caller leaks one, the worst outcome is a few KB per leaked parser.
+struct ParserRegistry {
+  std::mutex mu;
+  uint32_t next_id = 1;
+  std::unordered_map<uint32_t, std::unique_ptr<ti::MouseParser>> parsers;
+};
+
+static ParserRegistry& Registry() {
+  static ParserRegistry r;
+  return r;
+}
+
+static void CreateParser(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  ParserRegistry& r = Registry();
+  std::lock_guard<std::mutex> lock(r.mu);
+  uint32_t id = r.next_id++;
+  r.parsers.emplace(id, std::make_unique<ti::MouseParser>());
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, id));
+}
+
+static void DestroyParser(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  ParserRegistry& r = Registry();
+  std::lock_guard<std::mutex> lock(r.mu);
+  r.parsers.erase(id);
+}
+
+static void ResetParser(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  ParserRegistry& r = Registry();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.parsers.find(id);
+  if (it != r.parsers.end()) {
+    it->second->Reset();
+  }
+}
+
+static Local<Object> EventToObject(Isolate* isolate, Local<Context> context,
+                                   const ti::RawMouseEvent& event) {
+  Local<Object> obj = Object::New(isolate);
+  obj->Set(context, NewOneByteString(isolate, "type"),
+           Integer::New(isolate, static_cast<int32_t>(event.type)))
+      .Check();
+  obj->Set(context, NewOneByteString(isolate, "button"),
+           Integer::New(isolate, event.button))
+      .Check();
+  obj->Set(context, NewOneByteString(isolate, "x"),
+           Integer::New(isolate, event.x))
+      .Check();
+  obj->Set(context, NewOneByteString(isolate, "y"),
+           Integer::New(isolate, event.y))
+      .Check();
+  obj->Set(context, NewOneByteString(isolate, "shift"),
+           Boolean::New(isolate, event.modifiers.shift))
+      .Check();
+  obj->Set(context, NewOneByteString(isolate, "alt"),
+           Boolean::New(isolate, event.modifiers.alt))
+      .Check();
+  obj->Set(context, NewOneByteString(isolate, "ctrl"),
+           Boolean::New(isolate, event.modifiers.ctrl))
+      .Check();
+  if (event.scroll != nullptr) {
+    obj->Set(context, NewOneByteString(isolate, "scrollDirection"),
+             Integer::New(isolate,
+                          static_cast<int32_t>(event.scroll->direction)))
+        .Check();
+    obj->Set(context, NewOneByteString(isolate, "scrollDelta"),
+             Integer::New(isolate, event.scroll->delta))
+        .Check();
+  }
+  return obj;
+}
+
+static void ParseMouseOne(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  if (!args[1]->IsUint8Array()) {
+    args.GetReturnValue().Set(Null(isolate));
+    return;
+  }
+  Local<Uint8Array> arr = args[1].As<Uint8Array>();
+  uint32_t offset = args[2]->Uint32Value(context).FromMaybe(0);
+  size_t length = arr->ByteLength();
+  if (offset >= length) {
+    args.GetReturnValue().Set(Null(isolate));
+    return;
+  }
+  auto store = arr->Buffer()->GetBackingStore();
+  const uint8_t* data =
+      static_cast<const uint8_t*>(store->Data()) + arr->ByteOffset() + offset;
+  size_t available = length - offset;
+
+  ParserRegistry& r = Registry();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.parsers.find(id);
+  if (it == r.parsers.end()) {
+    args.GetReturnValue().Set(Null(isolate));
+    return;
+  }
+  size_t consumed = 0;
+  bool ok = it->second->ParseOne(data, available, &consumed);
+  Local<Object> result = Object::New(isolate);
+  result
+      ->Set(context, NewOneByteString(isolate, "consumed"),
+            Integer::NewFromUnsigned(
+                isolate, static_cast<uint32_t>(consumed)))
+      .Check();
+  Local<Value> event_value =
+      ok ? EventToObject(isolate, context, it->second->Event()).As<Value>()
+         : Null(isolate).As<Value>();
+  result->Set(context, NewOneByteString(isolate, "event"), event_value)
+      .Check();
+  args.GetReturnValue().Set(result);
+}
+
+static void LooksLikeMouseSequence(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  if (!args[0]->IsUint8Array()) {
+    args.GetReturnValue().Set(Boolean::New(isolate, false));
+    return;
+  }
+  Local<Uint8Array> arr = args[0].As<Uint8Array>();
+  uint32_t offset = args[1]->Uint32Value(context).FromMaybe(0);
+  size_t length = arr->ByteLength();
+  if (offset >= length) {
+    args.GetReturnValue().Set(Boolean::New(isolate, false));
+    return;
+  }
+  auto store = arr->Buffer()->GetBackingStore();
+  const uint8_t* data =
+      static_cast<const uint8_t*>(store->Data()) + arr->ByteOffset() + offset;
+  bool match = ti::LooksLikeMouseSequence(data, length - offset);
+  args.GetReturnValue().Set(Boolean::New(isolate, match));
+}
+
+bool FastLooksLikeMouseSequence(Local<Value> receiver,
+                                Local<Value> buffer_val,
+                                uint32_t offset,
+                                // NOLINTNEXTLINE(runtime/references)
+                                FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.looksLikeMouseSequence");
+  HandleScope scope(opts.isolate);
+  ArrayBufferViewContents<uint8_t> buf(buffer_val);
+  if (offset >= buf.length()) {
+    return false;
+  }
+  return ti::LooksLikeMouseSequence(buf.data() + offset,
+                                    buf.length() - offset);
+}
+
+static CFunction fast_looks_like_mouse_sequence(
+    CFunction::Make(FastLooksLikeMouseSequence));
+
+// ─── Section 4: Renderer / Cell buffer ────────────────────────────────
+//
+// Double-buffered cell-grid diff renderer. Mirrors OpenTUI's CliRenderer:
+//
+//   opentui/packages/core/src/zig/renderer.zig
+//     pub const CliRenderer = struct {
+//         next: OptimizedBuffer,   // caller draws into this
+//         prev: OptimizedBuffer,   // last-flushed state, for diff
+//         ...
+//         pub fn render(...) void  // walk both, emit ANSI for changes
+//     };
+//
+// Each frame: JS clears the next buffer, draws via the rendererSet /
+// rendererDrawText / rendererFillRect calls (cell-level writes into the
+// next buffer), then calls rendererFlush(handle, dstBuf, dstCap). Flush
+// walks every cell, emits ANSI for cells where next != prev via the
+// per-cell hot-path writers from Section 2, swaps prev↔next, and
+// returns the byte count written.
+//
+// Cell layout matches OpenTUI's `Cell` (codepoint + fg_rgb + bg_rgb +
+// attrs bitfield) — see include/tui/cell.hpp. 12 bytes per cell; a
+// 200×60 grid is 144 KB which fits in L1.
+//
+// Renderer handle registry — same pattern as ParserRegistry. Each handle
+// owns a Renderer (double-buffered cell grid + dirty flag). JS calls
+// drawing methods by handle; the methods are stateless from V8's POV.
+struct RendererRegistry {
+  std::mutex mu;
+  uint32_t next_id = 1;
+  std::unordered_map<uint32_t, std::unique_ptr<ti::Renderer>> renderers;
+};
+
+static RendererRegistry& Renderers() {
+  static RendererRegistry r;
+  return r;
+}
+
+static void CreateRenderer(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t width = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t height = args[1]->Uint32Value(context).FromMaybe(0);
+  RendererRegistry& r = Renderers();
+  std::lock_guard<std::mutex> lock(r.mu);
+  uint32_t id = r.next_id++;
+  r.renderers.emplace(id, std::make_unique<ti::Renderer>(width, height));
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, id));
+}
+
+static void DestroyRenderer(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  RendererRegistry& r = Renderers();
+  std::lock_guard<std::mutex> lock(r.mu);
+  r.renderers.erase(id);
+}
+
+static ti::Renderer* LookupRenderer(uint32_t id) {
+  RendererRegistry& r = Renderers();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.renderers.find(id);
+  return it == r.renderers.end() ? nullptr : it->second.get();
+}
+
+static void RendererResize(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t width = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t height = args[2]->Uint32Value(context).FromMaybe(0);
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer != nullptr) {
+    renderer->Resize(width, height);
+  }
+}
+
+void FastRendererResize(Local<Value> receiver, uint32_t id, uint32_t width,
+                        uint32_t height,
+                        // NOLINTNEXTLINE(runtime/references)
+                        FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.rendererResize");
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer != nullptr) {
+    renderer->Resize(width, height);
+  }
+}
+
+static CFunction fast_renderer_resize(CFunction::Make(FastRendererResize));
+
+static void RendererInvalidate(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer != nullptr) {
+    renderer->Invalidate();
+  }
+}
+
+void FastRendererInvalidate(Local<Value> receiver, uint32_t id,
+                            // NOLINTNEXTLINE(runtime/references)
+                            FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.rendererInvalidate");
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer != nullptr) {
+    renderer->Invalidate();
+  }
+}
+
+static CFunction fast_renderer_invalidate(
+    CFunction::Make(FastRendererInvalidate));
+
+// Helper: build a ti::Cell from args[start..start+7]
+//   codepoint, fgR, fgG, fgB, bgR, bgG, bgB, attrs
+static ti::Cell CellFromArgs(Local<Context> context,
+                             const FunctionCallbackInfo<Value>& args,
+                             int start) {
+  ti::Cell c;
+  c.codepoint = args[start]->Uint32Value(context).FromMaybe(U' ');
+  c.fg_r = static_cast<uint8_t>(
+      args[start + 1]->Uint32Value(context).FromMaybe(0));
+  c.fg_g = static_cast<uint8_t>(
+      args[start + 2]->Uint32Value(context).FromMaybe(0));
+  c.fg_b = static_cast<uint8_t>(
+      args[start + 3]->Uint32Value(context).FromMaybe(0));
+  c.bg_r = static_cast<uint8_t>(
+      args[start + 4]->Uint32Value(context).FromMaybe(0));
+  c.bg_g = static_cast<uint8_t>(
+      args[start + 5]->Uint32Value(context).FromMaybe(0));
+  c.bg_b = static_cast<uint8_t>(
+      args[start + 6]->Uint32Value(context).FromMaybe(0));
+  c.attrs = static_cast<uint8_t>(
+      args[start + 7]->Uint32Value(context).FromMaybe(0));
+  return c;
+}
+
+// rendererClear(handle, codepoint, fgR, fgG, fgB, bgR, bgG, bgB, attrs)
+static void RendererClear(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return;
+  }
+  renderer->Next().Clear(CellFromArgs(context, args, 1));
+}
+
+void FastRendererClear(Local<Value> receiver, uint32_t id, uint32_t codepoint,
+                       uint32_t fg_r, uint32_t fg_g, uint32_t fg_b,
+                       uint32_t bg_r, uint32_t bg_g, uint32_t bg_b,
+                       uint32_t attrs,
+                       // NOLINTNEXTLINE(runtime/references)
+                       FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.rendererClear");
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return;
+  }
+  ti::Cell cell{
+      codepoint,
+      static_cast<uint8_t>(fg_r), static_cast<uint8_t>(fg_g),
+      static_cast<uint8_t>(fg_b), static_cast<uint8_t>(bg_r),
+      static_cast<uint8_t>(bg_g), static_cast<uint8_t>(bg_b),
+      static_cast<uint8_t>(attrs)};
+  renderer->Next().Clear(cell);
+}
+
+static CFunction fast_renderer_clear(CFunction::Make(FastRendererClear));
+
+// rendererSet(handle, x, y, codepoint, fgR, fgG, fgB, bgR, bgG, bgB, attrs)
+static void RendererSet(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t x = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t y = args[2]->Uint32Value(context).FromMaybe(0);
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return;
+  }
+  renderer->Next().Set(x, y, CellFromArgs(context, args, 3));
+}
+
+void FastRendererSet(Local<Value> receiver, uint32_t id, uint32_t x,
+                     uint32_t y, uint32_t codepoint, uint32_t fg_r,
+                     uint32_t fg_g, uint32_t fg_b, uint32_t bg_r,
+                     uint32_t bg_g, uint32_t bg_b, uint32_t attrs,
+                     // NOLINTNEXTLINE(runtime/references)
+                     FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.rendererSet");
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return;
+  }
+  ti::Cell cell{
+      codepoint,
+      static_cast<uint8_t>(fg_r), static_cast<uint8_t>(fg_g),
+      static_cast<uint8_t>(fg_b), static_cast<uint8_t>(bg_r),
+      static_cast<uint8_t>(bg_g), static_cast<uint8_t>(bg_b),
+      static_cast<uint8_t>(attrs)};
+  renderer->Next().Set(x, y, cell);
+}
+
+static CFunction fast_renderer_set(CFunction::Make(FastRendererSet));
+
+// rendererFillRect(handle, x, y, w, h, codepoint, fgR, fgG, fgB, bgR, bgG,
+//                  bgB, attrs)
+static void RendererFillRect(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t x = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t y = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t w = args[3]->Uint32Value(context).FromMaybe(0);
+  uint32_t h = args[4]->Uint32Value(context).FromMaybe(0);
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return;
+  }
+  renderer->Next().FillRect(x, y, w, h, CellFromArgs(context, args, 5));
+}
+
+void FastRendererFillRect(Local<Value> receiver, uint32_t id, uint32_t x,
+                          uint32_t y, uint32_t w, uint32_t h,
+                          uint32_t codepoint, uint32_t fg_r, uint32_t fg_g,
+                          uint32_t fg_b, uint32_t bg_r, uint32_t bg_g,
+                          uint32_t bg_b, uint32_t attrs,
+                          // NOLINTNEXTLINE(runtime/references)
+                          FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.rendererFillRect");
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return;
+  }
+  ti::Cell cell{
+      codepoint,
+      static_cast<uint8_t>(fg_r), static_cast<uint8_t>(fg_g),
+      static_cast<uint8_t>(fg_b), static_cast<uint8_t>(bg_r),
+      static_cast<uint8_t>(bg_g), static_cast<uint8_t>(bg_b),
+      static_cast<uint8_t>(attrs)};
+  renderer->Next().FillRect(x, y, w, h, cell);
+}
+
+static CFunction fast_renderer_fill_rect(
+    CFunction::Make(FastRendererFillRect));
+
+// rendererDrawText(handle, x, y, utf8Bytes, fgR, fgG, fgB, bgR, bgG, bgB,
+//                  attrs)
+static void RendererDrawText(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t x = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t y = args[2]->Uint32Value(context).FromMaybe(0);
+  if (!args[3]->IsUint8Array()) {
+    return;
+  }
+  Local<Uint8Array> arr = args[3].As<Uint8Array>();
+  uint8_t fg_r = static_cast<uint8_t>(args[4]->Uint32Value(context).FromMaybe(0));
+  uint8_t fg_g = static_cast<uint8_t>(args[5]->Uint32Value(context).FromMaybe(0));
+  uint8_t fg_b = static_cast<uint8_t>(args[6]->Uint32Value(context).FromMaybe(0));
+  uint8_t bg_r = static_cast<uint8_t>(args[7]->Uint32Value(context).FromMaybe(0));
+  uint8_t bg_g = static_cast<uint8_t>(args[8]->Uint32Value(context).FromMaybe(0));
+  uint8_t bg_b = static_cast<uint8_t>(args[9]->Uint32Value(context).FromMaybe(0));
+  uint8_t attrs = static_cast<uint8_t>(
+      args[10]->Uint32Value(context).FromMaybe(0));
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return;
+  }
+  auto store = arr->Buffer()->GetBackingStore();
+  const char* utf8 =
+      static_cast<const char*>(store->Data()) + arr->ByteOffset();
+  renderer->Next().DrawText(x, y, utf8, arr->ByteLength(), fg_r, fg_g, fg_b,
+                            bg_r, bg_g, bg_b, attrs);
+}
+
+void FastRendererDrawText(Local<Value> receiver, uint32_t id, uint32_t x,
+                          uint32_t y, Local<Value> buffer_val, uint32_t fg_r,
+                          uint32_t fg_g, uint32_t fg_b, uint32_t bg_r,
+                          uint32_t bg_g, uint32_t bg_b, uint32_t attrs,
+                          // NOLINTNEXTLINE(runtime/references)
+                          FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.rendererDrawText");
+  HandleScope scope(opts.isolate);
+  ArrayBufferViewContents<uint8_t> buf(buffer_val);
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return;
+  }
+  const char* utf8 = reinterpret_cast<const char*>(buf.data());
+  renderer->Next().DrawText(x, y, utf8, buf.length(),
+                            static_cast<uint8_t>(fg_r),
+                            static_cast<uint8_t>(fg_g),
+                            static_cast<uint8_t>(fg_b),
+                            static_cast<uint8_t>(bg_r),
+                            static_cast<uint8_t>(bg_g),
+                            static_cast<uint8_t>(bg_b),
+                            static_cast<uint8_t>(attrs));
+}
+
+static CFunction fast_renderer_draw_text(
+    CFunction::Make(FastRendererDrawText));
+
+// rendererFlush(handle, dstBuf, dstCapacity) -> bytesWritten (or
+// kFlushOverflow if dst was too small).
+static void RendererFlush(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  if (!args[1]->IsUint8Array()) {
+    args.GetReturnValue().Set(Number::New(isolate, 0));
+    return;
+  }
+  Local<Uint8Array> arr = args[1].As<Uint8Array>();
+  uint32_t capacity = args[2]->Uint32Value(context).FromMaybe(0);
+  if (capacity > arr->ByteLength()) {
+    capacity = static_cast<uint32_t>(arr->ByteLength());
+  }
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    args.GetReturnValue().Set(Number::New(isolate, 0));
+    return;
+  }
+  auto store = arr->Buffer()->GetBackingStore();
+  char* dst = static_cast<char*>(store->Data()) + arr->ByteOffset();
+  size_t written = renderer->Flush(dst, capacity);
+  // Use Number for the return so the kFlushOverflow sentinel (size_t -1)
+  // survives intact — JS observes it as 2^53-1ish; the JS layer checks
+  // against the same sentinel exposed in `sizes.flushOverflow`.
+  args.GetReturnValue().Set(
+      Number::New(isolate, static_cast<double>(written)));
+}
+
+// Fast path for the per-frame flush — the hottest call in the binding,
+// running once per rendered frame. Returns a double so the
+// kFlushOverflow sentinel (size_t -1 cast to double) survives intact.
+double FastRendererFlush(Local<Value> receiver, uint32_t id,
+                         Local<Value> buffer_val, uint32_t capacity,
+                         // NOLINTNEXTLINE(runtime/references)
+                         FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.rendererFlush");
+  HandleScope scope(opts.isolate);
+  ArrayBufferViewContents<uint8_t> buf(buffer_val);
+  if (capacity > buf.length()) {
+    capacity = static_cast<uint32_t>(buf.length());
+  }
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return 0.0;
+  }
+  char* dst = reinterpret_cast<char*>(const_cast<uint8_t*>(buf.data()));
+  size_t written = renderer->Flush(dst, capacity);
+  return static_cast<double>(written);
+}
+
+static CFunction fast_renderer_flush(CFunction::Make(FastRendererFlush));
+
+static void RendererSize(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::Renderer* renderer = LookupRenderer(id);
+  Local<Object> obj = Object::New(isolate);
+  uint32_t width = renderer == nullptr ? 0 : renderer->Width();
+  uint32_t height = renderer == nullptr ? 0 : renderer->Height();
+  obj->Set(context, NewOneByteString(isolate, "width"),
+           Integer::NewFromUnsigned(isolate, width))
+      .Check();
+  obj->Set(context, NewOneByteString(isolate, "height"),
+           Integer::NewFromUnsigned(isolate, height))
+      .Check();
+  args.GetReturnValue().Set(obj);
+}
+
+// ─── Section 4b: Renderables (box + wrapped text) ─────────────────────
+//
+// Higher-level draw primitives layered over CellBuffer. The React/Solid
+// host-config callbacks dispatch on element tag → one of these helpers.
+// Keeps the per-element commit overhead constant (no JS-side cell
+// iteration). Source: opentui v0.2.15 packages/core/src/lib/border.ts +
+// packages/core/src/renderables/{Box,Text}.ts.
+
+// drawBox(rendererId, x, y, w, h, style, sidesBits, borderFgR, borderFgG,
+//         borderFgB, bgR, bgG, bgB, attrs, fillBackground)
+//
+// sidesBits: bit 0 = top, bit 1 = right, bit 2 = bottom, bit 3 = left.
+// style: 0=single 1=double 2=rounded 3=heavy (matches tui::BorderStyle).
+static void RendererDrawBox(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t x = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t y = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t w = args[3]->Uint32Value(context).FromMaybe(0);
+  uint32_t h = args[4]->Uint32Value(context).FromMaybe(0);
+  uint32_t style_idx = args[5]->Uint32Value(context).FromMaybe(0);
+  uint32_t sides_bits = args[6]->Uint32Value(context).FromMaybe(0xf);
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return;
+  }
+  ti::BoxStyle style{};
+  // Clamp style to known values; >= 4 falls back to kSingle.
+  style.style = style_idx <= 3
+                    ? static_cast<ti::BorderStyle>(style_idx)
+                    : ti::BorderStyle::kSingle;
+  style.sides.top = (sides_bits & 0x1) != 0;
+  style.sides.right = (sides_bits & 0x2) != 0;
+  style.sides.bottom = (sides_bits & 0x4) != 0;
+  style.sides.left = (sides_bits & 0x8) != 0;
+  style.border_fg_r = static_cast<uint8_t>(
+      args[7]->Uint32Value(context).FromMaybe(255));
+  style.border_fg_g = static_cast<uint8_t>(
+      args[8]->Uint32Value(context).FromMaybe(255));
+  style.border_fg_b = static_cast<uint8_t>(
+      args[9]->Uint32Value(context).FromMaybe(255));
+  style.bg_r = static_cast<uint8_t>(
+      args[10]->Uint32Value(context).FromMaybe(0));
+  style.bg_g = static_cast<uint8_t>(
+      args[11]->Uint32Value(context).FromMaybe(0));
+  style.bg_b = static_cast<uint8_t>(
+      args[12]->Uint32Value(context).FromMaybe(0));
+  style.attrs = static_cast<uint8_t>(
+      args[13]->Uint32Value(context).FromMaybe(0));
+  style.fill_background = args[14]->BooleanValue(isolate);
+  ti::DrawBox(renderer->Next(), x, y, w, h, style);
+}
+
+// V8 Fast API specialization for drawBox. Called per-render-tree-node
+// per frame (React/Solid host-config commit phase dispatches here).
+// 15 args via the slow path = 15 Local<Value> -> Uint32Value chains
+// = ~80ns per call. The Fast API form takes uint32_t directly and
+// runs at ~5ns per call.
+void FastRendererDrawBox(Local<Value> receiver, uint32_t id, uint32_t x,
+                         uint32_t y, uint32_t w, uint32_t h,
+                         uint32_t style_idx, uint32_t sides_bits,
+                         uint32_t border_fg_r, uint32_t border_fg_g,
+                         uint32_t border_fg_b, uint32_t bg_r, uint32_t bg_g,
+                         uint32_t bg_b, uint32_t attrs,
+                         bool fill_background,
+                         // NOLINTNEXTLINE(runtime/references)
+                         FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.rendererDrawBox");
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return;
+  }
+  ti::BoxStyle style{};
+  style.style = style_idx <= 3
+                    ? static_cast<ti::BorderStyle>(style_idx)
+                    : ti::BorderStyle::kSingle;
+  style.sides.top = (sides_bits & 0x1) != 0;
+  style.sides.right = (sides_bits & 0x2) != 0;
+  style.sides.bottom = (sides_bits & 0x4) != 0;
+  style.sides.left = (sides_bits & 0x8) != 0;
+  style.border_fg_r = static_cast<uint8_t>(border_fg_r);
+  style.border_fg_g = static_cast<uint8_t>(border_fg_g);
+  style.border_fg_b = static_cast<uint8_t>(border_fg_b);
+  style.bg_r = static_cast<uint8_t>(bg_r);
+  style.bg_g = static_cast<uint8_t>(bg_g);
+  style.bg_b = static_cast<uint8_t>(bg_b);
+  style.attrs = static_cast<uint8_t>(attrs);
+  style.fill_background = fill_background;
+  ti::DrawBox(renderer->Next(), x, y, w, h, style);
+}
+
+static CFunction fast_renderer_draw_box(CFunction::Make(FastRendererDrawBox));
+
+// drawTextWrapped(rendererId, x, y, maxWidth, maxLines, utf8Bytes,
+//                 fgR, fgG, fgB, bgR, bgG, bgB, attrs) -> linesEmitted
+//
+// maxWidth=0 means "wrap to buffer right edge". maxLines=0 means "no
+// limit".
+static void RendererDrawTextWrapped(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t x = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t y = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_width = args[3]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_lines = args[4]->Uint32Value(context).FromMaybe(0);
+  if (!args[5]->IsUint8Array()) {
+    args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, 0));
+    return;
+  }
+  Local<Uint8Array> arr = args[5].As<Uint8Array>();
+  uint8_t fg_r = static_cast<uint8_t>(
+      args[6]->Uint32Value(context).FromMaybe(255));
+  uint8_t fg_g = static_cast<uint8_t>(
+      args[7]->Uint32Value(context).FromMaybe(255));
+  uint8_t fg_b = static_cast<uint8_t>(
+      args[8]->Uint32Value(context).FromMaybe(255));
+  uint8_t bg_r = static_cast<uint8_t>(
+      args[9]->Uint32Value(context).FromMaybe(0));
+  uint8_t bg_g = static_cast<uint8_t>(
+      args[10]->Uint32Value(context).FromMaybe(0));
+  uint8_t bg_b = static_cast<uint8_t>(
+      args[11]->Uint32Value(context).FromMaybe(0));
+  uint8_t attrs = static_cast<uint8_t>(
+      args[12]->Uint32Value(context).FromMaybe(0));
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, 0));
+    return;
+  }
+  auto store = arr->Buffer()->GetBackingStore();
+  const char* utf8 =
+      static_cast<const char*>(store->Data()) + arr->ByteOffset();
+  uint32_t lines = ti::DrawTextWrapped(
+      renderer->Next(), x, y, max_width, max_lines, utf8, arr->ByteLength(),
+      fg_r, fg_g, fg_b, bg_r, bg_g, bg_b, attrs);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, lines));
+}
+
+// V8 Fast API specialization for drawTextWrapped. Same hot-path
+// rationale as FastRendererDrawText — text rendering happens
+// per-element per frame; the slow path's Local<Value>->Uint32Value
+// chain is the dominant per-call cost.
+uint32_t FastRendererDrawTextWrapped(Local<Value> receiver, uint32_t id,
+                                     uint32_t x, uint32_t y,
+                                     uint32_t max_width, uint32_t max_lines,
+                                     Local<Value> buffer_val, uint32_t fg_r,
+                                     uint32_t fg_g, uint32_t fg_b,
+                                     uint32_t bg_r, uint32_t bg_g,
+                                     uint32_t bg_b, uint32_t attrs,
+                                     // NOLINTNEXTLINE(runtime/references)
+                                     FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.rendererDrawTextWrapped");
+  HandleScope scope(opts.isolate);
+  ArrayBufferViewContents<uint8_t> buf(buffer_val);
+  ti::Renderer* renderer = LookupRenderer(id);
+  if (renderer == nullptr) {
+    return 0;
+  }
+  const char* utf8 = reinterpret_cast<const char*>(buf.data());
+  return ti::DrawTextWrapped(
+      renderer->Next(), x, y, max_width, max_lines, utf8, buf.length(),
+      static_cast<uint8_t>(fg_r), static_cast<uint8_t>(fg_g),
+      static_cast<uint8_t>(fg_b), static_cast<uint8_t>(bg_r),
+      static_cast<uint8_t>(bg_g), static_cast<uint8_t>(bg_b),
+      static_cast<uint8_t>(attrs));
+}
+
+static CFunction fast_renderer_draw_text_wrapped(
+    CFunction::Make(FastRendererDrawTextWrapped));
+
+// ─── Section 4c: String width (Unicode 17.0 East Asian + emoji) ───────
+//
+// Terminal-cell width of a UTF-8 string. ASCII-only inputs run at
+// memory bandwidth (tight inner loop, no per-byte branch into the
+// range tables); non-ASCII inputs do one binary-search per codepoint
+// against the Unicode 16.0.0 wide-range and zero-width-range tables
+// generated into width_data.cc.
+//
+// Surface: node:smol-tui.stringWidth(s) → integer cell count.
+
+static void StringWidthBinding(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  if (args.Length() < 1 || !args[0]->IsString()) {
+    args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, 0));
+    return;
+  }
+  Local<String> input = args[0].As<String>();
+  const size_t input_len = input->Utf8LengthV2(isolate);
+  if (input_len == 0) {
+    args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, 0));
+    return;
+  }
+  std::string buf(input_len, '\0');
+  input->WriteUtf8V2(isolate, buf.data(), input_len,
+                     String::WriteFlags::kNone, nullptr);
+  uint32_t width = ti::StringWidth(buf.data(), buf.size());
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, width));
+}
+
+// stringWidthFromBytes(Uint8Array) — same shape but skips the JS
+// String -> UTF-8 round-trip when the caller already holds a Uint8Array
+// (the renderer hot path does — every character it draws comes from a
+// pre-encoded Uint8Array via TextEncoder).
+static void StringWidthFromBytes(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  if (args.Length() < 1 || !args[0]->IsUint8Array()) {
+    args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, 0));
+    return;
+  }
+  Local<v8::Uint8Array> arr = args[0].As<v8::Uint8Array>();
+  auto store = arr->Buffer()->GetBackingStore();
+  const char* utf8 =
+      static_cast<const char*>(store->Data()) + arr->ByteOffset();
+  uint32_t width = ti::StringWidth(utf8, arr->ByteLength());
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, width));
+}
+
+// codepointWidth(cp) — single-codepoint convenience. Skips the UTF-8
+// decode for callers that already have an integer codepoint.
+static void CodepointWidthBinding(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  if (args.Length() < 1) {
+    args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, 1));
+    return;
+  }
+  uint32_t cp = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t width = ti::CodepointWidth(cp);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, width));
+}
+
+// V8 Fast API specialization for codepointWidth — pure uint32 in /
+// uint32 out, ideal Fast API shape. Inner work is one binary search
+// at most; the Fast API call overhead saving (~70 ns -> ~5 ns) is
+// the dominant win.
+uint32_t FastCodepointWidth(Local<Value> receiver, uint32_t cp,
+                            // NOLINTNEXTLINE(runtime/references)
+                            FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.codepointWidth");
+  return ti::CodepointWidth(cp);
+}
+
+static CFunction fast_codepoint_width(CFunction::Make(FastCodepointWidth));
+
+// V8 Fast API specialization for stringWidthFromBytes — called per
+// glyph during text rendering. The Uint8Array input shape is Fast-API-
+// compatible via ArrayBufferViewContents.
+uint32_t FastStringWidthFromBytes(Local<Value> receiver,
+                                  Local<Value> buffer_val,
+                                  // NOLINTNEXTLINE(runtime/references)
+                                  FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.stringWidthFromBytes");
+  HandleScope scope(opts.isolate);
+  ArrayBufferViewContents<uint8_t> buf(buffer_val);
+  return ti::StringWidth(reinterpret_cast<const char*>(buf.data()),
+                         buf.length());
+}
+
+static CFunction fast_string_width_from_bytes(
+    CFunction::Make(FastStringWidthFromBytes));
+
+// ─── Section 5: Yoga layout (flexbox) ─────────────────────────────────
+//
+// Direct C-API binding for Yoga 3.2.1 — a flexbox-spec layout engine
+// originally extracted from React Native. Used here so ink-style TUI
+// apps can express layout via flex semantics without re-implementing
+// CSS-flex math.
+//
+// Upstream:
+//   https://github.com/facebook/yoga/tree/v3.2.1
+//   submodule: packages/yoga-layout-builder/upstream/yoga/
+//   SHA: 042f5013152eb81c1552dec945b88f7b95ca350f
+//
+// Public C API surface (used here):
+//   yoga/YGNode.h         — YGNodeNewWithConfig, YGNodeFree, YGNodeInsertChild,
+//                           YGNodeRemoveChild, YGNodeMarkDirty,
+//                           YGNodeCalculateLayout
+//   yoga/YGNodeStyle.h    — YGNodeStyleSet{Width,Height,FlexDirection,
+//                           JustifyContent,AlignItems,AlignSelf,FlexWrap,
+//                           FlexGrow,FlexShrink,FlexBasis,Margin,Padding,
+//                           PositionType,Position}
+//   yoga/YGNodeLayout.h   — YGNodeLayoutGet{Left,Top,Width,Height}
+//   yoga/YGConfig.h       — YGConfigNew (one shared config across all nodes)
+//   yoga/YGEnums.h        — Enum integer values (mirrored to JS)
+//
+// We deliberately bind the C API rather than the C++ `facebook::yoga::*`
+// scoped enums — Yoga keeps the C API stable across point releases and
+// the C++ surface still moves between minor versions. The C symbols are
+// what the upstream yoga-layout npm package binds against too:
+//   yoga/javascript/src/wrapAsm.ts (line 23+ of the v3.2.1 tarball)
+// shows the equivalent extern "C" set; we expose the same set to V8.
+//
+// Yoga handle registry — yoga nodes are heap-allocated YGNodeRef pointers
+// with parent/child relationships that the registry doesn't track. JS owns
+// the tree shape via add/remove calls; the registry just holds a
+// non-owning handle-to-pointer map plus a YGConfigRef used as the default
+// config for created nodes. yogaCreateNode / yogaFreeNode keep the
+// registry coherent.
+//
+// NaN semantics: Yoga uses `float NaN` (YGUndefined) to mean
+// "unspecified" for dimensions and edges. The JS layer passes `NaN`
+// through Number → double → float cast; we pass it straight to Yoga.
+// Set explicit 0/non-NaN values when you want a constraint.
+struct YogaRegistry {
+  std::mutex mu;
+  uint32_t next_id = 1;
+  YGConfigRef config = nullptr;
+  std::unordered_map<uint32_t, YGNodeRef> nodes;
+};
+
+static YogaRegistry& YogaReg() {
+  static YogaRegistry r;
+  return r;
+}
+
+static YGNodeRef LookupYogaNode(uint32_t id) {
+  YogaRegistry& r = YogaReg();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.nodes.find(id);
+  return it == r.nodes.end() ? nullptr : it->second;
+}
+
+static void YogaCreateNode(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  YogaRegistry& r = YogaReg();
+  std::lock_guard<std::mutex> lock(r.mu);
+  if (r.config == nullptr) {
+    r.config = YGConfigNew();
+  }
+  YGNodeRef node = YGNodeNewWithConfig(r.config);
+  uint32_t id = r.next_id++;
+  r.nodes.emplace(id, node);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, id));
+}
+
+uint32_t FastYogaCreateNode(Local<Value> receiver,
+                            // NOLINTNEXTLINE(runtime/references)
+                            FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaCreateNode");
+  YogaRegistry& r = YogaReg();
+  std::lock_guard<std::mutex> lock(r.mu);
+  if (r.config == nullptr) {
+    r.config = YGConfigNew();
+  }
+  YGNodeRef node = YGNodeNewWithConfig(r.config);
+  uint32_t id = r.next_id++;
+  r.nodes.emplace(id, node);
+  return id;
+}
+
+static CFunction fast_yoga_create_node(CFunction::Make(FastYogaCreateNode));
+
+static void YogaFreeNode(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  YogaRegistry& r = YogaReg();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.nodes.find(id);
+  if (it != r.nodes.end()) {
+    YGNodeFree(it->second);
+    r.nodes.erase(it);
+  }
+}
+
+void FastYogaFreeNode(Local<Value> receiver, uint32_t id,
+                      // NOLINTNEXTLINE(runtime/references)
+                      FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaFreeNode");
+  YogaRegistry& r = YogaReg();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.nodes.find(id);
+  if (it != r.nodes.end()) {
+    YGNodeFree(it->second);
+    r.nodes.erase(it);
+  }
+}
+
+static CFunction fast_yoga_free_node(CFunction::Make(FastYogaFreeNode));
+
+// yogaInsertChild(parentId, childId, index)
+static void YogaInsertChild(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t parent_id = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t child_id = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t index = args[2]->Uint32Value(context).FromMaybe(0);
+  YGNodeRef parent = LookupYogaNode(parent_id);
+  YGNodeRef child = LookupYogaNode(child_id);
+  if (parent != nullptr && child != nullptr) {
+    YGNodeInsertChild(parent, child, index);
+  }
+}
+
+void FastYogaInsertChild(Local<Value> receiver, uint32_t parent_id,
+                         uint32_t child_id, uint32_t index,
+                         // NOLINTNEXTLINE(runtime/references)
+                         FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaInsertChild");
+  YGNodeRef parent = LookupYogaNode(parent_id);
+  YGNodeRef child = LookupYogaNode(child_id);
+  if (parent != nullptr && child != nullptr) {
+    YGNodeInsertChild(parent, child, index);
+  }
+}
+
+static CFunction fast_yoga_insert_child(
+    CFunction::Make(FastYogaInsertChild));
+
+static void YogaRemoveChild(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t parent_id = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t child_id = args[1]->Uint32Value(context).FromMaybe(0);
+  YGNodeRef parent = LookupYogaNode(parent_id);
+  YGNodeRef child = LookupYogaNode(child_id);
+  if (parent != nullptr && child != nullptr) {
+    YGNodeRemoveChild(parent, child);
+  }
+}
+
+void FastYogaRemoveChild(Local<Value> receiver, uint32_t parent_id,
+                         uint32_t child_id,
+                         // NOLINTNEXTLINE(runtime/references)
+                         FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaRemoveChild");
+  YGNodeRef parent = LookupYogaNode(parent_id);
+  YGNodeRef child = LookupYogaNode(child_id);
+  if (parent != nullptr && child != nullptr) {
+    YGNodeRemoveChild(parent, child);
+  }
+}
+
+static CFunction fast_yoga_remove_child(
+    CFunction::Make(FastYogaRemoveChild));
+
+// yogaCalculateLayout(nodeId, availWidth, availHeight, ownerDirection)
+// availWidth/availHeight are floats; NaN means unconstrained.
+static void YogaCalculateLayout(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  float avail_w = static_cast<float>(
+      args[1]->NumberValue(context).FromMaybe(YGUndefined));
+  float avail_h = static_cast<float>(
+      args[2]->NumberValue(context).FromMaybe(YGUndefined));
+  int32_t dir = static_cast<int32_t>(
+      args[3]->Int32Value(context).FromMaybe(YGDirectionLTR));
+  YGNodeRef node = LookupYogaNode(id);
+  if (node == nullptr) {
+    return;
+  }
+  YGNodeCalculateLayout(node, avail_w, avail_h,
+                        static_cast<YGDirection>(dir));
+}
+
+void FastYogaCalculateLayout(Local<Value> receiver, uint32_t id,
+                             double avail_w, double avail_h, int32_t dir,
+                             // NOLINTNEXTLINE(runtime/references)
+                             FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaCalculateLayout");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node == nullptr) {
+    return;
+  }
+  YGNodeCalculateLayout(node, static_cast<float>(avail_w),
+                        static_cast<float>(avail_h),
+                        static_cast<YGDirection>(dir));
+}
+
+static CFunction fast_yoga_calculate_layout(
+    CFunction::Make(FastYogaCalculateLayout));
+
+static void YogaMarkDirty(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeMarkDirty(node);
+  }
+}
+
+void FastYogaMarkDirty(Local<Value> receiver, uint32_t id,
+                       // NOLINTNEXTLINE(runtime/references)
+                       FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaMarkDirty");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeMarkDirty(node);
+  }
+}
+
+static CFunction fast_yoga_mark_dirty(CFunction::Make(FastYogaMarkDirty));
+
+// yogaGetComputedLayout(nodeId) -> { left, top, width, height }
+static void YogaGetComputedLayout(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t id = args[0]->Uint32Value(context).FromMaybe(0);
+  YGNodeRef node = LookupYogaNode(id);
+  Local<Object> obj = Object::New(isolate);
+  if (node == nullptr) {
+    obj->Set(context, NewOneByteString(isolate, "left"),
+             Number::New(isolate, 0.0))
+        .Check();
+    obj->Set(context, NewOneByteString(isolate, "top"),
+             Number::New(isolate, 0.0))
+        .Check();
+    obj->Set(context, NewOneByteString(isolate, "width"),
+             Number::New(isolate, 0.0))
+        .Check();
+    obj->Set(context, NewOneByteString(isolate, "height"),
+             Number::New(isolate, 0.0))
+        .Check();
+    args.GetReturnValue().Set(obj);
+    return;
+  }
+  obj->Set(context, NewOneByteString(isolate, "left"),
+           Number::New(isolate, YGNodeLayoutGetLeft(node)))
+      .Check();
+  obj->Set(context, NewOneByteString(isolate, "top"),
+           Number::New(isolate, YGNodeLayoutGetTop(node)))
+      .Check();
+  obj->Set(context, NewOneByteString(isolate, "width"),
+           Number::New(isolate, YGNodeLayoutGetWidth(node)))
+      .Check();
+  obj->Set(context, NewOneByteString(isolate, "height"),
+           Number::New(isolate, YGNodeLayoutGetHeight(node)))
+      .Check();
+  args.GetReturnValue().Set(obj);
+}
+
+// Style setters: each takes (nodeId, value) and routes to the matching
+// YGNodeStyleSet* call. Enum-typed values use the integer cast; the JS
+// layer pulls them from the binding's `yoga.*` enum mirrors.
+
+static void YogaSetWidth(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  float v = static_cast<float>(
+      args[1]->NumberValue(context).FromMaybe(YGUndefined));
+  YGNodeStyleSetWidth(node, v);
+}
+
+void FastYogaSetWidth(Local<Value> receiver, uint32_t id, double v,
+                      // NOLINTNEXTLINE(runtime/references)
+                      FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetWidth");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetWidth(node, static_cast<float>(v));
+  }
+}
+
+static CFunction fast_yoga_set_width(CFunction::Make(FastYogaSetWidth));
+
+static void YogaSetHeight(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  float v = static_cast<float>(
+      args[1]->NumberValue(context).FromMaybe(YGUndefined));
+  YGNodeStyleSetHeight(node, v);
+}
+
+void FastYogaSetHeight(Local<Value> receiver, uint32_t id, double v,
+                       // NOLINTNEXTLINE(runtime/references)
+                       FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetHeight");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetHeight(node, static_cast<float>(v));
+  }
+}
+
+static CFunction fast_yoga_set_height(CFunction::Make(FastYogaSetHeight));
+
+static void YogaSetFlexDirection(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  int32_t v = args[1]->Int32Value(context).FromMaybe(0);
+  YGNodeStyleSetFlexDirection(node, static_cast<YGFlexDirection>(v));
+}
+
+void FastYogaSetFlexDirection(Local<Value> receiver, uint32_t id, int32_t v,
+                              // NOLINTNEXTLINE(runtime/references)
+                              FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetFlexDirection");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetFlexDirection(node, static_cast<YGFlexDirection>(v));
+  }
+}
+
+static CFunction fast_yoga_set_flex_direction(
+    CFunction::Make(FastYogaSetFlexDirection));
+
+static void YogaSetJustifyContent(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  int32_t v = args[1]->Int32Value(context).FromMaybe(0);
+  YGNodeStyleSetJustifyContent(node, static_cast<YGJustify>(v));
+}
+
+void FastYogaSetJustifyContent(Local<Value> receiver, uint32_t id, int32_t v,
+                               // NOLINTNEXTLINE(runtime/references)
+                               FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetJustifyContent");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetJustifyContent(node, static_cast<YGJustify>(v));
+  }
+}
+
+static CFunction fast_yoga_set_justify_content(
+    CFunction::Make(FastYogaSetJustifyContent));
+
+static void YogaSetAlignItems(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  int32_t v = args[1]->Int32Value(context).FromMaybe(0);
+  YGNodeStyleSetAlignItems(node, static_cast<YGAlign>(v));
+}
+
+void FastYogaSetAlignItems(Local<Value> receiver, uint32_t id, int32_t v,
+                           // NOLINTNEXTLINE(runtime/references)
+                           FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetAlignItems");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetAlignItems(node, static_cast<YGAlign>(v));
+  }
+}
+
+static CFunction fast_yoga_set_align_items(
+    CFunction::Make(FastYogaSetAlignItems));
+
+static void YogaSetAlignSelf(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  int32_t v = args[1]->Int32Value(context).FromMaybe(0);
+  YGNodeStyleSetAlignSelf(node, static_cast<YGAlign>(v));
+}
+
+void FastYogaSetAlignSelf(Local<Value> receiver, uint32_t id, int32_t v,
+                          // NOLINTNEXTLINE(runtime/references)
+                          FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetAlignSelf");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetAlignSelf(node, static_cast<YGAlign>(v));
+  }
+}
+
+static CFunction fast_yoga_set_align_self(
+    CFunction::Make(FastYogaSetAlignSelf));
+
+static void YogaSetFlexWrap(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  int32_t v = args[1]->Int32Value(context).FromMaybe(0);
+  YGNodeStyleSetFlexWrap(node, static_cast<YGWrap>(v));
+}
+
+void FastYogaSetFlexWrap(Local<Value> receiver, uint32_t id, int32_t v,
+                         // NOLINTNEXTLINE(runtime/references)
+                         FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetFlexWrap");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetFlexWrap(node, static_cast<YGWrap>(v));
+  }
+}
+
+static CFunction fast_yoga_set_flex_wrap(CFunction::Make(FastYogaSetFlexWrap));
+
+static void YogaSetFlexGrow(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  float v = static_cast<float>(args[1]->NumberValue(context).FromMaybe(0.0));
+  YGNodeStyleSetFlexGrow(node, v);
+}
+
+void FastYogaSetFlexGrow(Local<Value> receiver, uint32_t id, double v,
+                         // NOLINTNEXTLINE(runtime/references)
+                         FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetFlexGrow");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetFlexGrow(node, static_cast<float>(v));
+  }
+}
+
+static CFunction fast_yoga_set_flex_grow(CFunction::Make(FastYogaSetFlexGrow));
+
+static void YogaSetFlexShrink(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  float v = static_cast<float>(args[1]->NumberValue(context).FromMaybe(0.0));
+  YGNodeStyleSetFlexShrink(node, v);
+}
+
+void FastYogaSetFlexShrink(Local<Value> receiver, uint32_t id, double v,
+                           // NOLINTNEXTLINE(runtime/references)
+                           FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetFlexShrink");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetFlexShrink(node, static_cast<float>(v));
+  }
+}
+
+static CFunction fast_yoga_set_flex_shrink(
+    CFunction::Make(FastYogaSetFlexShrink));
+
+static void YogaSetFlexBasis(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  float v = static_cast<float>(
+      args[1]->NumberValue(context).FromMaybe(YGUndefined));
+  YGNodeStyleSetFlexBasis(node, v);
+}
+
+void FastYogaSetFlexBasis(Local<Value> receiver, uint32_t id, double v,
+                          // NOLINTNEXTLINE(runtime/references)
+                          FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetFlexBasis");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetFlexBasis(node, static_cast<float>(v));
+  }
+}
+
+static CFunction fast_yoga_set_flex_basis(
+    CFunction::Make(FastYogaSetFlexBasis));
+
+// yogaSetMargin(nodeId, edge, value)
+static void YogaSetMargin(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  int32_t edge = args[1]->Int32Value(context).FromMaybe(0);
+  float v = static_cast<float>(args[2]->NumberValue(context).FromMaybe(0.0));
+  YGNodeStyleSetMargin(node, static_cast<YGEdge>(edge), v);
+}
+
+void FastYogaSetMargin(Local<Value> receiver, uint32_t id, int32_t edge,
+                       double v,
+                       // NOLINTNEXTLINE(runtime/references)
+                       FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetMargin");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetMargin(node, static_cast<YGEdge>(edge),
+                         static_cast<float>(v));
+  }
+}
+
+static CFunction fast_yoga_set_margin(CFunction::Make(FastYogaSetMargin));
+
+static void YogaSetPadding(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  int32_t edge = args[1]->Int32Value(context).FromMaybe(0);
+  float v = static_cast<float>(args[2]->NumberValue(context).FromMaybe(0.0));
+  YGNodeStyleSetPadding(node, static_cast<YGEdge>(edge), v);
+}
+
+void FastYogaSetPadding(Local<Value> receiver, uint32_t id, int32_t edge,
+                        double v,
+                        // NOLINTNEXTLINE(runtime/references)
+                        FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetPadding");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetPadding(node, static_cast<YGEdge>(edge),
+                          static_cast<float>(v));
+  }
+}
+
+static CFunction fast_yoga_set_padding(CFunction::Make(FastYogaSetPadding));
+
+static void YogaSetPositionType(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  int32_t v = args[1]->Int32Value(context).FromMaybe(0);
+  YGNodeStyleSetPositionType(node, static_cast<YGPositionType>(v));
+}
+
+void FastYogaSetPositionType(Local<Value> receiver, uint32_t id, int32_t v,
+                             // NOLINTNEXTLINE(runtime/references)
+                             FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetPositionType");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetPositionType(node, static_cast<YGPositionType>(v));
+  }
+}
+
+static CFunction fast_yoga_set_position_type(
+    CFunction::Make(FastYogaSetPositionType));
+
+// yogaSetPosition(nodeId, edge, value)
+static void YogaSetPosition(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  YGNodeRef node = LookupYogaNode(args[0]->Uint32Value(context).FromMaybe(0));
+  if (node == nullptr) {
+    return;
+  }
+  int32_t edge = args[1]->Int32Value(context).FromMaybe(0);
+  float v = static_cast<float>(
+      args[2]->NumberValue(context).FromMaybe(YGUndefined));
+  YGNodeStyleSetPosition(node, static_cast<YGEdge>(edge), v);
+}
+
+void FastYogaSetPosition(Local<Value> receiver, uint32_t id, int32_t edge,
+                         double v,
+                         // NOLINTNEXTLINE(runtime/references)
+                         FastApiCallbackOptions& opts) {
+  TRACK_V8_FAST_API_CALL("smol_tui.yogaSetPosition");
+  YGNodeRef node = LookupYogaNode(id);
+  if (node != nullptr) {
+    YGNodeStyleSetPosition(node, static_cast<YGEdge>(edge),
+                           static_cast<float>(v));
+  }
+}
+
+static CFunction fast_yoga_set_position(CFunction::Make(FastYogaSetPosition));
+
+// ─── Section 6: Text buffer store ─────────────────────────────────────
+//
+// Native TextBuffer store (packages/tui-infra text_buffer.{hpp,cc}), a port
+// of stuie crates/stuie-cabi/src/text_buffer.rs. Same handle-registry shape
+// as the Renderer registry, but handles are kind-tagged u32 ids
+// (KIND_TEXT_BUFFER, tui/handles.hpp <- stuie handles.rs) so a stale OR
+// wrong-kind handle misses the map and reads as a safe no-op — the contract
+// the lifecycle suite needs (text_buffer.rs:14-15).
+//
+// Foundation slice (S1): lifecycle + core content metrics. All seven
+// wrappers are cold (rare lifecycle / metric reads), so each is a plain
+// SetMethod with no Fast API sibling — the shape the shipped
+// CreateRenderer / DestroyRenderer / RendererSize wrappers use.
+struct TextBufferRegistry {
+  std::mutex mu;
+  uint32_t next_index = 1;
+  std::unordered_map<uint32_t, std::unique_ptr<ti::TextBuffer>> buffers;
+};
+
+static TextBufferRegistry& TextBuffers() {
+  static TextBufferRegistry r;
+  return r;
+}
+
+static ti::TextBuffer* LookupTextBuffer(uint32_t handle) {
+  TextBufferRegistry& r = TextBuffers();
+  std::lock_guard<std::mutex> lock(r.mu);
+  auto it = r.buffers.find(handle);
+  return it == r.buffers.end() ? nullptr : it->second.get();
+}
+
+// Owner-destroy cascade seam (stuie text_buffer.rs:327-333): destroy()
+// invalidates every TextBufferView this buffer owns BEFORE erasing it, so a
+// view whose owning buffer is gone reads as stale. S5 fills the body: it
+// delegates to the view family's owned-child cascade (stuie
+// text_view::destroy_owned_children), which lives with the view registry in
+// tui-infra text_view.{hpp,cc}.
+static void DestroyOwnedTextBufferViews(uint32_t buffer_handle) {
+  ti::DestroyOwnedChildren(buffer_handle);
+}
+
+// createTextBuffer(widthMethod) -> u32
+// stuie cabi.rs:1057 createTextBuffer -> text_buffer.rs:305 create().
+static void CreateTextBuffer(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  // args[0] widthMethod is accepted and ignored for ABI parity: stuie's
+  // createTextBuffer(_width_method: u8) takes the arg but never reads it.
+  TextBufferRegistry& r = TextBuffers();
+  std::lock_guard<std::mutex> lock(r.mu);
+  uint32_t index = r.next_index++;
+  uint32_t handle = ti::handles::Tag(ti::handles::kKindTextBuffer, index);
+  r.buffers.emplace(handle, std::make_unique<ti::TextBuffer>());
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, handle));
+}
+
+// destroyTextBuffer(handle)
+// stuie cabi.rs:1062 destroyTextBuffer -> text_buffer.rs:327 destroy().
+static void DestroyTextBuffer(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  // Cascade FIRST, exactly as stuie destroy() calls destroy_owned_children
+  // before removing the buffer (text_buffer.rs:331-332).
+  DestroyOwnedTextBufferViews(handle);
+  TextBufferRegistry& r = TextBuffers();
+  std::lock_guard<std::mutex> lock(r.mu);
+  r.buffers.erase(handle);
+}
+
+// textBufferGetLength(handle) -> u32
+// stuie cabi.rs:1067 -> text_buffer.rs:343 get_length(); stale handle -> 0.
+static void TextBufferGetLength(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, buffer == nullptr ? 0 : buffer->Length()));
+}
+
+// textBufferGetByteSize(handle) -> u32
+// stuie cabi.rs:1072 -> text_buffer.rs:347 get_byte_size(); stale handle -> 0.
+static void TextBufferGetByteSize(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, buffer == nullptr ? 0 : buffer->ByteSize()));
+}
+
+// textBufferGetLineCount(handle) -> u32
+// stuie cabi.rs:1077 -> text_buffer.rs:351 get_line_count(); stale handle -> 0
+// (NOT 1 — the stale default is the registry `with` default, not line_count).
+static void TextBufferGetLineCount(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, buffer == nullptr ? 0 : buffer->LineCount()));
+}
+
+// textBufferReset(handle)
+// stuie cabi.rs:1082 -> text_buffer.rs:355 reset(); stale handle -> no-op.
+static void TextBufferReset(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->Reset();
+  }
+}
+
+// textBufferClear(handle)
+// stuie cabi.rs:1087 -> text_buffer.rs:359 clear(); stale handle -> no-op.
+static void TextBufferClear(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->Clear();
+  }
+}
+
+// textBufferGetTabWidth(handle) -> u8
+// stuie cabi.rs:1092 -> text_buffer.rs:363 get_tab_width(). A stale handle
+// returns ti::kDefaultTabWidth (the registry `with` default = 2), NOT 0 —
+// this is the one TextBuffer getter whose stale fallback is not zero.
+static void TextBufferGetTabWidth(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, buffer == nullptr ? ti::kDefaultTabWidth : buffer->TabWidth()));
+}
+
+// textBufferSetTabWidth(handle, width)
+// stuie cabi.rs:1096 -> text_buffer.rs:383 set_tab_width(); stale -> no-op.
+static void TextBufferSetTabWidth(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint8_t width =
+      static_cast<uint8_t>(args[1]->Uint32Value(context).FromMaybe(0));
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->SetTabWidth(width);
+  }
+}
+
+// Read an optional RGBA quadruple from a JS Uint16Array(>=4). Any non-array
+// argument (null / undefined) reads as nullopt, which clears the default —
+// mirroring stuie cabi.rs:1039 read_optional_rgba (a null pointer -> None).
+static std::optional<std::array<uint16_t, 4>> ReadOptionalRgba(
+    Local<Value> value) {
+  if (!value->IsUint16Array()) {
+    return std::nullopt;
+  }
+  Local<Uint16Array> arr = value.As<Uint16Array>();
+  if (arr->Length() < 4) {
+    return std::nullopt;
+  }
+  auto store = arr->Buffer()->GetBackingStore();
+  const uint16_t* data = reinterpret_cast<const uint16_t*>(
+      static_cast<const uint8_t*>(store->Data()) + arr->ByteOffset());
+  return std::array<uint16_t, 4>{data[0], data[1], data[2], data[3]};
+}
+
+// textBufferSetDefaultFg(handle, rgbaOrNull)
+// stuie cabi.rs:1102 -> text_buffer.rs:425 set_default_fg(); stale -> no-op.
+static void TextBufferSetDefaultFg(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->SetDefaultFg(ReadOptionalRgba(args[1]));
+  }
+}
+
+// textBufferSetDefaultBg(handle, rgbaOrNull)
+// stuie cabi.rs:1107 -> text_buffer.rs:429 set_default_bg(); stale -> no-op.
+static void TextBufferSetDefaultBg(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->SetDefaultBg(ReadOptionalRgba(args[1]));
+  }
+}
+
+// textBufferSetDefaultAttributes(handle, attrsOrNull)
+// stuie cabi.rs:1116 -> text_buffer.rs:433 set_default_attributes(). A
+// Uint32Array(>=1) sets the bitset; any non-array argument clears it (null ->
+// None). Stale handle -> no-op.
+static void TextBufferSetDefaultAttributes(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    return;
+  }
+  std::optional<uint32_t> attrs;
+  if (args[1]->IsUint32Array()) {
+    Local<Uint32Array> arr = args[1].As<Uint32Array>();
+    if (arr->Length() >= 1) {
+      auto store = arr->Buffer()->GetBackingStore();
+      const uint32_t* data = reinterpret_cast<const uint32_t*>(
+          static_cast<const uint8_t*>(store->Data()) + arr->ByteOffset());
+      attrs = data[0];
+    }
+  }
+  buffer->SetDefaultAttributes(attrs);
+}
+
+// textBufferResetDefaults(handle)
+// stuie cabi.rs:1127 -> text_buffer.rs:437 reset_defaults(); stale -> no-op.
+static void TextBufferResetDefaults(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->ResetDefaults();
+  }
+}
+
+// ── Content I/O: mem registry + ingestion + readout (S3) ──
+//
+// stuie routes these through raw (ptr, len) FFI (cabi.rs:1131-1253). Here the
+// JS side hands the same bytes as a Uint8Array (input) or a caller-owned
+// Uint8Array plus a max-length (readout, mirroring stuie's `out: *mut u8,
+// max_len` — see RendererFlush for the same output contract). A stale handle
+// resolves to the registry `with` default (0 / false / no-op), never a throw.
+
+// Read a JS Uint8Array as a (ptr, len) view; a non-array reads as (nullptr, 0),
+// mirroring stuie read_bytes on a null pointer.
+static const uint8_t* Uint8ArrayBytes(Local<Value> value, size_t* len) {
+  if (!value->IsUint8Array()) {
+    *len = 0;
+    return nullptr;
+  }
+  Local<Uint8Array> arr = value.As<Uint8Array>();
+  *len = arr->ByteLength();
+  auto store = arr->Buffer()->GetBackingStore();
+  return static_cast<const uint8_t*>(store->Data()) + arr->ByteOffset();
+}
+
+// textBufferRegisterMemBuffer(handle, bytes) -> memId
+// stuie cabi.rs:1136 -> text_buffer.rs:445 register_mem. A stale handle yields
+// the failure sentinel kMemRegisterFailed, matching the registry `with`
+// default. The `owned` FFI flag is inert (node-smol always copies the bytes).
+static void TextBufferRegisterMemBuffer(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    args.GetReturnValue().Set(
+        Integer::NewFromUnsigned(isolate, ti::kMemRegisterFailed));
+    return;
+  }
+  size_t len = 0;
+  const uint8_t* bytes = Uint8ArrayBytes(args[1], &len);
+  args.GetReturnValue().Set(
+      Integer::NewFromUnsigned(isolate, buffer->RegisterMem(bytes, len)));
+}
+
+// textBufferReplaceMemBuffer(handle, memId, bytes) -> ok
+// stuie cabi.rs:1151 -> text_buffer.rs:449 replace_mem. memId is a u8 at the
+// FFI boundary (cabi.rs:1153 `mem_id: u8`); a stale handle -> false.
+static void TextBufferReplaceMemBuffer(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint8_t mem_id =
+      static_cast<uint8_t>(args[1]->Uint32Value(context).FromMaybe(0));
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    args.GetReturnValue().Set(false);
+    return;
+  }
+  size_t len = 0;
+  const uint8_t* bytes = Uint8ArrayBytes(args[2], &len);
+  args.GetReturnValue().Set(buffer->ReplaceMem(mem_id, bytes, len));
+}
+
+// textBufferClearMemRegistry(handle)
+// stuie cabi.rs:1163 -> text_buffer.rs:453 clear_mem_registry; stale -> no-op.
+static void TextBufferClearMemRegistry(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->ClearMemRegistry();
+  }
+}
+
+// textBufferSetTextFromMem(handle, memId)
+// stuie cabi.rs:1168 -> text_buffer.rs:457 set_from_mem. memId is a u8 at the
+// FFI boundary (cabi.rs:1168 `mem_id: u8`); stale -> no-op.
+static void TextBufferSetTextFromMem(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint8_t mem_id =
+      static_cast<uint8_t>(args[1]->Uint32Value(context).FromMaybe(0));
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->SetFromMem(mem_id);
+  }
+}
+
+// textBufferAppend(handle, bytes)
+// stuie cabi.rs:1177 -> text_buffer.rs:490 append; stale -> no-op.
+static void TextBufferAppend(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    return;
+  }
+  size_t len = 0;
+  const uint8_t* bytes = Uint8ArrayBytes(args[1], &len);
+  buffer->Append(bytes, len);
+}
+
+// textBufferAppendFromMemId(handle, memId)
+// stuie cabi.rs:1183 -> text_buffer.rs:494 append_from_mem. memId is a u8 at
+// the FFI boundary (cabi.rs:1183 `mem_id: u8`); stale -> no-op.
+static void TextBufferAppendFromMemId(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint8_t mem_id =
+      static_cast<uint8_t>(args[1]->Uint32Value(context).FromMaybe(0));
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->AppendFromMem(mem_id);
+  }
+}
+
+// textBufferLoadFile(handle, pathBytes) -> ok
+// stuie cabi.rs:1192 -> text_buffer.rs:498 load_file. The path is a UTF-8
+// byte view (stuie read_str(path, path_len)); a stale handle or unreadable
+// file -> false.
+static void TextBufferLoadFile(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    args.GetReturnValue().Set(false);
+    return;
+  }
+  size_t len = 0;
+  const uint8_t* path = Uint8ArrayBytes(args[1], &len);
+  args.GetReturnValue().Set(
+      buffer->LoadFile(reinterpret_cast<const char*>(path), len));
+}
+
+// Copy up to `max_len` bytes from a readout into a caller-owned Uint8Array,
+// clamping `max_len` to the array's length (stuie's shim sizes the array to
+// max_len; the clamp is defensive). A stale handle or non-array out -> 0.
+static uint32_t WriteReadout(Local<Value> out_value,
+                             uint32_t max_len,
+                             ti::TextBuffer* buffer,
+                             uint32_t (ti::TextBuffer::*fn)(uint8_t*, uint32_t)
+                                 const) {
+  if (buffer == nullptr || !out_value->IsUint8Array()) {
+    return 0;
+  }
+  Local<Uint8Array> arr = out_value.As<Uint8Array>();
+  if (max_len > arr->ByteLength()) {
+    max_len = static_cast<uint32_t>(arr->ByteLength());
+  }
+  auto store = arr->Buffer()->GetBackingStore();
+  uint8_t* out =
+      static_cast<uint8_t*>(store->Data()) + arr->ByteOffset();
+  return (buffer->*fn)(out, max_len);
+}
+
+// textBufferGetPlainText(handle, out, maxLen) -> bytesWritten
+// stuie cabi.rs:1216 -> text_buffer.rs:520 get_plain_text; stale -> 0.
+static void TextBufferGetPlainText(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_len = args[2]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  uint32_t n =
+      WriteReadout(args[1], max_len, buffer, &ti::TextBuffer::GetPlainText);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// textBufferGetTextRange(handle, start, end, out, maxLen) -> bytesWritten
+// stuie cabi.rs:1225 -> text_buffer.rs:525 get_text_range; stale -> 0.
+static void TextBufferGetTextRange(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t start = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t end = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_len = args[4]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  uint32_t n = 0;
+  if (buffer != nullptr && args[3]->IsUint8Array()) {
+    Local<Uint8Array> arr = args[3].As<Uint8Array>();
+    if (max_len > arr->ByteLength()) {
+      max_len = static_cast<uint32_t>(arr->ByteLength());
+    }
+    auto store = arr->Buffer()->GetBackingStore();
+    uint8_t* out = static_cast<uint8_t*>(store->Data()) + arr->ByteOffset();
+    n = buffer->GetTextRange(start, end, out, max_len);
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// textBufferGetTextRangeByCoords(handle, sr, sc, er, ec, out, maxLen)
+//   -> bytesWritten
+// stuie cabi.rs:1241 -> text_buffer.rs:577 get_text_range_by_coords; stale -> 0.
+static void TextBufferGetTextRangeByCoords(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t start_row = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t start_col = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t end_row = args[3]->Uint32Value(context).FromMaybe(0);
+  uint32_t end_col = args[4]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_len = args[6]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  uint32_t n = 0;
+  if (buffer != nullptr && args[5]->IsUint8Array()) {
+    Local<Uint8Array> arr = args[5].As<Uint8Array>();
+    if (max_len > arr->ByteLength()) {
+      max_len = static_cast<uint32_t>(arr->ByteLength());
+    }
+    auto store = arr->Buffer()->GetBackingStore();
+    uint8_t* out = static_cast<uint8_t*>(store->Data()) + arr->ByteOffset();
+    n = buffer->GetTextRangeByCoords(start_row, start_col, end_row, end_col, out,
+                                     max_len);
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// ── Highlights + styled text + syntax style (S4) ──
+//
+// stuie routes the packed highlight/styled records through raw (ptr, len) FFI
+// (cabi.rs:1203-1325). Here the JS side hands the same bytes as a Uint8Array;
+// the 16-byte HighlightStruct and the kStyledRecordSize StyledChunkStructs keep
+// their exact packed layout (ti::HighlightRepr is byte-identical, so the record
+// is memcpy'd in). A stale handle resolves to the registry `with` default.
+
+// Read a packed 16-byte HighlightStruct from a JS Uint8Array into a
+// ti::HighlightRepr (stuie cabi.rs:1052 read_highlight, a repr(C) unaligned
+// read). A short/absent array zero-fills, matching a zeroed struct.
+static ti::HighlightRepr ReadHighlight(Local<Value> value) {
+  ti::HighlightRepr hl{0, 0, 0, 0, 0, 0};
+  size_t len = 0;
+  const uint8_t* bytes = Uint8ArrayBytes(value, &len);
+  if (bytes != nullptr && len >= sizeof(ti::HighlightRepr)) {
+    std::memcpy(&hl, bytes, sizeof(ti::HighlightRepr));
+  }
+  return hl;
+}
+
+// textBufferAddHighlight(handle, lineIdx, highlightBytes)
+// stuie cabi.rs:1260 -> text_buffer.rs:598 add_highlight; stale -> no-op.
+static void TextBufferAddHighlight(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t line = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->AddHighlight(line, ReadHighlight(args[2]));
+  }
+}
+
+// textBufferAddHighlightByCharRange(handle, highlightBytes)
+// stuie cabi.rs:1269 -> text_buffer.rs:623 add_highlight_by_char_range; stale ->
+// no-op.
+static void TextBufferAddHighlightByCharRange(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->AddHighlightByCharRange(ReadHighlight(args[1]));
+  }
+}
+
+// textBufferRemoveHighlightsByRef(handle, hlRef)
+// stuie cabi.rs:1274 -> text_buffer.rs:666 remove_highlights_by_ref. hlRef is a
+// u16 at the FFI boundary; stale -> no-op.
+static void TextBufferRemoveHighlightsByRef(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t hl_ref = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->RemoveHighlightsByRef(static_cast<uint16_t>(hl_ref));
+  }
+}
+
+// textBufferClearLineHighlights(handle, lineIdx)
+// stuie cabi.rs:1279 -> text_buffer.rs:672 clear_line_highlights; stale -> no-op.
+static void TextBufferClearLineHighlights(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t line = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->ClearLineHighlights(line);
+  }
+}
+
+// textBufferClearAllHighlights(handle)
+// stuie cabi.rs:1284 -> text_buffer.rs:678 clear_all_highlights; stale -> no-op.
+static void TextBufferClearAllHighlights(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer != nullptr) {
+    buffer->ClearAllHighlights();
+  }
+}
+
+// textBufferGetHighlightCount(handle) -> count
+// stuie cabi.rs:1289 -> text_buffer.rs:682 get_highlight_count; stale -> 0.
+static void TextBufferGetHighlightCount(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  uint32_t n = buffer == nullptr ? 0 : buffer->HighlightCount();
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// textBufferSetSyntaxStyle(handle, style) -> ok
+// stuie cabi.rs:1294 -> text_buffer.rs:512 set_syntax_style; stale -> false.
+static void TextBufferSetSyntaxStyle(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t style = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  args.GetReturnValue().Set(buffer != nullptr && buffer->SetSyntaxStyle(style));
+}
+
+// textBufferGetLineHighlightsPtr(handle, lineIdx, outCount) -> ptr
+// stuie cabi.rs:1306 -> text_buffer.rs:784 get_line_highlights. Writes the count
+// into outCount (a Uint32Array(>=1)) and returns the heap array's address as a
+// Number (0 when the line has none). The caller frees it via
+// textBufferFreeLineHighlights, matching the FFI (ptr, count) contract.
+static void TextBufferGetLineHighlightsPtr(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t line = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  ti::HighlightRepr* ptr = nullptr;
+  uint32_t count = 0;
+  if (buffer != nullptr) {
+    auto pair = buffer->GetLineHighlights(line);
+    ptr = pair.first;
+    count = pair.second;
+  }
+  if (args[2]->IsUint32Array()) {
+    Local<Uint32Array> arr = args[2].As<Uint32Array>();
+    if (arr->Length() >= 1) {
+      auto store = arr->Buffer()->GetBackingStore();
+      uint32_t* out = reinterpret_cast<uint32_t*>(
+          static_cast<uint8_t*>(store->Data()) + arr->ByteOffset());
+      out[0] = count;
+    }
+  }
+  args.GetReturnValue().Set(Number::New(
+      isolate, static_cast<double>(reinterpret_cast<uintptr_t>(ptr))));
+}
+
+// textBufferFreeLineHighlights(ptr, count)
+// stuie cabi.rs:1323 -> text_buffer.rs:806 free_line_highlights. `ptr`/`count`
+// must be a pair returned by textBufferGetLineHighlightsPtr, freed once.
+static void TextBufferFreeLineHighlights(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uintptr_t addr =
+      static_cast<uintptr_t>(args[0]->NumberValue(context).FromMaybe(0));
+  uint32_t count = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer::FreeLineHighlights(reinterpret_cast<ti::HighlightRepr*>(addr),
+                                     count);
+}
+
+// textBufferSetStyledText(handle, records, count)
+// stuie cabi.rs:1203 -> text_buffer.rs:508 set_styled. `records` is the packed
+// StyledChunkStruct buffer (a Uint8Array); text + colors live behind borrowed
+// process pointers valid for this synchronous call (copied by SetStyled). A
+// stale handle -> no-op.
+static void TextBufferSetStyledText(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t count = args[2]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(handle);
+  if (buffer == nullptr) {
+    return;
+  }
+  size_t len = 0;
+  const uint8_t* records = Uint8ArrayBytes(args[1], &len);
+  buffer->SetStyled(records, len, count);
+}
+
+// ─── Section 6b: Text buffer view (lifecycle + geometry config) ───────
+//
+// Native TextBufferView (packages/tui-infra text_view.{hpp,cc}), a port of the
+// lifecycle + config-setter subset of stuie crates/stuie-cabi/src/text_view.rs.
+// Unlike the TextBuffer store, the view registry + owned-child index live in
+// tui-infra (stuie TBV_REGISTRY / OWNED_CHILD_VIEWS), so these wrappers just
+// forward the kind-tagged u32 handle to the ti:: free functions — a stale OR
+// wrong-kind handle misses the view map and reads as a safe no-op. All cold
+// (lifecycle / rare config writes), so each is a plain SetMethod with no Fast
+// API sibling.
+
+// createTextBufferView(bufferHandle) -> u32
+// stuie cabi.rs:1391 createTextBufferView. Reject a view over a BORROWED buffer
+// (returns 0 -> the shim throws); a stale/missing buffer is not borrowed and
+// falls through to a view over an empty buffer. On success the view is
+// registered as an owned child so destroying the buffer cascades to it.
+static void CreateTextBufferView(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t buffer_handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TextBuffer* buffer = LookupTextBuffer(buffer_handle);
+  bool borrowed = buffer != nullptr && buffer->IsBorrowed();
+  uint32_t view = ti::TbvCreateOwned(buffer_handle, borrowed);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, view));
+}
+
+// textBufferViewIsValid(handle) -> bool
+// stuie cabi.rs:1412 textBufferViewIsValid; stale AND wrong-kind -> false.
+static void TextBufferViewIsValid(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  args.GetReturnValue().Set(Boolean::New(isolate, ti::TbvIsValid(handle)));
+}
+
+// destroyTextBufferView(handle)
+// stuie cabi.rs:1424 destroyTextBufferView; stale handle -> no-op.
+static void DestroyTextBufferView(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TbvDestroy(handle);
+}
+
+// textBufferViewSetWrapMode(handle, mode) — 0=none, 1=char, 2=word.
+// stuie cabi.rs:1429 -> text_view.rs:997 tbv_set_wrap_mode; stale -> no-op.
+static void TextBufferViewSetWrapMode(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t mode = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetWrapMode(handle, static_cast<uint8_t>(mode));
+}
+
+// textBufferViewSetWrapWidth(handle, width) — 0 clears wrapping.
+// stuie cabi.rs:1434 -> text_view.rs:1001 tbv_set_wrap_width; stale -> no-op.
+static void TextBufferViewSetWrapWidth(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t width = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetWrapWidth(handle, width);
+}
+
+// textBufferViewSetFirstLineOffset(handle, offset)
+// stuie cabi.rs:1439 -> text_view.rs:1007 tbv_set_first_line_offset;
+// stale -> no-op.
+static void TextBufferViewSetFirstLineOffset(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t offset = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetFirstLineOffset(handle, offset);
+}
+
+// textBufferViewSetViewport(handle, x, y, width, height) — also pins wrap_width.
+// stuie cabi.rs:1444 -> text_view.rs:1011 tbv_set_viewport; stale -> no-op.
+static void TextBufferViewSetViewport(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t x = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t y = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t width = args[3]->Uint32Value(context).FromMaybe(0);
+  uint32_t height = args[4]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetViewport(handle, x, y, width, height);
+}
+
+// textBufferViewSetViewportSize(handle, width, height) — keeps the offset,
+// pins wrap_width. stuie cabi.rs:1449 -> text_view.rs:1018
+// tbv_set_viewport_size; stale -> no-op.
+static void TextBufferViewSetViewportSize(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t width = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t height = args[2]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetViewportSize(handle, width, height);
+}
+
+// textBufferViewSetTruncate(handle, truncate)
+// stuie cabi.rs:1454 -> text_view.rs:1026 tbv_set_truncate; stale -> no-op.
+static void TextBufferViewSetTruncate(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  bool truncate = args[1]->BooleanValue(isolate);
+  ti::TbvSetTruncate(handle, truncate);
+}
+
+// textBufferViewSetTabIndicator(handle, codePoint)
+// stuie cabi.rs:1459 -> text_view.rs:1030 tbv_set_tab_indicator;
+// stale -> no-op.
+static void TextBufferViewSetTabIndicator(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t code_point = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetTabIndicator(handle, code_point);
+}
+
+// textBufferViewSetTabIndicatorColor(handle, rgbaOrNull) — a non-array argument
+// clears the color (draw falls back to the cell foreground).
+// stuie cabi.rs:1469 -> text_view.rs:1034 tbv_set_tab_indicator_color;
+// stale -> no-op.
+static void TextBufferViewSetTabIndicatorColor(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetTabIndicatorColor(handle, ReadOptionalRgba(args[1]));
+}
+
+// The BufferResolver the S6 measurement kernel reads (text_view.hpp): resolve
+// a buffer handle in THIS binding's TextBuffer registry to its content lines,
+// per-line widths, and tab width — the C++ seam for stuie's cross-module
+// text_buffer::content_lines / line_widths / tab_width_cols calls. A
+// stale/missing buffer yields the documented per-helper fallbacks
+// (content_lines empty, line_widths == {0}, tab_width_cols == kDefaultTabWidth),
+// so a view over a destroyed buffer measures as (1 line, 0 cols) / 0 vlines
+// exactly like stuie.
+static ti::BufferData ResolveBufferData(uint32_t tb) {
+  ti::TextBuffer* buffer = LookupTextBuffer(tb);
+  if (buffer == nullptr) {
+    return ti::BufferData{{}, {0}, ti::kDefaultTabWidth};
+  }
+  std::vector<std::string> lines = buffer->ContentLines();
+  const uint32_t tab = buffer->TabWidth();
+  std::vector<uint32_t> widths = ti::LineWidths(lines, tab);
+  return ti::BufferData{std::move(lines), std::move(widths), tab};
+}
+
+// Resolve args[1] as a Uint32Array to a writable u32* + a capacity-clamped
+// max-entry count (2 header + 4 per entry must fit), so a mis-sized array can
+// never drive an out-of-bounds write into the backing store. Returns false and
+// leaves `*out`/`*max_entries` untouched when args[1] is not a Uint32Array.
+static bool ResolveU32OutBuffer(const FunctionCallbackInfo<Value>& args,
+                                Local<Context> context, uint32_t** out,
+                                uint32_t* max_entries) {
+  if (!args[1]->IsUint32Array()) {
+    return false;
+  }
+  Local<Uint32Array> arr = args[1].As<Uint32Array>();
+  auto store = arr->Buffer()->GetBackingStore();
+  *out = reinterpret_cast<uint32_t*>(
+      static_cast<uint8_t*>(store->Data()) + arr->ByteOffset());
+  uint32_t requested = args[2]->Uint32Value(context).FromMaybe(0);
+  const uint32_t cap = arr->Length();
+  const uint32_t cap_entries = cap >= 2 ? (cap - 2) / 4 : 0;
+  *max_entries = requested < cap_entries ? requested : cap_entries;
+  return true;
+}
+
+// textBufferViewGetVirtualLineCount(handle) -> u32
+// stuie cabi.rs:1474 -> text_view.rs:1046 tbv_virtual_line_count; stale -> 0.
+static void TextBufferViewGetVirtualLineCount(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, ti::TbvVirtualLineCount(handle, ResolveBufferData)));
+}
+
+// textBufferViewMeasureForDimensions(handle, width, height) -> packed u64
+// (lineCount << 32) | widthColsMax, returned as a JS Number (exact for the
+// realistic integer range). stuie cabi.rs:1479 -> text_view.rs:1052
+// tbv_measure; a stale view -> (1 << 32) | 0.
+static void TextBufferViewMeasureForDimensions(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t width = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t height = args[2]->Uint32Value(context).FromMaybe(0);
+  const uint64_t packed =
+      ti::TbvMeasure(handle, width, height, ResolveBufferData);
+  args.GetReturnValue().Set(Number::New(isolate, static_cast<double>(packed)));
+}
+
+// textBufferViewGetLineInfo(handle, outU32, maxEntries) -> count
+// Serializes the VIEWPORT-SLICED virtual lines into the u32 out-buffer.
+// stuie cabi.rs:1492 -> text_view.rs:1073 tbv_get_line_info.
+static void TextBufferViewGetLineInfo(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t* out = nullptr;
+  uint32_t max_entries = 0;
+  if (!ResolveU32OutBuffer(args, context, &out, &max_entries)) {
+    args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, 0));
+    return;
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate, ti::TbvGetLineInfo(handle, out, max_entries, ResolveBufferData)));
+}
+
+// textBufferViewGetLogicalLineInfo(handle, outU32, maxEntries) -> count
+// Serializes the FULL (un-sliced) virtual lines; widthColsMax = the buffer's
+// max LOGICAL line width. stuie cabi.rs:1508 -> text_view.rs:1095
+// tbv_get_logical_line_info.
+static void TextBufferViewGetLogicalLineInfo(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t* out = nullptr;
+  uint32_t max_entries = 0;
+  if (!ResolveU32OutBuffer(args, context, &out, &max_entries)) {
+    args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, 0));
+    return;
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(
+      isolate,
+      ti::TbvGetLogicalLineInfo(handle, out, max_entries, ResolveBufferData)));
+}
+
+// ── TextBufferView selection + extraction + draw (slice S7) ──
+//
+// The selection surface text-buffer-view.ts drives: explicit [start, end)
+// column-offset selection, screen-coord (local) resolution, packed
+// getSelectionInfo, width-aware selected-text extraction, plain-text readout,
+// and the draw-into-a-renderer path. Optional colors arrive as RGBA.buffer
+// (Uint16Array(4)) pointers, read via ReadOptionalRgba (nullopt when absent).
+
+// The TextBufferAccessor the draw/extraction paths read (text_view.hpp): resolve
+// a buffer handle in THIS binding's TextBuffer registry to its live TextBuffer,
+// the C++ seam for stuie's cross-module text_buffer::* calls. A stale/missing
+// buffer resolves to nullptr, yielding the documented empty/zero fallbacks.
+static const ti::TextBuffer* ResolveTextBufferConst(uint32_t tb) {
+  return LookupTextBuffer(tb);
+}
+
+// textBufferViewSetSelection(handle, start, end, bgPtr, fgPtr)
+// stuie cabi.rs:1523 -> text_view.rs:1110 tbv_set_selection.
+static void TextBufferViewSetSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t start = args[1]->Uint32Value(context).FromMaybe(0);
+  uint32_t end = args[2]->Uint32Value(context).FromMaybe(0);
+  ti::TbvSetSelection(handle, start, end, ReadOptionalRgba(args[3]),
+                      ReadOptionalRgba(args[4]));
+}
+
+// textBufferViewUpdateSelection(handle, end, bgPtr, fgPtr)
+// stuie cabi.rs:1544 -> text_view.rs:1124 tbv_update_selection.
+static void TextBufferViewUpdateSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t end = args[1]->Uint32Value(context).FromMaybe(0);
+  ti::TbvUpdateSelection(handle, end, ReadOptionalRgba(args[2]),
+                         ReadOptionalRgba(args[3]));
+}
+
+// textBufferViewResetSelection(handle)
+// stuie cabi.rs:1553 -> text_view.rs:1139 tbv_reset_selection.
+static void TextBufferViewResetSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TbvResetSelection(handle);
+}
+
+// textBufferViewGetSelection(handle) -> packedInfo (as a JS Number; exact for
+// the realistic (start<<32)|end range). stuie cabi.rs:1559 -> text_view.rs:1145
+// tbv_get_selection; a stale view -> NO_SELECTION (all-ones).
+static void TextBufferViewGetSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  args.GetReturnValue().Set(
+      Number::New(isolate, static_cast<double>(ti::TbvGetSelection(handle))));
+}
+
+// textBufferViewSetLocalSelection(handle, ax, ay, fx, fy, bgPtr, fgPtr)
+//   -> changed. stuie cabi.rs:1567 -> text_view.rs:1154 tbv_set_local_selection.
+static void TextBufferViewSetLocalSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  int32_t ax = args[1]->Int32Value(context).FromMaybe(0);
+  int32_t ay = args[2]->Int32Value(context).FromMaybe(0);
+  int32_t fx = args[3]->Int32Value(context).FromMaybe(0);
+  int32_t fy = args[4]->Int32Value(context).FromMaybe(0);
+  const bool changed = ti::TbvSetLocalSelection(
+      handle, ax, ay, fx, fy, ReadOptionalRgba(args[5]),
+      ReadOptionalRgba(args[6]), ResolveBufferData);
+  args.GetReturnValue().Set(Boolean::New(isolate, changed));
+}
+
+// textBufferViewUpdateLocalSelection(handle, ax, ay, fx, fy, bgPtr, fgPtr)
+//   -> changed. stuie cabi.rs:1587 -> text_view.rs:1170
+//   tbv_update_local_selection.
+static void TextBufferViewUpdateLocalSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  int32_t ax = args[1]->Int32Value(context).FromMaybe(0);
+  int32_t ay = args[2]->Int32Value(context).FromMaybe(0);
+  int32_t fx = args[3]->Int32Value(context).FromMaybe(0);
+  int32_t fy = args[4]->Int32Value(context).FromMaybe(0);
+  const bool changed = ti::TbvUpdateLocalSelection(
+      handle, ax, ay, fx, fy, ReadOptionalRgba(args[5]),
+      ReadOptionalRgba(args[6]), ResolveBufferData);
+  args.GetReturnValue().Set(Boolean::New(isolate, changed));
+}
+
+// textBufferViewResetLocalSelection(handle)
+// stuie cabi.rs:1611 -> text_view.rs:1185 tbv_reset_local_selection.
+static void TextBufferViewResetLocalSelection(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  ti::TbvResetLocalSelection(handle);
+}
+
+// textBufferViewGetSelectedTextBytes(handle, out, maxLen) -> bytesWritten
+// stuie cabi.rs:1620 -> text_view.rs:1198 tbv_get_selected_text_bytes.
+static void TextBufferViewGetSelectedTextBytes(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_len = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t n = 0;
+  if (args[1]->IsUint8Array()) {
+    Local<Uint8Array> arr = args[1].As<Uint8Array>();
+    if (max_len > arr->ByteLength()) {
+      max_len = static_cast<uint32_t>(arr->ByteLength());
+    }
+    auto store = arr->Buffer()->GetBackingStore();
+    uint8_t* out = static_cast<uint8_t*>(store->Data()) + arr->ByteOffset();
+    n = ti::TbvGetSelectedTextBytes(handle, out, max_len,
+                                    ResolveTextBufferConst);
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// textBufferViewGetPlainTextBytes(handle, out, maxLen) -> bytesWritten
+// stuie cabi.rs:1633 -> text_view.rs:1219 tbv_get_plain_text_bytes.
+static void TextBufferViewGetPlainTextBytes(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t handle = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t max_len = args[2]->Uint32Value(context).FromMaybe(0);
+  uint32_t n = 0;
+  if (args[1]->IsUint8Array()) {
+    Local<Uint8Array> arr = args[1].As<Uint8Array>();
+    if (max_len > arr->ByteLength()) {
+      max_len = static_cast<uint32_t>(arr->ByteLength());
+    }
+    auto store = arr->Buffer()->GetBackingStore();
+    uint8_t* out = static_cast<uint8_t*>(store->Data()) + arr->ByteOffset();
+    n = ti::TbvGetPlainTextBytes(handle, out, max_len, ResolveTextBufferConst);
+  }
+  args.GetReturnValue().Set(Integer::NewFromUnsigned(isolate, n));
+}
+
+// bufferDrawTextBufferView(rendererId, viewHandle, x, y)
+// stuie cabi.rs:468 bufferDrawTextBufferView -> text_view.rs:974 tbv_draw_model
+// + text_view.rs:2236 draw_model_into. CROSS-REGISTRY: builds the view's draw
+// model (spans composited over the buffer defaults + selection override +
+// reverse-video + tab-indicator fill + ellipsis-aware truncation) and blits each
+// cluster into the renderer's Next() cell buffer. A stale renderer OR view is a
+// no-op.
+static void BufferDrawTextBufferView(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint32_t renderer_id = args[0]->Uint32Value(context).FromMaybe(0);
+  uint32_t view = args[1]->Uint32Value(context).FromMaybe(0);
+  int32_t x = args[2]->Int32Value(context).FromMaybe(0);
+  int32_t y = args[3]->Int32Value(context).FromMaybe(0);
+  ti::Renderer* renderer = LookupRenderer(renderer_id);
+  if (renderer == nullptr) {
+    return;
+  }
+  std::optional<ti::DrawModel> model =
+      ti::TbvDrawModel(view, ResolveTextBufferConst);
+  if (!model.has_value()) {
+    return;
+  }
+  // Resolve the active buffer's default colors (white fg / transparent bg
+  // fallback for a stale buffer), mirroring draw_view_model's
+  // default_colors(model.tb) (cabi.rs:451).
+  std::array<uint16_t, 4> def_fg{255, 255, 255, 255};
+  std::array<uint16_t, 4> def_bg{0, 0, 0, 0};
+  const ti::TextBuffer* buffer = LookupTextBuffer(model->tb);
+  if (buffer != nullptr) {
+    const std::pair<std::array<uint16_t, 4>, std::array<uint16_t, 4>> colors =
+        buffer->DefaultColors();
+    def_fg = colors.first;
+    def_bg = colors.second;
+  }
+  auto& next = renderer->Next();
+  ti::DrawModelInto(
+      *model,
+      [&next](std::string_view s, int32_t cx, int32_t cy,
+              const std::array<uint16_t, 4>& fg,
+              const std::array<uint16_t, 4>& bg, uint32_t attrs) {
+        // Off-screen cells (negative cx/cy wrap to a huge unsigned index) are
+        // dropped by CellBuffer's bounds check. Colors are the RGBA lanes' low
+        // (value) bytes; the cell grid is 8-bit RGB with no alpha channel.
+        next.DrawText(static_cast<uint32_t>(cx), static_cast<uint32_t>(cy),
+                      s.data(), s.size(), static_cast<uint8_t>(fg[0] & 0xff),
+                      static_cast<uint8_t>(fg[1] & 0xff),
+                      static_cast<uint8_t>(fg[2] & 0xff),
+                      static_cast<uint8_t>(bg[0] & 0xff),
+                      static_cast<uint8_t>(bg[1] & 0xff),
+                      static_cast<uint8_t>(bg[2] & 0xff),
+                      static_cast<uint8_t>(attrs & 0xff));
+      },
+      def_fg, def_bg, x, y);
+}
+
+static void Initialize(Local<Object> target,
+                       Local<Value> /* unused */,
+                       Local<Context> context,
+                       void* /* priv */) {
+  Isolate* isolate = Isolate::GetCurrent();
+  Local<Object> constants = Object::New(isolate);
+
+#define BIND_CONST(name, value) \
+  constants                     \
+      ->Set(context, NewOneByteString(isolate, name), \
+            NewOneByteString(isolate, value))         \
+      .Check();
+
+  BIND_CONST("reset", ti::kReset);
+  BIND_CONST("clear", ti::kClear);
+  BIND_CONST("home", ti::kHome);
+  BIND_CONST("clearAndHome", ti::kClearAndHome);
+  BIND_CONST("hideCursor", ti::kHideCursor);
+  BIND_CONST("showCursor", ti::kShowCursor);
+  BIND_CONST("switchToAltScreen", ti::kSwitchToAltScreen);
+  BIND_CONST("switchToMainScreen", ti::kSwitchToMainScreen);
+  BIND_CONST("bracketedPasteStart", ti::kBracketedPasteStart);
+  BIND_CONST("bracketedPasteEnd", ti::kBracketedPasteEnd);
+  BIND_CONST("bracketedPasteSet", ti::kBracketedPasteSet);
+  BIND_CONST("bracketedPasteReset", ti::kBracketedPasteReset);
+  BIND_CONST("resetBackground", ti::kResetBackground);
+  BIND_CONST("resetForeground", ti::kResetForeground);
+  BIND_CONST("eraseBelowCursor", ti::kEraseBelowCursor);
+  BIND_CONST("nextLine", ti::kNextLine);
+  BIND_CONST("bold", ti::kBold);
+  BIND_CONST("dim", ti::kDim);
+  BIND_CONST("italic", ti::kItalic);
+  BIND_CONST("underline", ti::kUnderline);
+  BIND_CONST("blink", ti::kBlink);
+  BIND_CONST("inverse", ti::kInverse);
+  BIND_CONST("hidden", ti::kHidden);
+  BIND_CONST("strikethrough", ti::kStrikethrough);
+
+#undef BIND_CONST
+
+  target->Set(context, NewOneByteString(isolate, "constants"), constants)
+      .Check();
+
+  Local<Object> sizes = Object::New(isolate);
+  sizes
+      ->Set(context, NewOneByteString(isolate, "maxCursorPositionLen"),
+            Integer::New(
+                isolate,
+                static_cast<int32_t>(ti::kMaxCursorPositionLen)))
+      .Check();
+  sizes
+      ->Set(context, NewOneByteString(isolate, "maxRgbSgrLen"),
+            Integer::New(isolate, static_cast<int32_t>(ti::kMaxRgbSgrLen)))
+      .Check();
+  sizes
+      ->Set(context, NewOneByteString(isolate, "maxAttrRunLen"),
+            Integer::New(isolate, static_cast<int32_t>(ti::kMaxAttrRunLen)))
+      .Check();
+  sizes
+      ->Set(context, NewOneByteString(isolate, "flushOverflow"),
+            Number::New(isolate,
+                        static_cast<double>(ti::Renderer::kFlushOverflow)))
+      .Check();
+  target->Set(context, NewOneByteString(isolate, "sizes"), sizes).Check();
+
+  SetMethod(context, target, "cursorPosition", CursorPosition);
+  SetMethod(context, target, "setFgRgb", SetFgRgb);
+  SetMethod(context, target, "setBgRgb", SetBgRgb);
+  SetFastMethodNoSideEffect(context, target, "writeCursorPosition",
+                            WriteCursorPosition, &fast_write_cursor_position);
+  SetFastMethodNoSideEffect(context, target, "writeFgRgb", WriteFgRgb,
+                            &fast_write_fg_rgb);
+  SetFastMethodNoSideEffect(context, target, "writeBgRgb", WriteBgRgb,
+                            &fast_write_bg_rgb);
+  SetFastMethodNoSideEffect(context, target, "writeAttributes", WriteAttributes,
+                            &fast_write_attributes);
+
+  SetMethod(context, target, "createParser", CreateParser);
+  SetMethod(context, target, "destroyParser", DestroyParser);
+  SetMethod(context, target, "resetParser", ResetParser);
+  SetMethod(context, target, "parseMouseOne", ParseMouseOne);
+  SetFastMethodNoSideEffect(context, target, "looksLikeMouseSequence",
+                            LooksLikeMouseSequence,
+                            &fast_looks_like_mouse_sequence);
+
+  SetMethod(context, target, "createRenderer", CreateRenderer);
+  SetMethod(context, target, "destroyRenderer", DestroyRenderer);
+  SetFastMethodNoSideEffect(context, target, "rendererResize", RendererResize,
+                            &fast_renderer_resize);
+  SetFastMethodNoSideEffect(context, target, "rendererInvalidate",
+                            RendererInvalidate, &fast_renderer_invalidate);
+  SetFastMethodNoSideEffect(context, target, "rendererClear", RendererClear,
+                            &fast_renderer_clear);
+  SetFastMethodNoSideEffect(context, target, "rendererSet", RendererSet,
+                            &fast_renderer_set);
+  SetFastMethodNoSideEffect(context, target, "rendererFillRect",
+                            RendererFillRect, &fast_renderer_fill_rect);
+  SetFastMethodNoSideEffect(context, target, "rendererDrawText",
+                            RendererDrawText, &fast_renderer_draw_text);
+  SetFastMethodNoSideEffect(context, target, "rendererFlush", RendererFlush,
+                            &fast_renderer_flush);
+  SetMethod(context, target, "rendererSize", RendererSize);
+
+  // Renderables (high-level draw helpers). Per-render-tree-node hot
+  // path; Fast API saves ~70 ns per call on the dispatch.
+  SetFastMethodNoSideEffect(context, target, "rendererDrawBox",
+                            RendererDrawBox, &fast_renderer_draw_box);
+  SetFastMethodNoSideEffect(context, target, "rendererDrawTextWrapped",
+                            RendererDrawTextWrapped,
+                            &fast_renderer_draw_text_wrapped);
+
+  // String width (Unicode 17.0). stringWidth keeps the slow path
+  // (V8 Fast API string-arg support is limited); the byte-array
+  // variant and codepoint variant get Fast API.
+  SetMethod(context, target, "stringWidth", StringWidthBinding);
+  SetFastMethodNoSideEffect(context, target, "stringWidthFromBytes",
+                            StringWidthFromBytes,
+                            &fast_string_width_from_bytes);
+  SetFastMethodNoSideEffect(context, target, "codepointWidth",
+                            CodepointWidthBinding, &fast_codepoint_width);
+
+  // Text buffer store (Section 6). All cold -> SetMethod, no Fast API.
+  SetMethod(context, target, "createTextBuffer", CreateTextBuffer);
+  SetMethod(context, target, "destroyTextBuffer", DestroyTextBuffer);
+  SetMethod(context, target, "textBufferGetLength", TextBufferGetLength);
+  SetMethod(context, target, "textBufferGetByteSize", TextBufferGetByteSize);
+  SetMethod(context, target, "textBufferGetLineCount", TextBufferGetLineCount);
+  SetMethod(context, target, "textBufferReset", TextBufferReset);
+  SetMethod(context, target, "textBufferClear", TextBufferClear);
+  SetMethod(context, target, "textBufferGetTabWidth", TextBufferGetTabWidth);
+  SetMethod(context, target, "textBufferSetTabWidth", TextBufferSetTabWidth);
+  SetMethod(context, target, "textBufferSetDefaultFg", TextBufferSetDefaultFg);
+  SetMethod(context, target, "textBufferSetDefaultBg", TextBufferSetDefaultBg);
+  SetMethod(context, target, "textBufferSetDefaultAttributes",
+            TextBufferSetDefaultAttributes);
+  SetMethod(context, target, "textBufferResetDefaults", TextBufferResetDefaults);
+  SetMethod(context, target, "textBufferRegisterMemBuffer",
+            TextBufferRegisterMemBuffer);
+  SetMethod(context, target, "textBufferReplaceMemBuffer",
+            TextBufferReplaceMemBuffer);
+  SetMethod(context, target, "textBufferClearMemRegistry",
+            TextBufferClearMemRegistry);
+  SetMethod(context, target, "textBufferSetTextFromMem",
+            TextBufferSetTextFromMem);
+  SetMethod(context, target, "textBufferAppend", TextBufferAppend);
+  SetMethod(context, target, "textBufferAppendFromMemId",
+            TextBufferAppendFromMemId);
+  SetMethod(context, target, "textBufferLoadFile", TextBufferLoadFile);
+  SetMethod(context, target, "textBufferGetPlainText", TextBufferGetPlainText);
+  SetMethod(context, target, "textBufferGetTextRange", TextBufferGetTextRange);
+  SetMethod(context, target, "textBufferGetTextRangeByCoords",
+            TextBufferGetTextRangeByCoords);
+  SetMethod(context, target, "textBufferAddHighlight", TextBufferAddHighlight);
+  SetMethod(context, target, "textBufferAddHighlightByCharRange",
+            TextBufferAddHighlightByCharRange);
+  SetMethod(context, target, "textBufferRemoveHighlightsByRef",
+            TextBufferRemoveHighlightsByRef);
+  SetMethod(context, target, "textBufferClearLineHighlights",
+            TextBufferClearLineHighlights);
+  SetMethod(context, target, "textBufferClearAllHighlights",
+            TextBufferClearAllHighlights);
+  SetMethod(context, target, "textBufferGetHighlightCount",
+            TextBufferGetHighlightCount);
+  SetMethod(context, target, "textBufferSetSyntaxStyle",
+            TextBufferSetSyntaxStyle);
+  SetMethod(context, target, "textBufferGetLineHighlightsPtr",
+            TextBufferGetLineHighlightsPtr);
+  SetMethod(context, target, "textBufferFreeLineHighlights",
+            TextBufferFreeLineHighlights);
+  SetMethod(context, target, "textBufferSetStyledText",
+            TextBufferSetStyledText);
+
+  // Text buffer view (Section 6b). All cold -> SetMethod, no Fast API.
+  SetMethod(context, target, "createTextBufferView", CreateTextBufferView);
+  SetMethod(context, target, "textBufferViewIsValid", TextBufferViewIsValid);
+  SetMethod(context, target, "destroyTextBufferView", DestroyTextBufferView);
+  SetMethod(context, target, "textBufferViewSetWrapMode",
+            TextBufferViewSetWrapMode);
+  SetMethod(context, target, "textBufferViewSetWrapWidth",
+            TextBufferViewSetWrapWidth);
+  SetMethod(context, target, "textBufferViewSetFirstLineOffset",
+            TextBufferViewSetFirstLineOffset);
+  SetMethod(context, target, "textBufferViewSetViewport",
+            TextBufferViewSetViewport);
+  SetMethod(context, target, "textBufferViewSetViewportSize",
+            TextBufferViewSetViewportSize);
+  SetMethod(context, target, "textBufferViewSetTruncate",
+            TextBufferViewSetTruncate);
+  SetMethod(context, target, "textBufferViewSetTabIndicator",
+            TextBufferViewSetTabIndicator);
+  SetMethod(context, target, "textBufferViewSetTabIndicatorColor",
+            TextBufferViewSetTabIndicatorColor);
+  SetMethod(context, target, "textBufferViewGetVirtualLineCount",
+            TextBufferViewGetVirtualLineCount);
+  SetMethod(context, target, "textBufferViewMeasureForDimensions",
+            TextBufferViewMeasureForDimensions);
+  SetMethod(context, target, "textBufferViewGetLineInfo",
+            TextBufferViewGetLineInfo);
+  SetMethod(context, target, "textBufferViewGetLogicalLineInfo",
+            TextBufferViewGetLogicalLineInfo);
+  SetMethod(context, target, "textBufferViewSetSelection",
+            TextBufferViewSetSelection);
+  SetMethod(context, target, "textBufferViewUpdateSelection",
+            TextBufferViewUpdateSelection);
+  SetMethod(context, target, "textBufferViewResetSelection",
+            TextBufferViewResetSelection);
+  SetMethod(context, target, "textBufferViewGetSelection",
+            TextBufferViewGetSelection);
+  SetMethod(context, target, "textBufferViewSetLocalSelection",
+            TextBufferViewSetLocalSelection);
+  SetMethod(context, target, "textBufferViewUpdateLocalSelection",
+            TextBufferViewUpdateLocalSelection);
+  SetMethod(context, target, "textBufferViewResetLocalSelection",
+            TextBufferViewResetLocalSelection);
+  SetMethod(context, target, "textBufferViewGetSelectedTextBytes",
+            TextBufferViewGetSelectedTextBytes);
+  SetMethod(context, target, "textBufferViewGetPlainTextBytes",
+            TextBufferViewGetPlainTextBytes);
+  SetMethod(context, target, "bufferDrawTextBufferView",
+            BufferDrawTextBufferView);
+
+  SetFastMethodNoSideEffect(context, target, "yogaCalculateLayout",
+                            YogaCalculateLayout,
+                            &fast_yoga_calculate_layout);
+  SetFastMethodNoSideEffect(context, target, "yogaCreateNode", YogaCreateNode,
+                            &fast_yoga_create_node);
+  SetFastMethodNoSideEffect(context, target, "yogaFreeNode", YogaFreeNode,
+                            &fast_yoga_free_node);
+  SetMethod(context, target, "yogaGetComputedLayout", YogaGetComputedLayout);
+  SetFastMethodNoSideEffect(context, target, "yogaInsertChild",
+                            YogaInsertChild, &fast_yoga_insert_child);
+  SetFastMethodNoSideEffect(context, target, "yogaMarkDirty", YogaMarkDirty,
+                            &fast_yoga_mark_dirty);
+  SetFastMethodNoSideEffect(context, target, "yogaRemoveChild",
+                            YogaRemoveChild, &fast_yoga_remove_child);
+  SetFastMethodNoSideEffect(context, target, "yogaSetAlignItems",
+                            YogaSetAlignItems, &fast_yoga_set_align_items);
+  SetFastMethodNoSideEffect(context, target, "yogaSetAlignSelf",
+                            YogaSetAlignSelf, &fast_yoga_set_align_self);
+  SetFastMethodNoSideEffect(context, target, "yogaSetFlexBasis",
+                            YogaSetFlexBasis, &fast_yoga_set_flex_basis);
+  SetFastMethodNoSideEffect(context, target, "yogaSetFlexDirection",
+                            YogaSetFlexDirection,
+                            &fast_yoga_set_flex_direction);
+  SetFastMethodNoSideEffect(context, target, "yogaSetFlexGrow",
+                            YogaSetFlexGrow, &fast_yoga_set_flex_grow);
+  SetFastMethodNoSideEffect(context, target, "yogaSetFlexShrink",
+                            YogaSetFlexShrink, &fast_yoga_set_flex_shrink);
+  SetFastMethodNoSideEffect(context, target, "yogaSetFlexWrap",
+                            YogaSetFlexWrap, &fast_yoga_set_flex_wrap);
+  SetFastMethodNoSideEffect(context, target, "yogaSetHeight", YogaSetHeight,
+                            &fast_yoga_set_height);
+  SetFastMethodNoSideEffect(context, target, "yogaSetJustifyContent",
+                            YogaSetJustifyContent,
+                            &fast_yoga_set_justify_content);
+  SetFastMethodNoSideEffect(context, target, "yogaSetMargin", YogaSetMargin,
+                            &fast_yoga_set_margin);
+  SetFastMethodNoSideEffect(context, target, "yogaSetPadding", YogaSetPadding,
+                            &fast_yoga_set_padding);
+  SetFastMethodNoSideEffect(context, target, "yogaSetPosition", YogaSetPosition,
+                            &fast_yoga_set_position);
+  SetFastMethodNoSideEffect(context, target, "yogaSetPositionType",
+                            YogaSetPositionType,
+                            &fast_yoga_set_position_type);
+  SetFastMethodNoSideEffect(context, target, "yogaSetWidth", YogaSetWidth,
+                            &fast_yoga_set_width);
+
+  // Yoga enum mirrors. Values come straight from YG*.h so JS doesn't
+  // hard-code numbers that could drift if Yoga adds a new entry.
+  Local<Object> flexDirection = Object::New(isolate);
+#define BIND_FLEX_DIR(name, value)                                  \
+  flexDirection                                                     \
+      ->Set(context, NewOneByteString(isolate, name),               \
+            Integer::New(isolate, static_cast<int32_t>(value)))     \
+      .Check();
+  BIND_FLEX_DIR("COLUMN", YGFlexDirectionColumn);
+  BIND_FLEX_DIR("COLUMN_REVERSE", YGFlexDirectionColumnReverse);
+  BIND_FLEX_DIR("ROW", YGFlexDirectionRow);
+  BIND_FLEX_DIR("ROW_REVERSE", YGFlexDirectionRowReverse);
+#undef BIND_FLEX_DIR
+  target->Set(context, NewOneByteString(isolate, "flexDirection"),
+              flexDirection)
+      .Check();
+
+  Local<Object> justify = Object::New(isolate);
+#define BIND_JUSTIFY(name, value)                                   \
+  justify                                                           \
+      ->Set(context, NewOneByteString(isolate, name),               \
+            Integer::New(isolate, static_cast<int32_t>(value)))     \
+      .Check();
+  BIND_JUSTIFY("FLEX_START", YGJustifyFlexStart);
+  BIND_JUSTIFY("CENTER", YGJustifyCenter);
+  BIND_JUSTIFY("FLEX_END", YGJustifyFlexEnd);
+  BIND_JUSTIFY("SPACE_BETWEEN", YGJustifySpaceBetween);
+  BIND_JUSTIFY("SPACE_AROUND", YGJustifySpaceAround);
+  BIND_JUSTIFY("SPACE_EVENLY", YGJustifySpaceEvenly);
+#undef BIND_JUSTIFY
+  target->Set(context, NewOneByteString(isolate, "justify"), justify)
+      .Check();
+
+  Local<Object> align = Object::New(isolate);
+#define BIND_ALIGN(name, value)                                     \
+  align                                                             \
+      ->Set(context, NewOneByteString(isolate, name),               \
+            Integer::New(isolate, static_cast<int32_t>(value)))     \
+      .Check();
+  BIND_ALIGN("AUTO", YGAlignAuto);
+  BIND_ALIGN("FLEX_START", YGAlignFlexStart);
+  BIND_ALIGN("CENTER", YGAlignCenter);
+  BIND_ALIGN("FLEX_END", YGAlignFlexEnd);
+  BIND_ALIGN("STRETCH", YGAlignStretch);
+  BIND_ALIGN("BASELINE", YGAlignBaseline);
+  BIND_ALIGN("SPACE_BETWEEN", YGAlignSpaceBetween);
+  BIND_ALIGN("SPACE_AROUND", YGAlignSpaceAround);
+  BIND_ALIGN("SPACE_EVENLY", YGAlignSpaceEvenly);
+#undef BIND_ALIGN
+  target->Set(context, NewOneByteString(isolate, "align"), align).Check();
+
+  Local<Object> edge = Object::New(isolate);
+#define BIND_EDGE(name, value)                                      \
+  edge                                                              \
+      ->Set(context, NewOneByteString(isolate, name),               \
+            Integer::New(isolate, static_cast<int32_t>(value)))     \
+      .Check();
+  BIND_EDGE("LEFT", YGEdgeLeft);
+  BIND_EDGE("TOP", YGEdgeTop);
+  BIND_EDGE("RIGHT", YGEdgeRight);
+  BIND_EDGE("BOTTOM", YGEdgeBottom);
+  BIND_EDGE("START", YGEdgeStart);
+  BIND_EDGE("END", YGEdgeEnd);
+  BIND_EDGE("HORIZONTAL", YGEdgeHorizontal);
+  BIND_EDGE("VERTICAL", YGEdgeVertical);
+  BIND_EDGE("ALL", YGEdgeAll);
+#undef BIND_EDGE
+  target->Set(context, NewOneByteString(isolate, "edge"), edge).Check();
+
+  Local<Object> wrap = Object::New(isolate);
+#define BIND_WRAP(name, value)                                      \
+  wrap                                                              \
+      ->Set(context, NewOneByteString(isolate, name),               \
+            Integer::New(isolate, static_cast<int32_t>(value)))     \
+      .Check();
+  BIND_WRAP("NO_WRAP", YGWrapNoWrap);
+  BIND_WRAP("WRAP", YGWrapWrap);
+  BIND_WRAP("WRAP_REVERSE", YGWrapWrapReverse);
+#undef BIND_WRAP
+  target->Set(context, NewOneByteString(isolate, "wrap"), wrap).Check();
+
+  Local<Object> positionType = Object::New(isolate);
+#define BIND_POS(name, value)                                       \
+  positionType                                                      \
+      ->Set(context, NewOneByteString(isolate, name),               \
+            Integer::New(isolate, static_cast<int32_t>(value)))     \
+      .Check();
+  BIND_POS("STATIC", YGPositionTypeStatic);
+  BIND_POS("RELATIVE", YGPositionTypeRelative);
+  BIND_POS("ABSOLUTE", YGPositionTypeAbsolute);
+#undef BIND_POS
+  target->Set(context, NewOneByteString(isolate, "positionType"),
+              positionType)
+      .Check();
+
+  Local<Object> direction = Object::New(isolate);
+#define BIND_DIR(name, value)                                       \
+  direction                                                         \
+      ->Set(context, NewOneByteString(isolate, name),               \
+            Integer::New(isolate, static_cast<int32_t>(value)))     \
+      .Check();
+  BIND_DIR("INHERIT", YGDirectionInherit);
+  BIND_DIR("LTR", YGDirectionLTR);
+  BIND_DIR("RTL", YGDirectionRTL);
+#undef BIND_DIR
+  target->Set(context, NewOneByteString(isolate, "direction"), direction)
+      .Check();
+
+  Local<Object> events = Object::New(isolate);
+#define BIND_EVENT(name, value) \
+  events                        \
+      ->Set(context, NewOneByteString(isolate, name), \
+            Integer::New(isolate, static_cast<int32_t>(value))) \
+      .Check();
+  BIND_EVENT("DOWN", ti::MouseEventType::kDown);
+  BIND_EVENT("UP", ti::MouseEventType::kUp);
+  BIND_EVENT("MOVE", ti::MouseEventType::kMove);
+  BIND_EVENT("DRAG", ti::MouseEventType::kDrag);
+  BIND_EVENT("DRAG_END", ti::MouseEventType::kDragEnd);
+  BIND_EVENT("DROP", ti::MouseEventType::kDrop);
+  BIND_EVENT("OVER", ti::MouseEventType::kOver);
+  BIND_EVENT("OUT", ti::MouseEventType::kOut);
+  BIND_EVENT("SCROLL", ti::MouseEventType::kScroll);
+#undef BIND_EVENT
+  target->Set(context, NewOneByteString(isolate, "mouseEventType"), events)
+      .Check();
+
+  Local<Object> scrolls = Object::New(isolate);
+#define BIND_SCROLL(name, value) \
+  scrolls                        \
+      ->Set(context, NewOneByteString(isolate, name), \
+            Integer::New(isolate, static_cast<int32_t>(value))) \
+      .Check();
+  BIND_SCROLL("UP", ti::ScrollDirection::kUp);
+  BIND_SCROLL("DOWN", ti::ScrollDirection::kDown);
+  BIND_SCROLL("LEFT", ti::ScrollDirection::kLeft);
+  BIND_SCROLL("RIGHT", ti::ScrollDirection::kRight);
+#undef BIND_SCROLL
+  target->Set(context, NewOneByteString(isolate, "scrollDirection"), scrolls)
+      .Check();
+}
+
+static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
+  registry->Register(CursorPosition);
+  registry->Register(SetFgRgb);
+  registry->Register(SetBgRgb);
+  registry->Register(WriteCursorPosition);
+  registry->Register(fast_write_cursor_position);
+  registry->Register(WriteFgRgb);
+  registry->Register(fast_write_fg_rgb);
+  registry->Register(WriteBgRgb);
+  registry->Register(fast_write_bg_rgb);
+  registry->Register(WriteAttributes);
+  registry->Register(fast_write_attributes);
+  registry->Register(CreateParser);
+  registry->Register(DestroyParser);
+  registry->Register(ResetParser);
+  registry->Register(ParseMouseOne);
+  registry->Register(LooksLikeMouseSequence);
+  registry->Register(fast_looks_like_mouse_sequence);
+  registry->Register(CreateRenderer);
+  registry->Register(DestroyRenderer);
+  registry->Register(RendererResize);
+  registry->Register(fast_renderer_resize);
+  registry->Register(RendererInvalidate);
+  registry->Register(fast_renderer_invalidate);
+  registry->Register(RendererClear);
+  registry->Register(fast_renderer_clear);
+  registry->Register(RendererSet);
+  registry->Register(fast_renderer_set);
+  registry->Register(RendererFillRect);
+  registry->Register(fast_renderer_fill_rect);
+  registry->Register(RendererDrawText);
+  registry->Register(fast_renderer_draw_text);
+  registry->Register(RendererFlush);
+  registry->Register(fast_renderer_flush);
+  registry->Register(RendererSize);
+  registry->Register(CreateTextBuffer);
+  registry->Register(DestroyTextBuffer);
+  registry->Register(TextBufferGetLength);
+  registry->Register(TextBufferGetByteSize);
+  registry->Register(TextBufferGetLineCount);
+  registry->Register(TextBufferReset);
+  registry->Register(TextBufferClear);
+  registry->Register(TextBufferGetTabWidth);
+  registry->Register(TextBufferSetTabWidth);
+  registry->Register(TextBufferSetDefaultFg);
+  registry->Register(TextBufferSetDefaultBg);
+  registry->Register(TextBufferSetDefaultAttributes);
+  registry->Register(TextBufferResetDefaults);
+  registry->Register(TextBufferRegisterMemBuffer);
+  registry->Register(TextBufferReplaceMemBuffer);
+  registry->Register(TextBufferClearMemRegistry);
+  registry->Register(TextBufferSetTextFromMem);
+  registry->Register(TextBufferAppend);
+  registry->Register(TextBufferAppendFromMemId);
+  registry->Register(TextBufferLoadFile);
+  registry->Register(TextBufferGetPlainText);
+  registry->Register(TextBufferGetTextRange);
+  registry->Register(TextBufferGetTextRangeByCoords);
+  registry->Register(TextBufferAddHighlight);
+  registry->Register(TextBufferAddHighlightByCharRange);
+  registry->Register(TextBufferRemoveHighlightsByRef);
+  registry->Register(TextBufferClearLineHighlights);
+  registry->Register(TextBufferClearAllHighlights);
+  registry->Register(TextBufferGetHighlightCount);
+  registry->Register(TextBufferSetSyntaxStyle);
+  registry->Register(TextBufferGetLineHighlightsPtr);
+  registry->Register(TextBufferFreeLineHighlights);
+  registry->Register(TextBufferSetStyledText);
+  registry->Register(CreateTextBufferView);
+  registry->Register(TextBufferViewIsValid);
+  registry->Register(DestroyTextBufferView);
+  registry->Register(TextBufferViewSetWrapMode);
+  registry->Register(TextBufferViewSetWrapWidth);
+  registry->Register(TextBufferViewSetFirstLineOffset);
+  registry->Register(TextBufferViewSetViewport);
+  registry->Register(TextBufferViewSetViewportSize);
+  registry->Register(TextBufferViewSetTruncate);
+  registry->Register(TextBufferViewSetTabIndicator);
+  registry->Register(TextBufferViewSetTabIndicatorColor);
+  registry->Register(TextBufferViewGetVirtualLineCount);
+  registry->Register(TextBufferViewMeasureForDimensions);
+  registry->Register(TextBufferViewGetLineInfo);
+  registry->Register(TextBufferViewGetLogicalLineInfo);
+  registry->Register(TextBufferViewSetSelection);
+  registry->Register(TextBufferViewUpdateSelection);
+  registry->Register(TextBufferViewResetSelection);
+  registry->Register(TextBufferViewGetSelection);
+  registry->Register(TextBufferViewSetLocalSelection);
+  registry->Register(TextBufferViewUpdateLocalSelection);
+  registry->Register(TextBufferViewResetLocalSelection);
+  registry->Register(TextBufferViewGetSelectedTextBytes);
+  registry->Register(TextBufferViewGetPlainTextBytes);
+  registry->Register(BufferDrawTextBufferView);
+  registry->Register(RendererDrawBox);
+  registry->Register(fast_renderer_draw_box);
+  registry->Register(RendererDrawTextWrapped);
+  registry->Register(fast_renderer_draw_text_wrapped);
+  registry->Register(StringWidthBinding);
+  registry->Register(StringWidthFromBytes);
+  registry->Register(fast_string_width_from_bytes);
+  registry->Register(CodepointWidthBinding);
+  registry->Register(fast_codepoint_width);
+  registry->Register(YogaCalculateLayout);
+  registry->Register(fast_yoga_calculate_layout);
+  registry->Register(YogaCreateNode);
+  registry->Register(fast_yoga_create_node);
+  registry->Register(YogaFreeNode);
+  registry->Register(fast_yoga_free_node);
+  registry->Register(YogaGetComputedLayout);
+  registry->Register(YogaInsertChild);
+  registry->Register(fast_yoga_insert_child);
+  registry->Register(YogaMarkDirty);
+  registry->Register(fast_yoga_mark_dirty);
+  registry->Register(YogaRemoveChild);
+  registry->Register(fast_yoga_remove_child);
+  registry->Register(YogaSetAlignItems);
+  registry->Register(fast_yoga_set_align_items);
+  registry->Register(YogaSetAlignSelf);
+  registry->Register(fast_yoga_set_align_self);
+  registry->Register(YogaSetFlexBasis);
+  registry->Register(fast_yoga_set_flex_basis);
+  registry->Register(YogaSetFlexDirection);
+  registry->Register(fast_yoga_set_flex_direction);
+  registry->Register(YogaSetFlexGrow);
+  registry->Register(fast_yoga_set_flex_grow);
+  registry->Register(YogaSetFlexShrink);
+  registry->Register(fast_yoga_set_flex_shrink);
+  registry->Register(YogaSetFlexWrap);
+  registry->Register(fast_yoga_set_flex_wrap);
+  registry->Register(YogaSetHeight);
+  registry->Register(fast_yoga_set_height);
+  registry->Register(YogaSetJustifyContent);
+  registry->Register(fast_yoga_set_justify_content);
+  registry->Register(YogaSetMargin);
+  registry->Register(fast_yoga_set_margin);
+  registry->Register(YogaSetPadding);
+  registry->Register(fast_yoga_set_padding);
+  registry->Register(YogaSetPosition);
+  registry->Register(fast_yoga_set_position);
+  registry->Register(YogaSetPositionType);
+  registry->Register(fast_yoga_set_position_type);
+  registry->Register(YogaSetWidth);
+  registry->Register(fast_yoga_set_width);
+}
+
+}  // namespace tui
+}  // namespace socketsecurity
+}  // namespace node
+
+NODE_BINDING_CONTEXT_AWARE_INTERNAL(smol_tui,
+                                    node::socketsecurity::tui::Initialize)
+NODE_BINDING_EXTERNAL_REFERENCE(
+    smol_tui, node::socketsecurity::tui::RegisterExternalReferences)
