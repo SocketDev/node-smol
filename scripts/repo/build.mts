@@ -27,6 +27,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { parseArgs } from 'node:util'
 
+import { isPlainObject } from '@socketsecurity/lib-stable/objects/predicates'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { isMainModule } from '../fleet/_shared/is-main-module.mts'
@@ -52,14 +53,6 @@ export interface PrebakePlan {
 }
 
 /**
- * Type guard for a plain JSON object — keeps the config walk free of type
- * assertions.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value)
-}
-
-/**
  * Extract the prebake plan from a parsed socket-wheelhouse.json root. Returns
  * an error string (for fail-loud reporting) when the shape is not usable.
  */
@@ -67,11 +60,11 @@ export function extractPrebakePlan(
   configValue: Record<string, unknown>,
 ): PrebakePlan | string {
   const docker = configValue['docker']
-  if (!isRecord(docker)) {
+  if (!isPlainObject(docker)) {
     return 'config has no docker section'
   }
   const prebakes = docker['prebakes']
-  if (!isRecord(prebakes)) {
+  if (!isPlainObject(prebakes)) {
     return 'config has no docker.prebakes section'
   }
   const registry = prebakes['registry']
@@ -85,7 +78,7 @@ export function extractPrebakePlan(
   const entries: PrebakeEntry[] = []
   for (let i = 0, { length } = rawEntries; i < length; i += 1) {
     const entry: unknown = rawEntries[i]
-    if (!isRecord(entry)) {
+    if (!isPlainObject(entry)) {
       return `docker.prebakes.prebakes[${i}] is not an object`
     }
     const name = entry['name']

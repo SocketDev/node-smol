@@ -19,14 +19,16 @@ export function findVFSKey(
   }
 
   // Check with trailing slash for directories
-  // oxlint-disable-next-line socket/normalize-path-before-match -- vfsPath is a VFS-internal namespace key ('/'-only by design), not an OS filesystem path; normalizePath's cross-platform separator unification doesn't apply here
+  // VFS keys use slash separators and are not host filesystem paths.
+  // oxlint-disable-next-line socket/paths-are-normalized-before-match-at-edit -- VFS key
   const withSlash = vfsPath.endsWith('/') ? vfsPath : `${vfsPath}/`
   if (entries.has(withSlash)) {
     return withSlash
   }
 
   // Check without trailing slash
-  // oxlint-disable-next-line socket/normalize-path-before-match -- vfsPath is a VFS-internal namespace key ('/'-only by design), not an OS filesystem path
+  // VFS keys use slash separators and are not host filesystem paths.
+  // oxlint-disable-next-line socket/paths-are-normalized-before-match-at-edit -- VFS key
   const withoutSlash = vfsPath.endsWith('/') ? vfsPath.slice(0, -1) : vfsPath
   if (withoutSlash !== vfsPath && entries.has(withoutSlash)) {
     return withoutSlash
