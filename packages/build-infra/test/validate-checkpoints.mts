@@ -20,7 +20,14 @@ const CHECKPOINT_FORMATS = ['*.tar', '*.tar.gz', '*.tgz'] as const
 /**
  * Result of checkpoint validation.
  */
+export type CheckpointValidationStatus =
+  | 'missing-directories'
+  | 'missing-archives'
+  | 'valid'
+  | 'corrupted'
+
 export interface ValidationResult {
+  status: CheckpointValidationStatus
   checkpointsFound: boolean
   valid: boolean
   message: string
@@ -128,6 +135,7 @@ export function validateCheckpoints(
       checkpointsFound: false,
       corruptedCount: 0,
       message: 'No checkpoint directories found',
+      status: 'missing-directories',
       valid: false,
     }
   }
@@ -150,6 +158,7 @@ export function validateCheckpoints(
       checkpointsFound: true,
       corruptedCount: 0,
       message: 'No checkpoint archives found',
+      status: 'missing-archives',
       valid: false,
     }
   }
@@ -171,6 +180,7 @@ export function validateCheckpoints(
       checkpointsFound: true,
       corruptedCount: 0,
       message: 'All checkpoints valid',
+      status: 'valid',
       valid: true,
     }
   }
@@ -180,6 +190,7 @@ export function validateCheckpoints(
     checkpointsFound: true,
     corruptedCount,
     message: 'Corrupted checkpoints detected',
+    status: 'corrupted',
     valid: false,
   }
 }

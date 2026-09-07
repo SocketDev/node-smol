@@ -142,7 +142,7 @@ describe('no checkpoint directories', () => {
 
     expect(result.checkpointsFound).toBeFalsy()
     expect(result.valid).toBeFalsy()
-    expect(result.message).toBe('No checkpoint directories found')
+    expect(result.status).toBe('missing-directories')
     expect(result.checkpointCount).toBe(0)
     expect(result.corruptedCount).toBe(0)
   })
@@ -166,7 +166,7 @@ describe('empty checkpoint directories', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeFalsy()
-    expect(result.message).toBe('No checkpoint archives found')
+    expect(result.status).toBe('missing-archives')
     expect(result.checkpointCount).toBe(0)
     expect(result.corruptedCount).toBe(0)
   })
@@ -192,7 +192,7 @@ describe('valid checkpoints', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeTruthy()
-    expect(result.message).toBe('All checkpoints valid')
+    expect(result.status).toBe('valid')
     expect(result.checkpointCount).toBe(1)
     expect(result.corruptedCount).toBe(0)
   })
@@ -212,7 +212,7 @@ describe('valid checkpoints', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeTruthy()
-    expect(result.message).toBe('All checkpoints valid')
+    expect(result.status).toBe('valid')
     expect(result.checkpointCount).toBe(1)
     expect(result.corruptedCount).toBe(0)
   })
@@ -232,7 +232,7 @@ describe('valid checkpoints', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeTruthy()
-    expect(result.message).toBe('All checkpoints valid')
+    expect(result.status).toBe('valid')
     expect(result.checkpointCount).toBe(1)
     expect(result.corruptedCount).toBe(0)
   })
@@ -254,7 +254,7 @@ describe('valid checkpoints', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeTruthy()
-    expect(result.message).toBe('All checkpoints valid')
+    expect(result.status).toBe('valid')
     expect(result.checkpointCount).toBe(3)
     expect(result.corruptedCount).toBe(0)
   })
@@ -280,7 +280,7 @@ describe('corrupted checkpoints', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeFalsy()
-    expect(result.message).toBe('Corrupted checkpoints detected')
+    expect(result.status).toBe('corrupted')
     expect(result.checkpointCount).toBe(1)
     expect(result.corruptedCount).toBe(1)
   })
@@ -302,7 +302,7 @@ describe('corrupted checkpoints', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeFalsy()
-    expect(result.message).toBe('Corrupted checkpoints detected')
+    expect(result.status).toBe('corrupted')
     expect(result.checkpointCount).toBe(3)
     expect(result.corruptedCount).toBe(1)
   })
@@ -327,7 +327,7 @@ describe('corrupted checkpoints', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeFalsy()
-    expect(result.message).toBe('Corrupted checkpoints detected')
+    expect(result.status).toBe('corrupted')
     expect(result.checkpointCount).toBe(1)
     expect(result.corruptedCount).toBe(1)
   })
@@ -353,7 +353,7 @@ describe('build modes', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeTruthy()
-    expect(result.message).toBe('All checkpoints valid')
+    expect(result.status).toBe('valid')
     expect(result.checkpointCount).toBe(1)
     expect(result.corruptedCount).toBe(0)
   })
@@ -373,7 +373,7 @@ describe('build modes', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeTruthy()
-    expect(result.message).toBe('All checkpoints valid')
+    expect(result.status).toBe('valid')
     expect(result.checkpointCount).toBe(1)
     expect(result.corruptedCount).toBe(0)
   })
@@ -404,7 +404,7 @@ describe('shared checkpoints', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeTruthy()
-    expect(result.message).toBe('All checkpoints valid')
+    expect(result.status).toBe('valid')
     expect(result.checkpointCount).toBe(1)
     expect(result.corruptedCount).toBe(0)
   })
@@ -427,7 +427,7 @@ describe('shared checkpoints', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeTruthy()
-    expect(result.message).toBe('All checkpoints valid')
+    expect(result.status).toBe('valid')
     expect(result.checkpointCount).toBe(2)
     expect(result.corruptedCount).toBe(0)
   })
@@ -450,7 +450,7 @@ describe('shared checkpoints', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeFalsy()
-    expect(result.message).toBe('Corrupted checkpoints detected')
+    expect(result.status).toBe('corrupted')
     expect(result.checkpointCount).toBe(2)
     expect(result.corruptedCount).toBe(1)
   })
@@ -478,7 +478,7 @@ describe('mixed archive formats', () => {
 
     expect(result.checkpointsFound).toBeTruthy()
     expect(result.valid).toBeTruthy()
-    expect(result.message).toBe('All checkpoints valid')
+    expect(result.status).toBe('valid')
     expect(result.checkpointCount).toBe(3)
     expect(result.corruptedCount).toBe(0)
   })
