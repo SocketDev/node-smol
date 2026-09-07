@@ -138,7 +138,7 @@ export async function linksLibFuzzer(cxx: string): Promise<boolean> {
   } catch {
     return false
   } finally {
-    safeDeleteSync(probeDir, { force: true })
+    safeDeleteSync(probeDir)
   }
 }
 

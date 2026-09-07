@@ -29,7 +29,7 @@ function loadNativeBinding(config) {
     return opts.require(packageName)
   } catch (cause) {
     const detail =
-      cause && typeof cause === 'object' && 'message' in cause
+      cause !== null && typeof cause === 'object' && 'message' in cause
         ? String(cause.message)
         : String(cause)
     const error = new Error(`Failed to load ${packageName}: ${detail}`, {

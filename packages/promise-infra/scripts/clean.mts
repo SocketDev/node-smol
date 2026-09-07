@@ -23,7 +23,7 @@ void (async () => {
   for (let i = 0, { length } = CLEAN_TARGETS; i < length; i += 1) {
     const target = CLEAN_TARGETS[i]
     const fullPath = path.join(packageRoot, target)
-    await safeDelete(fullPath, { force: true })
+    await safeDelete(fullPath)
     logger.success(`removed ${target}/`)
   }
 })()

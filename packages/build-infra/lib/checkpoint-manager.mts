@@ -399,7 +399,7 @@ export async function createCheckpoint(
       // oxlint-disable-next-line socket/prefer-exists-sync -- see above
       const tempStats = await fs.stat(tempTarballPath)
       if (tempStats.size === 0) {
-        safeDeleteSync(tempTarballPath, { force: true })
+        safeDeleteSync(tempTarballPath)
         throw new Error(
           `Tar created empty file (0 bytes). Artifact may not exist or tar command failed: ${resolvedArtifactPath}`,
         )
@@ -408,7 +408,7 @@ export async function createCheckpoint(
       // Check for unreasonably large checkpoints (>2GB indicates unintended files included)
       const MAX_CHECKPOINT_SIZE = 2 * 1024 * 1024 * 1024
       if (tempStats.size > MAX_CHECKPOINT_SIZE) {
-        safeDeleteSync(tempTarballPath, { force: true })
+        safeDeleteSync(tempTarballPath)
         throw new Error(
           `Checkpoint tarball exceeds maximum size: ${(tempStats.size / 1024 / 1024).toFixed(1)}MB > 2048MB. ` +
             `This may indicate unintended files were included in checkpoint: ${resolvedArtifactPath}`,
@@ -468,7 +468,7 @@ export async function createCheckpoint(
                 logger.warn(
                   `Checkpoint already exists: ${tarballPath}. Concurrent build detected, skipping overwrite.`,
                 )
-                safeDeleteSync(tempTarballPath, { force: true })
+                safeDeleteSync(tempTarballPath)
                 checkpointAlreadyExists = true
                 // Don't return - continue to cleanup code
               } else {
@@ -477,7 +477,7 @@ export async function createCheckpoint(
                 renameSync(tempTarballPath, tarballPath)
               }
             } catch {
-              safeDeleteSync(tempTarballPath, { force: true })
+              safeDeleteSync(tempTarballPath)
               checkpointAlreadyExists = true
             }
           } else if (renameErrorCode === 'ENOENT') {
@@ -498,7 +498,7 @@ export async function createCheckpoint(
     } catch (e) {
       // Clean up temp file on failure
       if (existsSync(tempTarballPath)) {
-        safeDeleteSync(tempTarballPath, { force: true })
+        safeDeleteSync(tempTarballPath)
       }
       const workingDirExists = existsSync(tarDir)
       const sourceExists = existsSync(resolvedArtifactPath)
@@ -556,7 +556,7 @@ export async function createCheckpoint(
       } finally {
         // Clean up temporary extraction directory
         if (existsSync(tempExtractDir)) {
-          safeDeleteSync(tempExtractDir, { force: true, recursive: true })
+          safeDeleteSync(tempExtractDir, { recursive: true })
         }
       }
     }
@@ -677,7 +677,7 @@ export async function createCheckpoint(
         logger.warn(
           `Checkpoint JSON already exists: ${checkpointFile}. Concurrent build detected.`,
         )
-        safeDeleteSync(tempCheckpointFile, { force: true })
+        safeDeleteSync(tempCheckpointFile)
         // Don't return - continue to cleanup code
       } else {
         throw e
@@ -1525,7 +1525,7 @@ export async function writeCacheHash(
     if (isErrnoException(e) && (e.code === 'EEXIST' || e.code === 'EPERM')) {
       // Concurrent build already wrote hash file - safe to ignore since
       // deterministic builds produce identical hashes
-      safeDeleteSync(tempHashFile, { force: true })
+      safeDeleteSync(tempHashFile)
       return
     }
     throw e

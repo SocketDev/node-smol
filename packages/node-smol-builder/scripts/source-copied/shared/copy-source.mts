@@ -89,7 +89,7 @@ export async function cloneNodeSource(config) {
     if (existsSync(sharedSourceDir) && (cleanBuild || versionMismatch)) {
       logger.step('Clean Build Requested')
       logger.log('Removing existing shared Node.js source directory…')
-      await safeDelete(sharedSourceDir, { force: true, recursive: true })
+      await safeDelete(sharedSourceDir, { recursive: true })
       await cleanCheckpoint(sharedBuildDir, packageName)
       logger.success('Cleaned shared source directory')
       logger.log('')
@@ -191,7 +191,7 @@ export async function cloneNodeSource(config) {
         'Existing source directory is invalid (missing configure script)',
       )
       logger.info('Will re-copy from upstream…')
-      await safeDelete(sharedSourceDir, { force: true, recursive: true })
+      await safeDelete(sharedSourceDir, { recursive: true })
 
       // Recursively call to handle the fresh clone
       await cloneNodeSource(config)

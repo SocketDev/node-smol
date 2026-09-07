@@ -22,7 +22,7 @@ const scratchDirs: string[] = []
 
 afterEach(async () => {
   for (const directory of scratchDirs.splice(0)) {
-    await safeDelete(directory, { force: true })
+    await safeDelete(directory)
   }
 })
 

@@ -99,6 +99,18 @@ export async function checkDockerSetup() {
 }
 
 /**
+ * Map target to Docker image tag.
+ *
+ * @param {string} target - Build target (e.g., 'linux-x64-glibc')
+ *
+ * @returns {string | undefined} Docker image tag or undefined if not
+ *   Docker-buildable.
+ */
+export function getBuilderImageTag(target) {
+  return BUILDER_IMAGE_TAGS[target]
+}
+
+/**
  * Determine build strategy for a target.
  *
  * @param {string} target - Build target.
@@ -136,18 +148,6 @@ export function getBuildStrategy(target) {
 
   // Download pre-built for everything else
   return 'download'
-}
-
-/**
- * Map target to Docker image tag.
- *
- * @param {string} target - Build target (e.g., 'linux-x64-glibc')
- *
- * @returns {string | undefined} Docker image tag or undefined if not
- *   Docker-buildable.
- */
-export function getBuilderImageTag(target) {
-  return BUILDER_IMAGE_TAGS[target]
 }
 
 /**
