@@ -1,10 +1,9 @@
-# stuie-main-HEAD
-# no-release-tag: stuie publishes no release tags (git ls-remote --tags is empty)
+# stuie-cabi-snapshot (2026-08-03) sha256:573544022eb6c1c2d924aba6e5d27a360b3d3c39ea3a8fb036f0159821528f23
 [submodule "upstream/stuie"]
+	ref = ae927afb9e8176dc4c7b642a1d8e638285df448a
 	ignore = dirty
 	path = upstream/stuie
 	url = git@github.com:SocketDev/stuie.git
-	branch = main
 	shallow = true
 # node-v26.7.0 (2026-08-05) sha256:55978d14606877dcb1ffd9d2b789fde4fac5355709eec9913e870b65d94f1f33
 [submodule "packages/node-smol-builder/upstream/node"]

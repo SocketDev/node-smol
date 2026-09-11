@@ -17,7 +17,7 @@ import {
   renderFindings,
   summarize,
   validateMap,
-} from '../../../scripts/repo/check/smol-tui-cabi-symbols-are-mapped.mts'
+} from '../../../../../scripts/repo/check/smol-tui-cabi-symbols-are-mapped/audit.mts'
 import type {
   AuditFinding,
   AuditFindingKind,
@@ -25,7 +25,7 @@ import type {
   CabiSymbol,
   CabiSymbolMap,
   CabiSymbolSnapshot,
-} from '../../../scripts/repo/check/smol-tui-cabi-symbols-are-mapped.mts'
+} from '../../../../../scripts/repo/check/smol-tui-cabi-symbols-are-mapped/audit.mts'
 
 const CABI_FILE = 'crates/stuie-cabi/src/cabi.rs'
 
