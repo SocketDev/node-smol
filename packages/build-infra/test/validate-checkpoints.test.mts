@@ -92,14 +92,12 @@ export function createValidTarGz(tarPath: string): void {
   const testFile = path.join(contentDir, 'test.txt')
   writeFileSync(testFile, 'test content')
 
-  const result = spawnSync(
-    'tar',
-    ['-czf', tarPath, '-C', contentDir, 'test.txt'],
-    {
-      encoding: 'utf8',
-      stdio: 'pipe',
-    },
-  )
+  const relativeTarPath = path.relative(contentDir, tarPath)
+  const result = spawnSync('tar', ['-czf', relativeTarPath, 'test.txt'], {
+    cwd: contentDir,
+    encoding: 'utf8',
+    stdio: 'pipe',
+  })
 
   if (result.status !== 0) {
     throw new Error(`Failed to create tar.gz archive: ${result.stderr}`)
@@ -185,7 +183,9 @@ describe('valid checkpoints', () => {
     const checkpointDir = path.join(packagePath, 'build', 'prod', 'checkpoints')
     safeMkdirSync(checkpointDir)
 
-    createValidTarGz(path.join(checkpointDir, 'stage1.tar.gz'))
+    const archivePath = path.join(checkpointDir, 'stage1.tar.gz')
+    createValidTarGz(archivePath)
+    expect(existsSync(archivePath)).toBeTruthy()
 
     const result = validateCheckpoints({
       buildMode: 'prod',
