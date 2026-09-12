@@ -26,7 +26,7 @@ import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
 import colors from 'yoctocolors-cjs'
 
-import { whichSync } from '@socketsecurity/lib-stable/bin/which'
+import { whichSync } from '@socketsecurity/lib-stable/exe/path/which'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 

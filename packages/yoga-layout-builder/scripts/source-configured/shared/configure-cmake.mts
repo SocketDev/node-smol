@@ -11,7 +11,7 @@ import process from 'node:process'
 import { printError } from 'local-build-infra/lib/build-output'
 import { ensureEmscripten } from 'local-build-infra/lib/emscripten-installer'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

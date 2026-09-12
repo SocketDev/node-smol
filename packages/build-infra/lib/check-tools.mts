@@ -5,7 +5,7 @@
 import { existsSync } from 'node:fs'
 import process from 'node:process'
 
-import { whichSync } from '@socketsecurity/lib-stable/bin/which'
+import { whichSync } from '@socketsecurity/lib-stable/exe/path/which'
 import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'

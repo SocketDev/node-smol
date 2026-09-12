@@ -12,7 +12,7 @@ import {
   getFileSize,
 } from 'local-build-infra/lib/build-helpers'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'

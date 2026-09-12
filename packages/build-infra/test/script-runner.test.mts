@@ -6,10 +6,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 
-import type * as BinWhich from '@socketsecurity/lib-stable/bin/which'
+import type * as BinWhich from '@socketsecurity/lib-stable/exe/path/which'
 import type * as SpawnChild from '@socketsecurity/lib-stable/process/spawn/child'
 
-import * as binModule from '@socketsecurity/lib-stable/bin/which'
+import * as binModule from '@socketsecurity/lib-stable/exe/path/which'
 import * as spawnModule from '@socketsecurity/lib-stable/process/spawn/child'
 
 import {
@@ -22,7 +22,7 @@ import {
 } from '../lib/script-runner.mts'
 
 vi.mock<typeof BinWhich>(
-  import('@socketsecurity/lib-stable/bin/which'),
+  import('@socketsecurity/lib-stable/exe/path/which'),
   () => ({
     which: vi.fn(),
   }),

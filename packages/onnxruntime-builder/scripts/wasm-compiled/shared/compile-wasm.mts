@@ -20,7 +20,7 @@ import {
   getCCRemapFlagsString,
 } from 'local-build-infra/lib/path-remap-flags'
 
-import { whichSync } from '@socketsecurity/lib-stable/bin/which'
+import { whichSync } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

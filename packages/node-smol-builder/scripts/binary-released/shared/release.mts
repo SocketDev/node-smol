@@ -45,7 +45,7 @@ import colors from 'yoctocolors-cjs'
 import process from 'node:process'
 
 import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'

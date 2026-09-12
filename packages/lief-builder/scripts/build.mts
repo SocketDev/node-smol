@@ -36,7 +36,7 @@ import { extractTarball } from 'local-build-infra/lib/tarball-utils'
 import { getSubmoduleVersion } from 'local-build-infra/lib/version-helpers'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

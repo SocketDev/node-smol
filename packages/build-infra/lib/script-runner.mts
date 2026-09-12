@@ -3,7 +3,7 @@
  *   Provides DRY helpers for running pnpm scripts, commands, and sequences.
  */
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

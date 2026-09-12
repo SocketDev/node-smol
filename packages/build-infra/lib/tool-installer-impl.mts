@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
-import binPkg, { which } from '@socketsecurity/lib-stable/bin/which'
+import binPkg, { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 

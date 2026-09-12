@@ -10,7 +10,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { toUnixPath } from '@socketsecurity/lib-stable/paths/normalize'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'

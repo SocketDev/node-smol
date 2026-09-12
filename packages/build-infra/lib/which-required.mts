@@ -7,7 +7,7 @@
  * command.
  */
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 
 /**
  * Resolve a binary on PATH, throwing when it cannot be found.

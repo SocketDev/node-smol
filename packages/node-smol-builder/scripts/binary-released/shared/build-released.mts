@@ -54,7 +54,7 @@ import { appendCCRemapFlags } from 'local-build-infra/lib/path-remap-flags'
 import colors from 'yoctocolors-cjs'
 import process from 'node:process'
 
-import { which, whichSync } from '@socketsecurity/lib-stable/bin/which'
+import { which, whichSync } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

@@ -11,7 +11,7 @@ import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 import { getPythonCommand } from 'local-build-infra/lib/python-installer'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

@@ -10,7 +10,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import binPkg from '@socketsecurity/lib-stable/bin/which'
+import binPkg from '@socketsecurity/lib-stable/exe/path/which'
 import platformPkg from '@socketsecurity/lib-stable/constants/platform'
 import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
