@@ -1,4 +1,5 @@
-name: 🧱 prebake publish
+name: 📦 Publish prebake pack
+run-name: Publish prebake pack
 
 # Generic repo-owned prebake publisher: bakes every image declared in the
 # repo's own `.config/repo/socket-wheelhouse.json` `docker.prebakes` section
@@ -28,10 +29,32 @@ permissions:
 
 jobs:
   bake:
-    name: bake + push prebakes
+    name: Bake + push prebakes
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
+      - name: Bootstrap checkout
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          TRIGGER_REF: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git init -q
+          git config --local advice.detachedHead false
+          git remote remove origin 2>/dev/null || true
+          git remote add origin "${SERVER_URL}/${REPOSITORY}"
+          FETCH_ARGS=(--no-tags --prune --depth 1 origin "${TRIGGER_REF}")
+          if [ -n "${GITHUB_TOKEN}" ]; then
+            AUTH_B64="$(printf 'x-access-token:%s' "${GITHUB_TOKEN}" | base64 | tr -d '\n')"
+            git -c "http.${SERVER_URL}/.extraheader=AUTHORIZATION: basic ${AUTH_B64}" fetch "${FETCH_ARGS[@]}"
+          else
+            git fetch "${FETCH_ARGS[@]}"
+          fi
+          git checkout -q --detach FETCH_HEAD
+
       - name: Checkout
         uses: ./.github/actions/fleet/checkout
 
