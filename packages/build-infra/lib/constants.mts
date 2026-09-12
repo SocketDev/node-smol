@@ -12,7 +12,7 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { getCI } from '@socketsecurity/lib-stable/env/ci'
+import { isCI } from '@socketsecurity/lib-stable/env/ci'
 
 // =============================================================================
 // Path Constants
@@ -209,7 +209,7 @@ export function getBuildMode(
   if (process.env['BUILD_MODE']) {
     return process.env['BUILD_MODE']
   }
-  return getCI() ? 'prod' : 'dev'
+  return isCI() ? 'prod' : 'dev'
 }
 
 /**
