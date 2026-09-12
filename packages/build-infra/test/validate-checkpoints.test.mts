@@ -6,7 +6,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, test } from 'vitest'
 
-import { writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -163,7 +163,9 @@ describe('valid checkpoints', () => {
     const checkpointDir = path.join(packagePath, 'build', 'prod', 'checkpoints')
     safeMkdirSync(checkpointDir)
 
-    createValidTar(path.join(checkpointDir, 'stage1.tar'))
+    const archivePath = path.join(checkpointDir, 'stage1.tar')
+    createValidTar(archivePath)
+    expect(existsSync(archivePath)).toBeTruthy()
 
     const result = validateCheckpoints({
       buildMode: 'prod',
