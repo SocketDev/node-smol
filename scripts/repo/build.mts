@@ -30,7 +30,7 @@ import { parseArgs } from 'node:util'
 import { isPlainObject } from '@socketsecurity/lib-stable/objects/predicates'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
-import { isMainModule } from '../fleet/_shared/is-main-module.mts'
+import { isMainModule } from '../fleet/process/is-main-module.mts'
 import { runCapture, runInherit } from '../fleet/registry-infra/shared.mts'
 import { loadSocketWheelhouseConfig, REPO_ROOT } from './paths.mts'
 
@@ -162,13 +162,19 @@ interface BaseTargetOptions {
 /**
  * Bake the declared prebake images. Returns the process exit code.
  */
+function isMultiPlatformLocalBuild(config: {
+  push: boolean
+  platforms: string
+}): boolean {
+  const cfg = { __proto__: null, ...config } as typeof config
+  return !cfg.push && cfg.platforms.includes(',')
+}
+
 async function runBaseTarget(
   options?: BaseTargetOptions | undefined,
 ): Promise<number> {
   const opts = { __proto__: null, ...options } as BaseTargetOptions
-  const dryRun = opts.dryRun ?? false
-  const { platformsOverride } = opts
-  const push = opts.push ?? false
+  const { dryRun = false, platformsOverride, push = false } = opts
   const loaded = loadSocketWheelhouseConfig(REPO_ROOT)
   if (!loaded) {
     logger.error(
@@ -205,7 +211,7 @@ async function runBaseTarget(
     const platforms =
       platformsOverride ??
       (push ? entry.platforms.join(',') : hostDockerPlatform())
-    if (!push && platforms.includes(',')) {
+    if (isMultiPlatformLocalBuild({ push, platforms })) {
       logger.error(
         'build.mts: buildx cannot --load a multi-platform build.\n' +
           `  Saw:   --platforms ${platforms} without --push.\n` +

@@ -17,10 +17,11 @@ vi.mock(
 import {
   assertStuieSourcePath,
   readStuieSourcePin,
+  stuieGitEnvironment,
   verifyStuieSource,
 } from '../../../../../scripts/repo/check/smol-tui-cabi-symbols-are-mapped/source.mts'
 
-const revision = '1234567890abcdef1234567890abcdef1234567890'
+const revision = '1234567890abcdef1234567890abcdef12345678'
 const checksum = 'a'.repeat(64)
 let temporary: string
 let repoRoot: string
@@ -42,6 +43,7 @@ beforeEach(() => {
 })
 
 afterEach(async () => {
+  vi.unstubAllEnvs()
   vi.resetAllMocks()
   await safeDelete(temporary)
 })
@@ -75,6 +77,16 @@ test('rejects an external source-directory symlink', () => {
 test('verifies revision, clean source, and checksum before snapshot updates', async () => {
   await expect(verifyStuieSource(repoRoot)).resolves.toBe(source)
   expect(mocks.resolve).toHaveBeenCalledOnce()
+})
+
+test('source verification removes inherited Git repository context', async () => {
+  vi.stubEnv('GIT_DIR', '/outside/example.git')
+  vi.stubEnv('GIT_WORK_TREE', '/outside/example')
+  expect(stuieGitEnvironment()).not.toHaveProperty('GIT_DIR')
+  expect(stuieGitEnvironment()).not.toHaveProperty('GIT_WORK_TREE')
+  await verifyStuieSource(repoRoot)
+  expect(mocks.spawn.mock.calls[0]?.[2]?.env).not.toHaveProperty('GIT_DIR')
+  expect(mocks.spawn.mock.calls[1]?.[2]?.env).not.toHaveProperty('GIT_WORK_TREE')
 })
 
 test('rejects a changed source checksum', async () => {

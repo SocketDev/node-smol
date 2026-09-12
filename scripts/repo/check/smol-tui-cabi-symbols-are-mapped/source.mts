@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
+import { safeProcessEnv } from '@socketsecurity/lib-stable/env/rewire'
 import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
+import { GIT_CONTEXT_VARS } from '../../../../.git-hooks/_shared/git-context-vars.mts'
 import {
   repositoryContainsTarget,
   repositoryRealPath,
@@ -55,16 +57,25 @@ export function assertStuieSourcePath(
   return source
 }
 
+export function stuieGitEnvironment(): NodeJS.ProcessEnv {
+  const env = { ...safeProcessEnv() }
+  for (const variable of GIT_CONTEXT_VARS) {
+    delete env[variable]
+  }
+  return env
+}
+
 export async function verifyStuieSource(repoRoot: string): Promise<string> {
   const pin = readStuieSourcePin(repoRoot)
   const source = path.resolve(repoRoot, pin.path)
   const head = spawnSync('git', ['-C', source, 'rev-parse', 'HEAD'], {
     encoding: 'utf8',
+    env: stuieGitEnvironment(),
   })
   const dirty = spawnSync(
     'git',
     ['-C', source, 'status', '--porcelain', '--untracked-files=all'],
-    { encoding: 'utf8' },
+    { encoding: 'utf8', env: stuieGitEnvironment() },
   )
   if (
     head.status !== 0 ||

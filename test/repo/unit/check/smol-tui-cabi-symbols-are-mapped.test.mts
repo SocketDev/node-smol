@@ -21,7 +21,7 @@ vi.mock(
 )
 import { main } from '../../../../scripts/repo/check/smol-tui-cabi-symbols-are-mapped.mts'
 
-const revision = '1234567890abcdef1234567890abcdef1234567890'
+const revision = '1234567890abcdef1234567890abcdef12345678'
 let originalArgv: string[]
 let originalExitCode: typeof process.exitCode
 
