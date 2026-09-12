@@ -79,10 +79,8 @@ export function stageNapiArtifacts(
   artifactsDir: string,
   options?: { npmRoot?: string | undefined } | undefined,
 ): StagedNapiArtifact[] {
-  const { npmRoot = path.join(REPO_ROOT, 'packages', 'npm', '@node-smol') } = {
-    __proto__: null,
-    ...options,
-  }
+  const { npmRoot = path.join(REPO_ROOT, 'packages', 'npm', '@node-smol') } =
+    options ?? {}
   const staged: StagedNapiArtifact[] = []
   for (const target of SMOL_AI_NAPI_TARGETS) {
     const packageName = packageNameFor(target.platform)
@@ -241,10 +239,7 @@ async function packAndUploadRelease(
     tag: string
   },
 ): Promise<void> {
-  const { bundleDir, dryRun, shouldStage, tag } = {
-    __proto__: null,
-    ...config,
-  }
+  const { bundleDir, dryRun, shouldStage, tag } = config
   const checksums: string[] = []
   for (let index = 0; index < release.packageDirs.length; index += 1) {
     const directory = release.packageDirs[index]!
