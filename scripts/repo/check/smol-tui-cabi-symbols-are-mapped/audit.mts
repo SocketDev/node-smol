@@ -148,8 +148,8 @@ export function extractCabiSymbols(
     let end = closeIndex + 1
     while (
       end < rustText.length &&
-      rustText[end] !== '{' &&
-      rustText[end] !== ';'
+      rustText.charCodeAt(end) !== 123 /* '{' */ &&
+      rustText.charCodeAt(end) !== 59 /* ';' */
     ) {
       end += 1
     }
@@ -267,7 +267,7 @@ export function narrowSnapshotJson(
   if (isJsonRecord(rawFiles)) {
     const digests = Object.entries(rawFiles)
     for (let i = 0, { length } = digests; i < length; i += 1) {
-      const [key, digest] = digests[i]!
+      const { 0: key, 1: digest } = digests[i]!
       if (typeof digest === 'string') {
         files[key] = digest
       }
@@ -383,14 +383,11 @@ export function validateCounterpart(
 // The law itself. Pure over its three inputs — the parsed snapshot, the parsed
 // map, and a reader for counterpart files — so every fail class is unit
 // testable without a filesystem.
-export function validateMap(
-  snapshot: CabiSymbolSnapshot,
-  map: CabiSymbolMap,
-  readCounterpart: (file: string) => string | undefined,
+function validateEmptyMap(
+  symbols: CabiSymbol[],
+  rows: CabiSymbolMap['rows'],
 ): AuditFinding[] {
   const findings: AuditFinding[] = []
-  const { symbols } = snapshot
-  const { rows } = map
   if (symbols.length === 0) {
     findings.push({
       detail: `the snapshot lists zero symbols, so a green verdict is vacuous; run \`node ${CHECK_REL_PATH} --update\``,
@@ -403,6 +400,18 @@ export function validateMap(
       kind: 'empty-map',
     })
   }
+  return findings
+}
+
+export function validateMap(
+  snapshot: CabiSymbolSnapshot,
+  map: CabiSymbolMap,
+  readCounterpart: (file: string) => string | undefined,
+): AuditFinding[] {
+  const findings: AuditFinding[] = []
+  const { symbols } = snapshot
+  const { rows } = map
+  findings.push(...validateEmptyMap(symbols, rows))
   const mapped = new Set<string>()
   for (let i = 0, { length } = rows; i < length; i += 1) {
     mapped.add(rows[i]!.symbol)

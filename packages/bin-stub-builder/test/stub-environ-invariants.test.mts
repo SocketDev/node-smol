@@ -50,6 +50,30 @@ const CREATE_PROCESS_ENVIRONMENT_INDEX = 6
  * URL never starts a comment, and a log line that mentions `execve()` is not
  * an exec call.
  */
+function stripBlockComment(
+  source: string,
+  index: number,
+  out: string[],
+): number {
+  out.push('  ')
+  index += 2
+  while (
+    index < source.length &&
+    !(
+      source.charCodeAt(index) === 42 /* '*' */ &&
+      source.charCodeAt(index + 1) === 47 /* '/' */
+    )
+  ) {
+    out.push(source.charCodeAt(index) === 10 /* '\n' */ ? '\n' : ' ')
+    index += 1
+  }
+  if (index < source.length) {
+    out.push('  ')
+    index += 2
+  }
+  return index
+}
+
 function stripCommentsAndLiterals(source: string): string {
   const out: string[] = []
   let index = 0
@@ -57,23 +81,14 @@ function stripCommentsAndLiterals(source: string): string {
     const char = source[index] as string
     const next = source[index + 1]
     if (char === '/' && next === '*') {
-      out.push('  ')
-      index += 2
-      while (
-        index < source.length &&
-        !(source[index] === '*' && source[index + 1] === '/')
-      ) {
-        out.push(source[index] === '\n' ? '\n' : ' ')
-        index += 1
-      }
-      if (index < source.length) {
-        out.push('  ')
-        index += 2
-      }
+      index = stripBlockComment(source, index, out)
       continue
     }
     if (char === '/' && next === '/') {
-      while (index < source.length && source[index] !== '\n') {
+      while (
+        index < source.length &&
+        source.charCodeAt(index) !== 10 /* '\n' */
+      ) {
         out.push(' ')
         index += 1
       }

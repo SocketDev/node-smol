@@ -17,6 +17,7 @@
  */
 
 import crypto from 'node:crypto'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
@@ -25,7 +26,7 @@ import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import { isMainModule } from '../../fleet/_shared/is-main-module.mts'
+import { isMainModule } from '../../fleet/process/is-main-module.mts'
 import { REPO_ROOT } from '../paths.mts'
 import {
   CABI_SRC_SUBDIR,
@@ -142,7 +143,7 @@ export function readRepoFileText(file: string): string | undefined {
  */
 export function resolveStuieDir(): string | undefined {
   const candidate =
-    process.env['STUIE_DIR'] ?? path.join(REPO_ROOT, '..', 'stuie')
+    getEnvValue('STUIE_DIR') ?? path.join(REPO_ROOT, '..', 'stuie')
   return existsSync(path.join(candidate, CABI_SRC_SUBDIR))
     ? candidate
     : undefined
