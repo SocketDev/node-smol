@@ -56,8 +56,9 @@ export const EXTRA_YUM_PACKAGES: readonly string[] = [
 /**
  * Build steps run in declared order. Each step's args reference
  * placeholder env vars resolved by both consumers:
- * - build.mts: substitutes via path.join() of getPaths() outputs
- * - emit-docker-build.mts: emits literal "$VAR" for bash.
+ *
+ * - Build.mts: substitutes via path.join() of getPaths() outputs
+ * - Emit-docker-build.mts: emits literal "$VAR" for bash.
  */
 export const BUILD_STEPS: readonly BuildStep[] = [
   {

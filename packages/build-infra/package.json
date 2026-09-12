@@ -9,6 +9,7 @@
     "./lib/build-env": "./lib/build-env.mts",
     "./lib/build-helpers": "./lib/build-helpers.mts",
     "./lib/build-output": "./lib/build-output.mts",
+    "./lib/build-steps": "./lib/build-steps.mts",
     "./lib/cache-key": "./lib/cache-key.mts",
     "./lib/check-tools": "./lib/check-tools.mts",
     "./lib/checkpoint-cache-key": "./lib/checkpoint-cache-key.mts",

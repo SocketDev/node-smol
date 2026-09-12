@@ -397,7 +397,6 @@ importers:
         }
       },
     )
-
   })
 
   describe('uv-lock fixtures', () => {
@@ -434,6 +433,5 @@ importers:
         expect(Array.isArray(golden.packages)).toBe(true)
       }
     })
-
   })
 })

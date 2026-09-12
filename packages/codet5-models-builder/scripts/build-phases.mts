@@ -276,6 +276,7 @@ export async function quantizeModels(ctx) {
  * only).
  *
  * Uses onnxruntime.transformers.optimizer to apply graph optimizations like:
+ *
  * - Fusing operations (LayerNorm, Attention)
  * - Constant folding
  * - Removing redundant nodes.

@@ -3,6 +3,7 @@
  * Uses forks pool with sequential file runs for codesigning compatibility.
  *
  * IMPORTANT: Must use the forks pool with fileParallelism: false because:
+ *
  * 1. Codesigning operations on macOS can leave file handles open
  * 2. Multiple concurrent test processes can cause race conditions
  * 3. Sequential execution in a single fork prevents these issues.

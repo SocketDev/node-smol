@@ -5,6 +5,7 @@
  * across builder packages (onnxruntime-builder, yoga-layout-builder).
  *
  * It handles:
+ *
  * - Reading WASM binary and converting to base64
  * - Generating both CommonJS (.js) and ESM (.mts) synchronous wrappers
  * - Smoke testing the generated wrappers.
@@ -16,6 +17,8 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { generateSyncCjs } from './generate-sync-cjs.mts'
 import { generateSyncEsm } from './generate-sync-esm.mts'
+
+const logger = getDefaultLogger()
 
 /**
  * Generate a synchronous WASM wrapper with embedded base64 binary.
@@ -45,12 +48,14 @@ export async function generateWasmSyncWrapper(config) {
     description,
     exportName,
     initFunctionName,
-    logger = getDefaultLogger(),
+    logger: configuredLogger,
     mjsFile,
     outputSyncJs,
     packageName,
     wasmFile,
   } = { __proto__: null, ...config }
+
+  const activeLogger = configuredLogger || logger
 
   if (!existsSync(wasmFile)) {
     throw new Error(`WASM file not found: ${wasmFile}`)
@@ -60,7 +65,7 @@ export async function generateWasmSyncWrapper(config) {
     throw new Error(`MJS glue code file not found: ${mjsFile}`)
   }
 
-  logger.substep('Generating synchronous wrappers with embedded WASM…')
+  activeLogger.substep('Generating synchronous wrappers with embedded WASM…')
 
   // Read WASM binary and convert to base64
   const wasmBinary = await fs.readFile(wasmFile)
@@ -122,7 +127,7 @@ export async function generateWasmSyncWrapper(config) {
   })
 
   // Smoke test both sync.cjs and sync.mts files
-  logger.substep(`Smoke testing ${outputSyncCjs.split('/').pop()}...`)
+  activeLogger.substep(`Smoke testing ${outputSyncCjs.split('/').pop()}...`)
 
   if (customSmokeTest) {
     // Use custom smoke test if provided
@@ -141,13 +146,13 @@ export async function generateWasmSyncWrapper(config) {
       throw new Error('Sync CJS file is empty')
     }
 
-    logger.substep(
+    activeLogger.substep(
       `Sync JS file valid (${(syncStats.size / 1024).toFixed(2)} KB)`,
     )
   }
 
   // Smoke test the sync.mts file (ESM version)
-  logger.substep(`Smoke testing ${outputSyncMjs.split('/').pop()}...`)
+  activeLogger.substep(`Smoke testing ${outputSyncMjs.split('/').pop()}...`)
 
   if (customSmokeTest) {
     // Use custom smoke test if provided (same test, different file)
@@ -166,10 +171,10 @@ export async function generateWasmSyncWrapper(config) {
       throw new Error('Sync MJS file is empty')
     }
 
-    logger.substep(
+    activeLogger.substep(
       `Sync MJS file valid (${(syncMjsStats.size / 1024).toFixed(2)} KB)`,
     )
   }
 
-  logger.success('WASM sync wrappers generated (CJS + ESM)')
+  activeLogger.success('WASM sync wrappers generated (CJS + ESM)')
 }

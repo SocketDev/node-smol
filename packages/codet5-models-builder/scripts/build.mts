@@ -2,6 +2,7 @@
  * Build codet5-models - Convert and optimize CodeT5 models for Socket CLI.
  *
  * This script downloads, converts, and optimizes CodeT5 models:
+ *
  * - Downloads models from Hugging Face
  * - Converts to ONNX format
  * - Applies INT4/INT8 mixed-precision quantization
@@ -38,6 +39,7 @@ import {
   quantizeModels,
 } from './build-phases.mts'
 import { getBuildPaths, getCurrentPlatform } from './paths.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
@@ -90,7 +92,7 @@ async function initBuildContext() {
   // no cross-compile). createCheckpoint now throws without these for non-source
   // checkpoints.
   const targetPlatform = process.platform
-  const targetArch = process.env['TARGET_ARCH'] || process.arch
+  const targetArch = getEnvValue('TARGET_ARCH') || process.arch
   const {
     buildDir,
     configFile,

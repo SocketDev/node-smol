@@ -26,26 +26,24 @@ const finalBinaryPath = getLatestFinalBinary()
 const skipTests = !finalBinaryPath || !existsSync(finalBinaryPath)
 const testTmpDir = path.join(os.tmpdir(), 'socket-btm-vfs-fs-shim-b-tests')
 
-describe.skipIf(skipTests)(
-  'vFS — fs shim enhancements (part B)',
-  () => {
-    beforeAll(async () => {
-      await safeMkdir(testTmpDir)
-    })
+describe.skipIf(skipTests)('vFS — fs shim enhancements (part B)', () => {
+  beforeAll(async () => {
+    await safeMkdir(testTmpDir)
+  })
 
-    afterAll(async () => {
-      await safeDelete(testTmpDir)
-    })
+  afterAll(async () => {
+    await safeDelete(testTmpDir)
+  })
 
-    describe('vFS fs shim enhancements', () => {
-      it('should support async fs.access() callback', async () => {
-        const testDir = path.join(testTmpDir, 'vfs-async-access')
-        await safeMkdir(testDir)
+  describe('vFS fs shim enhancements', () => {
+    it('should support async fs.access() callback', async () => {
+      const testDir = path.join(testTmpDir, 'vfs-async-access')
+      await safeMkdir(testDir)
 
-        const appJs = path.join(testDir, 'app.js')
-        await fs.writeFile(
-          appJs,
-          `
+      const appJs = path.join(testDir, 'app.js')
+      await fs.writeFile(
+        appJs,
+        `
 const fs = require('fs')
 
 const results = []
@@ -67,56 +65,56 @@ fs.access('/snapshot/test.txt', fs.constants.R_OK, (err) => {
   })
 })
 `,
-        )
+      )
 
-        const vfsDir = path.join(testDir, 'vfs-content')
-        await safeMkdir(vfsDir)
-        await fs.writeFile(path.join(vfsDir, 'test.txt'), 'content')
+      const vfsDir = path.join(testDir, 'vfs-content')
+      await safeMkdir(vfsDir)
+      await fs.writeFile(path.join(vfsDir, 'test.txt'), 'content')
 
-        const vfsTar = path.join(testDir, 'vfs.tar')
-        await spawn('tar', ['cf', vfsTar, '-C', vfsDir, '.'], {
-          env: { ...process.env, COPYFILE_DISABLE: '1' },
-        })
-
-        const seaConfig = path.join(testDir, 'sea-config.json')
-        await fs.writeFile(
-          seaConfig,
-          JSON.stringify({
-            disableExperimentalSEAWarning: true,
-            main: 'app.js',
-            output: 'app.blob',
-          }),
-        )
-
-        const seaBinary = path.join(testDir, 'app')
-        await fs.copyFile(finalBinaryPath, seaBinary)
-        await makeExecutable(seaBinary)
-
-        await runBinject(
-          seaBinary,
-          'BOTH',
-          { sea: 'sea-config.json', vfs: vfsTar },
-          {
-            machoSegmentName: MACHO_SEGMENT_NODE_SEA,
-            sentinelFuse: 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
-            testDir,
-          },
-        )
-
-        const execResult = await spawn(seaBinary, [])
-        expect(execResult.code).toBe(0)
-        expect(execResult.stdout).toContain('ACCESS_EXIST_OK=true')
-        expect(execResult.stdout).toContain('ACCESS_NOENT_ERROR=ENOENT')
+      const vfsTar = path.join(testDir, 'vfs.tar')
+      await spawn('tar', ['cf', vfsTar, '-C', vfsDir, '.'], {
+        env: { ...process.env, COPYFILE_DISABLE: '1' },
       })
 
-      it('should support async fs.lstat() callback', async () => {
-        const testDir = path.join(testTmpDir, 'vfs-async-lstat')
-        await safeMkdir(testDir)
+      const seaConfig = path.join(testDir, 'sea-config.json')
+      await fs.writeFile(
+        seaConfig,
+        JSON.stringify({
+          disableExperimentalSEAWarning: true,
+          main: 'app.js',
+          output: 'app.blob',
+        }),
+      )
 
-        const appJs = path.join(testDir, 'app.js')
-        await fs.writeFile(
-          appJs,
-          `
+      const seaBinary = path.join(testDir, 'app')
+      await fs.copyFile(finalBinaryPath, seaBinary)
+      await makeExecutable(seaBinary)
+
+      await runBinject(
+        seaBinary,
+        'BOTH',
+        { sea: 'sea-config.json', vfs: vfsTar },
+        {
+          machoSegmentName: MACHO_SEGMENT_NODE_SEA,
+          sentinelFuse: 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
+          testDir,
+        },
+      )
+
+      const execResult = await spawn(seaBinary, [])
+      expect(execResult.code).toBe(0)
+      expect(execResult.stdout).toContain('ACCESS_EXIST_OK=true')
+      expect(execResult.stdout).toContain('ACCESS_NOENT_ERROR=ENOENT')
+    })
+
+    it('should support async fs.lstat() callback', async () => {
+      const testDir = path.join(testTmpDir, 'vfs-async-lstat')
+      await safeMkdir(testDir)
+
+      const appJs = path.join(testDir, 'app.js')
+      await fs.writeFile(
+        appJs,
+        `
 const fs = require('fs')
 
 const results = []
@@ -132,57 +130,57 @@ fs.lstat('/snapshot/test.txt', (err, stats) => {
   console.log(results.join('\\n'))
 })
 `,
-        )
+      )
 
-        const vfsDir = path.join(testDir, 'vfs-content')
-        await safeMkdir(vfsDir)
-        await fs.writeFile(path.join(vfsDir, 'test.txt'), 'hello')
+      const vfsDir = path.join(testDir, 'vfs-content')
+      await safeMkdir(vfsDir)
+      await fs.writeFile(path.join(vfsDir, 'test.txt'), 'hello')
 
-        const vfsTar = path.join(testDir, 'vfs.tar')
-        await spawn('tar', ['cf', vfsTar, '-C', vfsDir, '.'], {
-          env: { ...process.env, COPYFILE_DISABLE: '1' },
-        })
-
-        const seaConfig = path.join(testDir, 'sea-config.json')
-        await fs.writeFile(
-          seaConfig,
-          JSON.stringify({
-            disableExperimentalSEAWarning: true,
-            main: 'app.js',
-            output: 'app.blob',
-          }),
-        )
-
-        const seaBinary = path.join(testDir, 'app')
-        await fs.copyFile(finalBinaryPath, seaBinary)
-        await makeExecutable(seaBinary)
-
-        await runBinject(
-          seaBinary,
-          'BOTH',
-          { sea: 'sea-config.json', vfs: vfsTar },
-          {
-            machoSegmentName: MACHO_SEGMENT_NODE_SEA,
-            sentinelFuse: 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
-            testDir,
-          },
-        )
-
-        const execResult = await spawn(seaBinary, [])
-        expect(execResult.code).toBe(0)
-        expect(execResult.stdout).toContain('LSTAT_IS_FILE=true')
-        expect(execResult.stdout).toContain('LSTAT_IS_SYMLINK=false')
-        expect(execResult.stdout).toContain('LSTAT_SIZE=5')
+      const vfsTar = path.join(testDir, 'vfs.tar')
+      await spawn('tar', ['cf', vfsTar, '-C', vfsDir, '.'], {
+        env: { ...process.env, COPYFILE_DISABLE: '1' },
       })
 
-      it('should support fs.promises.stat() and fs.promises.readdir()', async () => {
-        const testDir = path.join(testTmpDir, 'vfs-promises-stat-readdir')
-        await safeMkdir(testDir)
+      const seaConfig = path.join(testDir, 'sea-config.json')
+      await fs.writeFile(
+        seaConfig,
+        JSON.stringify({
+          disableExperimentalSEAWarning: true,
+          main: 'app.js',
+          output: 'app.blob',
+        }),
+      )
 
-        const appJs = path.join(testDir, 'app.js')
-        await fs.writeFile(
-          appJs,
-          `
+      const seaBinary = path.join(testDir, 'app')
+      await fs.copyFile(finalBinaryPath, seaBinary)
+      await makeExecutable(seaBinary)
+
+      await runBinject(
+        seaBinary,
+        'BOTH',
+        { sea: 'sea-config.json', vfs: vfsTar },
+        {
+          machoSegmentName: MACHO_SEGMENT_NODE_SEA,
+          sentinelFuse: 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
+          testDir,
+        },
+      )
+
+      const execResult = await spawn(seaBinary, [])
+      expect(execResult.code).toBe(0)
+      expect(execResult.stdout).toContain('LSTAT_IS_FILE=true')
+      expect(execResult.stdout).toContain('LSTAT_IS_SYMLINK=false')
+      expect(execResult.stdout).toContain('LSTAT_SIZE=5')
+    })
+
+    it('should support fs.promises.stat() and fs.promises.readdir()', async () => {
+      const testDir = path.join(testTmpDir, 'vfs-promises-stat-readdir')
+      await safeMkdir(testDir)
+
+      const appJs = path.join(testDir, 'app.js')
+      await fs.writeFile(
+        appJs,
+        `
 const fs = require('fs').promises
 
 async function test() {
@@ -205,58 +203,58 @@ async function test() {
 
 test()
 `,
-        )
+      )
 
-        const vfsDir = path.join(testDir, 'vfs-content')
-        await safeMkdir(vfsDir)
-        await fs.writeFile(path.join(vfsDir, 'test.txt'), 'hello world')
-        await fs.writeFile(path.join(vfsDir, 'other.txt'), 'other')
+      const vfsDir = path.join(testDir, 'vfs-content')
+      await safeMkdir(vfsDir)
+      await fs.writeFile(path.join(vfsDir, 'test.txt'), 'hello world')
+      await fs.writeFile(path.join(vfsDir, 'other.txt'), 'other')
 
-        const vfsTar = path.join(testDir, 'vfs.tar')
-        await spawn('tar', ['cf', vfsTar, '-C', vfsDir, '.'], {
-          env: { ...process.env, COPYFILE_DISABLE: '1' },
-        })
-
-        const seaConfig = path.join(testDir, 'sea-config.json')
-        await fs.writeFile(
-          seaConfig,
-          JSON.stringify({
-            disableExperimentalSEAWarning: true,
-            main: 'app.js',
-            output: 'app.blob',
-          }),
-        )
-
-        const seaBinary = path.join(testDir, 'app')
-        await fs.copyFile(finalBinaryPath, seaBinary)
-        await makeExecutable(seaBinary)
-
-        await runBinject(
-          seaBinary,
-          'BOTH',
-          { sea: 'sea-config.json', vfs: vfsTar },
-          {
-            machoSegmentName: MACHO_SEGMENT_NODE_SEA,
-            sentinelFuse: 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
-            testDir,
-          },
-        )
-
-        const execResult = await spawn(seaBinary, [])
-        expect(execResult.code).toBe(0)
-        expect(execResult.stdout).toContain('PROMISE_STAT_IS_FILE=true')
-        expect(execResult.stdout).toContain('PROMISE_STAT_SIZE=11')
-        expect(execResult.stdout).toContain('PROMISE_READDIR_HAS_FILE=true')
+      const vfsTar = path.join(testDir, 'vfs.tar')
+      await spawn('tar', ['cf', vfsTar, '-C', vfsDir, '.'], {
+        env: { ...process.env, COPYFILE_DISABLE: '1' },
       })
 
-      it('should support fs.promises.access() and fs.promises.realpath()', async () => {
-        const testDir = path.join(testTmpDir, 'vfs-promises-access-realpath')
-        await safeMkdir(testDir)
+      const seaConfig = path.join(testDir, 'sea-config.json')
+      await fs.writeFile(
+        seaConfig,
+        JSON.stringify({
+          disableExperimentalSEAWarning: true,
+          main: 'app.js',
+          output: 'app.blob',
+        }),
+      )
 
-        const appJs = path.join(testDir, 'app.js')
-        await fs.writeFile(
-          appJs,
-          `
+      const seaBinary = path.join(testDir, 'app')
+      await fs.copyFile(finalBinaryPath, seaBinary)
+      await makeExecutable(seaBinary)
+
+      await runBinject(
+        seaBinary,
+        'BOTH',
+        { sea: 'sea-config.json', vfs: vfsTar },
+        {
+          machoSegmentName: MACHO_SEGMENT_NODE_SEA,
+          sentinelFuse: 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
+          testDir,
+        },
+      )
+
+      const execResult = await spawn(seaBinary, [])
+      expect(execResult.code).toBe(0)
+      expect(execResult.stdout).toContain('PROMISE_STAT_IS_FILE=true')
+      expect(execResult.stdout).toContain('PROMISE_STAT_SIZE=11')
+      expect(execResult.stdout).toContain('PROMISE_READDIR_HAS_FILE=true')
+    })
+
+    it('should support fs.promises.access() and fs.promises.realpath()', async () => {
+      const testDir = path.join(testTmpDir, 'vfs-promises-access-realpath')
+      await safeMkdir(testDir)
+
+      const appJs = path.join(testDir, 'app.js')
+      await fs.writeFile(
+        appJs,
+        `
 const fs = require('fs').promises
 const { constants } = require('fs')
 
@@ -289,50 +287,47 @@ async function test() {
 
 test()
 `,
-        )
+      )
 
-        const vfsDir = path.join(testDir, 'vfs-content')
-        await safeMkdir(vfsDir)
-        await fs.writeFile(path.join(vfsDir, 'test.txt'), 'content')
+      const vfsDir = path.join(testDir, 'vfs-content')
+      await safeMkdir(vfsDir)
+      await fs.writeFile(path.join(vfsDir, 'test.txt'), 'content')
 
-        const vfsTar = path.join(testDir, 'vfs.tar')
-        await spawn('tar', ['cf', vfsTar, '-C', vfsDir, '.'], {
-          env: { ...process.env, COPYFILE_DISABLE: '1' },
-        })
-
-        const seaConfig = path.join(testDir, 'sea-config.json')
-        await fs.writeFile(
-          seaConfig,
-          JSON.stringify({
-            disableExperimentalSEAWarning: true,
-            main: 'app.js',
-            output: 'app.blob',
-          }),
-        )
-
-        const seaBinary = path.join(testDir, 'app')
-        await fs.copyFile(finalBinaryPath, seaBinary)
-        await makeExecutable(seaBinary)
-
-        await runBinject(
-          seaBinary,
-          'BOTH',
-          { sea: 'sea-config.json', vfs: vfsTar },
-          {
-            machoSegmentName: MACHO_SEGMENT_NODE_SEA,
-            sentinelFuse: 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
-            testDir,
-          },
-        )
-
-        const execResult = await spawn(seaBinary, [])
-        expect(execResult.code).toBe(0)
-        expect(execResult.stdout).toContain('PROMISE_ACCESS_OK=true')
-        expect(execResult.stdout).toContain(
-          'PROMISE_REALPATH=/snapshot/test.txt',
-        )
-        expect(execResult.stdout).toContain('PROMISE_ACCESS_NOENT_ERROR=ENOENT')
+      const vfsTar = path.join(testDir, 'vfs.tar')
+      await spawn('tar', ['cf', vfsTar, '-C', vfsDir, '.'], {
+        env: { ...process.env, COPYFILE_DISABLE: '1' },
       })
+
+      const seaConfig = path.join(testDir, 'sea-config.json')
+      await fs.writeFile(
+        seaConfig,
+        JSON.stringify({
+          disableExperimentalSEAWarning: true,
+          main: 'app.js',
+          output: 'app.blob',
+        }),
+      )
+
+      const seaBinary = path.join(testDir, 'app')
+      await fs.copyFile(finalBinaryPath, seaBinary)
+      await makeExecutable(seaBinary)
+
+      await runBinject(
+        seaBinary,
+        'BOTH',
+        { sea: 'sea-config.json', vfs: vfsTar },
+        {
+          machoSegmentName: MACHO_SEGMENT_NODE_SEA,
+          sentinelFuse: 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
+          testDir,
+        },
+      )
+
+      const execResult = await spawn(seaBinary, [])
+      expect(execResult.code).toBe(0)
+      expect(execResult.stdout).toContain('PROMISE_ACCESS_OK=true')
+      expect(execResult.stdout).toContain('PROMISE_REALPATH=/snapshot/test.txt')
+      expect(execResult.stdout).toContain('PROMISE_ACCESS_NOENT_ERROR=ENOENT')
     })
-  },
-)
+  })
+})

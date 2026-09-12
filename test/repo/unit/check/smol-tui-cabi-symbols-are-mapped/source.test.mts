@@ -86,7 +86,9 @@ test('source verification removes inherited Git repository context', async () =>
   expect(stuieGitEnvironment()).not.toHaveProperty('GIT_WORK_TREE')
   await verifyStuieSource(repoRoot)
   expect(mocks.spawn.mock.calls[0]?.[2]?.env).not.toHaveProperty('GIT_DIR')
-  expect(mocks.spawn.mock.calls[1]?.[2]?.env).not.toHaveProperty('GIT_WORK_TREE')
+  expect(mocks.spawn.mock.calls[1]?.[2]?.env).not.toHaveProperty(
+    'GIT_WORK_TREE',
+  )
 })
 
 test('rejects a changed source checksum', async () => {

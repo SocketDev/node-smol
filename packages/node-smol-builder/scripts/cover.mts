@@ -3,8 +3,9 @@
  * Works on macOS, Linux, and Windows (with MinGW/MSYS).
  *
  * Runs coverage for both:
+ *
  * - C packages (binject, binpress, binflate) via their platform Makefiles
- * - node-smol-builder's own JS tests via vitest.
+ * - Node-smol-builder's own JS tests via vitest.
  *
  * Usage:
  * node scripts/cover.mts              # both C packages and vitest
@@ -124,30 +125,50 @@ async function main() {
 
   const cPackages = C_PACKAGES.includes(target) ? [target] : C_PACKAGES
   const results = {
+    __proto__: null,
     failed: [],
     passed: [],
   }
 
-  if (runC) {
+  async function collectCCoverage() {
     logger.info(`C packages to analyze: ${cPackages.join(', ')}`)
-    const cPromises = cPackages.map(async pkg => {
-      const success = await runCCoverageForPackage(pkg)
-      return { name: pkg, success }
-    })
-    const cResults = await Promise.allSettled(cPromises)
-    for (let i = 0, { length } = cResults; i < length; i += 1) {
-      const result = cResults[i]
-      if (result.status === 'fulfilled') {
-        const { name, success } = result.value
-        if (success) {
-          results.passed.push(name)
-        } else {
-          results.failed.push(name)
-        }
-      } else {
+    const cResults = await Promise.allSettled(
+      cPackages.map(async pkg => ({
+        __proto__: null,
+        name: pkg,
+        success: await runCCoverageForPackage(pkg),
+      })),
+    )
+    for (const result of cResults) {
+      if (result.status !== 'fulfilled') {
         results.failed.push('unknown')
+      } else if (result.value.success) {
+        results.passed.push(result.value.name)
+      } else {
+        results.failed.push(result.value.name)
       }
     }
+  }
+
+  function printCoverageSummary() {
+    logger.log('')
+    logger.step('Coverage Summary')
+    logger.success(`Passed: ${results.passed.length}`)
+    for (const name of results.passed) {
+      logger.substep(String(name))
+    }
+    if (results.failed.length === 0) {
+      return
+    }
+    logger.error(`Failed: ${results.failed.length}`)
+    for (const name of results.failed) {
+      logger.substep(String(name))
+    }
+    throw new Error(`Coverage failed for ${results.failed.length} run(s)`)
+  }
+
+  if (runC) {
+    await collectCCoverage()
   }
 
   if (runVitest) {
@@ -159,23 +180,7 @@ async function main() {
     }
   }
 
-  logger.log('')
-  logger.step('Coverage Summary')
-  logger.success(`Passed: ${results.passed.length}`)
-  if (results.passed.length > 0) {
-    // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
-    for (const name of results.passed) {
-      logger.substep(String(name))
-    }
-  }
-  if (results.failed.length > 0) {
-    logger.error(`Failed: ${results.failed.length}`)
-    // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
-    for (const name of results.failed) {
-      logger.substep(String(name))
-    }
-    throw new Error(`Coverage failed for ${results.failed.length} run(s)`)
-  }
+  printCoverageSummary()
 
   logger.log('')
   logger.success('All coverage runs completed successfully!')

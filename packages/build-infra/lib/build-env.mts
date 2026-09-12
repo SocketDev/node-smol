@@ -3,8 +3,9 @@
  *
  * Re-exports toolchain and emscripten helpers and provides the top-level
  * `setupBuildEnvironment` orchestrator. Implementation split across:
- * - build-env-toolchain.mts  (command detection, Python, Rust, source flags)
- * - build-env-emscripten.mts (EMSDK detection and activation)
+ *
+ * - Build-env-toolchain.mts (command detection, Python, Rust, source flags)
+ * - Build-env-emscripten.mts (EMSDK detection and activation)
  */
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -91,6 +92,33 @@ export async function setupBuildEnvironment(
     success: true,
   }
 
+  async function checkPythonEnvironment() {
+    const pythonCheck = await checkPython()
+    if (!pythonCheck.available) {
+      results.success = false
+      results.errors.push(`Python ${getMinPythonVersion()}+ not found`)
+      if (autoSetup) {
+        results.errors.push(
+          '  Run: node scripts/setup-build-toolchain.mts --python',
+        )
+      }
+      return
+    }
+    if (pythonCheck.meetsRequirement) {
+      results.messages.push(`Python ${pythonCheck.version}`)
+      return
+    }
+    results.success = false
+    results.errors.push(
+      `Python ${pythonCheck.version} is too old (need ${getMinPythonVersion()}+)`,
+    )
+    if (autoSetup) {
+      results.errors.push(
+        '  Run: node scripts/setup-build-toolchain.mts --python',
+      )
+    }
+  }
+
   if (emscripten) {
     const activated = await activateEmscriptenSDK()
 
@@ -149,45 +177,7 @@ export async function setupBuildEnvironment(
   }
 
   if (python) {
-    const pythonCheck = await checkPython()
-
-    if (pythonCheck.available) {
-      if (pythonCheck.meetsRequirement) {
-        // Emoji are pushed into result.messages/result.errors arrays that
-        // callers may render anywhere (JSON, file, stderr); there is no single
-        // logger.success/fail call to migrate to.
-        // oxlint-disable-next-line socket/no-status-emoji -- see above
-        results.messages.push(`✓ Python ${pythonCheck.version}`)
-      } else {
-        results.success = false
-        results.errors.push(
-          // Emoji are pushed into result.messages/result.errors arrays that
-          // callers may render anywhere (JSON, file, stderr); there is no
-          // single logger.success/fail call to migrate to.
-          // oxlint-disable-next-line socket/no-status-emoji -- see above
-          `✗ Python ${pythonCheck.version} is too old (need ${getMinPythonVersion()}+)`,
-        )
-
-        if (autoSetup) {
-          results.errors.push(
-            '  Run: node scripts/setup-build-toolchain.mts --python',
-          )
-        }
-      }
-    } else {
-      results.success = false
-      // Emoji are pushed into result.messages/result.errors arrays that callers
-      // may render anywhere (JSON, file, stderr); there is no single
-      // logger.success/fail call to migrate to.
-      // oxlint-disable-next-line socket/no-status-emoji -- see above
-      results.errors.push(`✗ Python ${getMinPythonVersion()}+ not found`)
-
-      if (autoSetup) {
-        results.errors.push(
-          '  Run: node scripts/setup-build-toolchain.mts --python',
-        )
-      }
-    }
+    await checkPythonEnvironment()
   }
 
   return results
