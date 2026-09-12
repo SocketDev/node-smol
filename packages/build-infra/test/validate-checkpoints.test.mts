@@ -10,7 +10,6 @@ import { writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdirSync } from '@socketsecurity/lib-stable/fs/safe'
 import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -67,23 +66,12 @@ export function createValidTar(tarPath: string): void {
   const testFile = path.join(contentDir, 'test.txt')
   writeFileSync(testFile, 'test content')
 
-  // GNU tar reads a drive-letter colon as a remote-host spec; --force-local
-  // keeps C:\... paths local on Windows runners.
-  const result = spawnSync(
-    'tar',
-    [
-      ...(isWin32() ? ['--force-local'] : []),
-      '-cf',
-      tarPath,
-      '-C',
-      contentDir,
-      'test.txt',
-    ],
-    {
-      encoding: 'utf8',
-      stdio: 'pipe',
-    },
-  )
+  const relativeTarPath = path.relative(contentDir, tarPath)
+  const result = spawnSync('tar', ['-cf', relativeTarPath, 'test.txt'], {
+    cwd: contentDir,
+    encoding: 'utf8',
+    stdio: 'pipe',
+  })
 
   if (result.status !== 0) {
     throw new Error(`Failed to create tar archive: ${result.stderr}`)
