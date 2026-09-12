@@ -26,7 +26,7 @@ const finalBinaryPath = getLatestFinalBinary()
 const skipTests = !finalBinaryPath || !existsSync(finalBinaryPath)
 const testTmpDir = path.join(os.tmpdir(), 'socket-btm-vfs-fs-shim-c-tests')
 
-describe.sequential.skipIf(skipTests)(
+describe.skipIf(skipTests)(
   'vFS — fs shim enhancements (part C)',
   () => {
     beforeAll(async () => {

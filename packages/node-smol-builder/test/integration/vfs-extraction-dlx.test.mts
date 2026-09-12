@@ -24,7 +24,7 @@ const finalBinaryPath = getLatestFinalBinary()
 const skipTests = !finalBinaryPath || !existsSync(finalBinaryPath)
 const testTmpDir = path.join(os.tmpdir(), 'socket-btm-vfs-extraction-tests')
 
-describe.sequential.skipIf(skipTests)(
+describe.skipIf(skipTests)(
   'vFS — extraction to ~/.socket/_dlx/ and path validation',
   () => {
     const createdCacheDirs: string[] = []

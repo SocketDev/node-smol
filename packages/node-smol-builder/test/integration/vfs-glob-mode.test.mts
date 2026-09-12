@@ -24,7 +24,7 @@ const finalBinaryPath = getLatestFinalBinary()
 const skipTests = !finalBinaryPath || !existsSync(finalBinaryPath)
 const testTmpDir = path.join(os.tmpdir(), 'socket-btm-vfs-glob-mode-tests')
 
-describe.sequential.skipIf(skipTests)(
+describe.skipIf(skipTests)(
   'vFS — glob support and mode flags',
   () => {
     beforeAll(async () => {

@@ -24,7 +24,7 @@ const finalBinaryPath = getLatestFinalBinary()
 const skipTests = !finalBinaryPath || !existsSync(finalBinaryPath)
 const testTmpDir = path.join(os.tmpdir(), 'socket-btm-vfs-traversal-tests')
 
-describe.sequential.skipIf(skipTests)('vFS — path traversal protection', () => {
+describe.skipIf(skipTests)('vFS — path traversal protection', () => {
   beforeAll(async () => {
     await safeMkdir(testTmpDir)
   })

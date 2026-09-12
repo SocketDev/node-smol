@@ -26,7 +26,7 @@ const finalBinaryPath = getLatestFinalBinary()
 const skipTests = !finalBinaryPath || !existsSync(finalBinaryPath)
 const testTmpDir = path.join(os.tmpdir(), 'socket-btm-vfs-symlink-a-tests')
 
-describe.sequential.skipIf(skipTests)('vFS — symlink support (A)', () => {
+describe.skipIf(skipTests)('vFS — symlink support (A)', () => {
   beforeAll(async () => {
     await safeMkdir(testTmpDir)
   })

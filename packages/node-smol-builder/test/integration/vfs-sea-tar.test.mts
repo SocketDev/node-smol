@@ -25,7 +25,7 @@ const finalBinaryPath = getLatestFinalBinary()
 const skipTests = !finalBinaryPath || !existsSync(finalBinaryPath)
 const testTmpDir = path.join(os.tmpdir(), 'socket-btm-vfs-sea-tar-tests')
 
-describe.sequential.skipIf(skipTests)(
+describe.skipIf(skipTests)(
   'vFS — SEA fuse, TAR archive creation, dual injection',
   () => {
     beforeAll(async () => {
