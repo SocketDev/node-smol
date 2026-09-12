@@ -55,31 +55,6 @@ function reportSuccess(message: string): void {
 }
 
 /**
- * Compare the snapshot's symbol set against a live extraction from `stuieDir`.
- * Undefined when the two agree, otherwise a message naming the delta.
- */
-export function describeSnapshotDrift(
-  snapshot: CabiSymbolSnapshot,
-  stuieDir: string,
-): string | undefined {
-  const live = new Set(extractCheckoutSymbols(stuieDir).map(sym => sym.name))
-  const stored = new Set(snapshot.symbols.map(sym => sym.name))
-  const added = [...live].filter(name => !stored.has(name))
-  const gone = [...stored].filter(name => !live.has(name))
-  if (added.length === 0 && gone.length === 0) {
-    return undefined
-  }
-  return `snapshot drift vs ${stuieDir}: ${added.length} only in the checkout [${added.slice(0, 5).join(', ')}], ${gone.length} only in the snapshot [${gone.slice(0, 5).join(', ')}]. Run \`node ${CHECK_REL_PATH} --update\`.`
-}
-
-/**
- * Every C ABI symbol a stuie checkout currently exports, sorted by name.
- */
-export function extractCheckoutSymbols(stuieDir: string): CabiSymbol[] {
-  return extractSnapshotFromCheckout(stuieDir).symbols
-}
-
-/**
  * Build the committed snapshot from a stuie checkout.
  */
 export function extractSnapshotFromCheckout(
