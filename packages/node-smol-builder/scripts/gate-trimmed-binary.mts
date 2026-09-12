@@ -3,7 +3,7 @@
 /**
  * @file Fail-closed gate for a bundle-trimmed node-smol binary.
  *   USAGE:
- *   pnpm --filter node-smol-builder run gate --\
+ *   `pnpm --filter` node-smol-builder run gate --\
  *   --binary=path/to/trimmed/node --bundle=path/to/main.js\
  *   [--vfs=path/to/vfs.tar] [--overrides=package.json]\
  *   [--suite="<shell command that runs the app's tests against $SMOL_BINARY>"]
@@ -34,7 +34,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
-import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
+import { parseArgs } from '@socketsecurity/lib-stable/exe/argv/parse'
 import {
   spawn,
   spawnSync,
@@ -135,6 +135,37 @@ export function spawnProbe(binary: string, specifier: string): boolean {
 }
 
 async function main(): Promise<void> {
+  function reportFeatureFindings(findings) {
+    let failed = false
+    logger.log('Feature probes (expected vs actual presence):')
+    for (const finding of findings) {
+      const tag = finding.ok ? 'ok' : 'FAIL'
+      logger.log(
+        `  [${tag}] ${finding.feature.padEnd(12)} expect ${finding.expectedPresent ? 'present' : 'absent '} → ${finding.actualPresent ? 'present' : 'absent'}`,
+      )
+      if (!finding.ok) {
+        failed = true
+      }
+    }
+    return failed
+  }
+
+  async function readOverrides(overridesPath: string | undefined) {
+    if (!overridesPath) {
+      return undefined
+    }
+    try {
+      const { promises: fs } = await import('node:fs')
+      const pkg = JSON.parse(await fs.readFile(overridesPath, 'utf8'))
+      return pkg?.smol
+        ? { __proto__: null, drop: pkg.smol.drop, keep: pkg.smol.keep }
+        : undefined
+    } catch (e) {
+      logger.warn(`could not read overrides: ${errorMessage(e)}`)
+      return undefined
+    }
+  }
+
   const { values } = parseArgs({
     args:
       process.argv.slice(2)[0] === '--'
@@ -167,21 +198,8 @@ async function main(): Promise<void> {
     return
   }
 
-  let overrides:
-    | { keep?: string[] | undefined; drop?: string[] | undefined }
-    | undefined
   const overridesPath = stringArg(values['overrides'])
-  if (overridesPath) {
-    try {
-      const { promises: fs } = await import('node:fs')
-      const pkg = JSON.parse(await fs.readFile(overridesPath, 'utf8'))
-      overrides = pkg?.smol
-        ? { keep: pkg.smol.keep, drop: pkg.smol.drop }
-        : undefined
-    } catch (e) {
-      logger.warn(`could not read overrides: ${errorMessage(e)}`)
-    }
-  }
+  const overrides = await readOverrides(overridesPath)
 
   // Re-derive the manifest the trimmed binary was built from (same inputs).
   const manifest = await detectBundleFeatures({
@@ -197,20 +215,9 @@ async function main(): Promise<void> {
     expectDropped: manifest.features[f.name]?.drop,
   }))
 
-  let failed = false
-
   // 1 + 2. Absence / presence probes.
   const findings = checkBinaryFeatures(binary, expectations, spawnProbe)
-  logger.log('Feature probes (expected vs actual presence):')
-  for (const f of findings) {
-    const tag = f.ok ? 'ok' : 'FAIL'
-    logger.log(
-      `  [${tag}] ${f.feature.padEnd(12)} expect ${f.expectedPresent ? 'present' : 'absent '} → ${f.actualPresent ? 'present' : 'absent'}`,
-    )
-    if (!f.ok) {
-      failed = true
-    }
-  }
+  let failed = reportFeatureFindings(findings)
 
   // 3. Soft-use features that were dropped — flag for the operator; the app suite
   // is what actually exercises the fallback path.

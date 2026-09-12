@@ -44,7 +44,7 @@ import { errorMessage } from 'local-build-infra/lib/error-utils'
 import colors from 'yoctocolors-cjs'
 import process from 'node:process'
 
-import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
+import { parseArgs } from '@socketsecurity/lib-stable/exe/argv/parse'
 import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -345,6 +345,7 @@ export async function createReleaseArchive(
   logger.log(`  Size: ${sizeMB} MB`)
 
   return {
+    __proto__: null,
     archiveName,
     archivePath,
     checksum,

@@ -25,7 +25,7 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
+import { parseArgs } from '@socketsecurity/lib-stable/exe/argv/parse'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
@@ -77,6 +77,7 @@ export function compileSkipPatterns(skipPatterns) {
   return skipPatterns.map(pattern => {
     const lowerPattern = pattern.toLowerCase()
     return {
+      __proto__: null,
       regex: new RegExp(
         `^${lowerPattern.replaceAll('*', '.*').replaceAll('?', '.')}$`,
       ),
@@ -171,6 +172,7 @@ export function filterTests(testFiles, skipPatterns) {
   }
 
   return {
+    __proto__: null,
     filtered,
     skipped,
     stats: {
@@ -215,20 +217,28 @@ export function shouldSkipTest(testPath, compiledPatterns) {
  * Main test runner.
  */
 async function main() {
+  function resolveTestBinaryPath() {
+    const platformArch =
+      stringArg(values['platform-arch']) || getDefaultPlatformArch()
+    const { outputFinalBinary } = getBuildPaths(
+      BUILD_MODE,
+      process.platform,
+      platformArch,
+    )
+    return {
+      __proto__: null,
+      binaryPath: stringArg(values['binary']) || outputFinalBinary,
+      platformArch,
+    }
+  }
+
   logger.log('')
   logger.log('🧪 Node.js Test Suite Runner for node-smol')
   logger.log('')
 
   // Determine binary path.
   // Use provided platform-arch or auto-detect from current system.
-  const platformArch =
-    stringArg(values['platform-arch']) || getDefaultPlatformArch()
-  const { outputFinalBinary } = getBuildPaths(
-    BUILD_MODE,
-    process.platform,
-    platformArch,
-  )
-  const binaryPath = stringArg(values['binary']) || outputFinalBinary
+  const { binaryPath, platformArch } = resolveTestBinaryPath()
 
   if (!existsSync(binaryPath)) {
     logger.fail(`Binary not found: ${binaryPath}`)

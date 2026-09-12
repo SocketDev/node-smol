@@ -72,12 +72,12 @@ export function createValidTar(tarPath: string): void {
   const result = spawnSync(
     'tar',
     [
+      ...(WIN32 ? ['--force-local'] : []),
       '-cf',
       tarPath,
       '-C',
       contentDir,
       'test.txt',
-      ...(WIN32 ? ['--force-local'] : []),
     ],
     {
       encoding: 'utf8',
@@ -106,14 +106,7 @@ export function createValidTarGz(tarPath: string): void {
 
   const result = spawnSync(
     'tar',
-    [
-      '-czf',
-      tarPath,
-      '-C',
-      contentDir,
-      'test.txt',
-      ...(WIN32 ? ['--force-local'] : []),
-    ],
+    ['-czf', tarPath, '-C', contentDir, 'test.txt'],
     {
       encoding: 'utf8',
       stdio: 'pipe',

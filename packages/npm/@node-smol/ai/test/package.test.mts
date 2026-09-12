@@ -118,6 +118,6 @@ describe('@node-smol/ai package family', () => {
 
     expect(() =>
       loadNativeBinding({ require: requireNative, target: 'darwin-arm64' }),
-    ).toThrow(/@node-smol\/ai\.node-darwin-arm64.*dlopen failed/i)
+    ).toThrow(/@node-smol\/ai\.node\.darwin-arm64.*dlopen failed/i)
   })
 })

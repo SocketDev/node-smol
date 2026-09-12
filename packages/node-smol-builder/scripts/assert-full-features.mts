@@ -2,7 +2,7 @@
 
 /**
  * @file Assert a FULL-feature node-smol binary includes every gated subsystem.
- *   The CI guard for the default (untrimmed) build. USAGE: pnpm --filter
+ *   The CI guard for the default (untrimmed) build. USAGE: `pnpm --filter`
  *   node-smol-builder run assert-full-features [--binary=PATH] The bundle
  *   feature detector + gates let per-bundle builds compile subsystems out. The
  *   DEFAULT build must still ship them ALL — a gyp/configure regression (e.g. a
@@ -23,7 +23,7 @@ import path from 'node:path'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
-import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
+import { parseArgs } from '@socketsecurity/lib-stable/exe/argv/parse'
 import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { featureBuiltinSpecifier, SMOL_FEATURES } from './lib/smol-features.mts'
