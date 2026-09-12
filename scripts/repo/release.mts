@@ -34,10 +34,18 @@ import { parseArgs } from 'node:util'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { isMainModule } from '../fleet/process/is-main-module.mts'
+import { runMain } from '../fleet/process/run-main.mts'
+import type { ScriptMeta } from '../fleet/process/run-main.mts'
 import { runCapture, runInherit } from '../fleet/registry-infra/shared.mts'
 import { RELEASE_ASSETS_DIR, REPO_ROOT } from './paths.mts'
 
 const logger = getDefaultLogger()
+
+const SCRIPT_META: ScriptMeta = {
+  describe: 'Assemble and optionally publish a draft GitHub release.',
+  help: 'Usage: pnpm run release --tag <version> [--dir <path>] [--notes-file <path>] [--publish] [--json]',
+  json: 'result',
+}
 
 const CHECKSUMS_BASENAME = 'checksums.txt'
 
@@ -123,6 +131,7 @@ export async function main(): Promise<void> {
     args: process.argv.slice(2),
     options: {
       dir: { type: 'string' },
+      json: { default: false, type: 'boolean' },
       'notes-file': { type: 'string' },
       publish: { default: false, type: 'boolean' },
       tag: { type: 'string' },
@@ -262,8 +271,5 @@ export async function main(): Promise<void> {
 // Entrypoint-guarded: importing this module (unit tests of its exported
 // helpers) must not execute the script.
 if (isMainModule(import.meta.url)) {
-  main().catch((e: unknown) => {
-    logger.error(e)
-    process.exitCode = 1
-  })
+  runMain(main, SCRIPT_META)
 }

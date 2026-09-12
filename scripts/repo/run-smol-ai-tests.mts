@@ -14,6 +14,14 @@ import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { isMainModule } from '../fleet/process/is-main-module.mts'
+import { runMain } from '../fleet/process/run-main.mts'
+import type { ScriptMeta } from '../fleet/process/run-main.mts'
+
+const SCRIPT_META: ScriptMeta = {
+  describe: 'Run the owned tests for one smol-ai workspace.',
+  help: 'Usage: node scripts/repo/run-smol-ai-tests.mts <package> [--json]',
+  json: 'result',
+}
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -27,7 +35,7 @@ const packageRoots = new Map([
   ['smol-ai-builder', path.join(repoRoot, 'packages', 'smol-ai-builder')],
 ])
 
-function main(): void {
+export function main(): void {
   const packageName = process.argv[2]
   const packageRoot = packageName ? packageRoots.get(packageName) : undefined
   if (!packageRoot) {
@@ -58,5 +66,5 @@ function main(): void {
 }
 
 if (isMainModule(import.meta.url)) {
-  main()
+  runMain(main, SCRIPT_META)
 }

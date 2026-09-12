@@ -31,10 +31,18 @@ import { isPlainObject } from '@socketsecurity/lib-stable/objects/predicates'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { isMainModule } from '../fleet/process/is-main-module.mts'
+import { runMain } from '../fleet/process/run-main.mts'
+import type { ScriptMeta } from '../fleet/process/run-main.mts'
 import { runCapture, runInherit } from '../fleet/registry-infra/shared.mts'
 import { loadSocketWheelhouseConfig, REPO_ROOT } from './paths.mts'
 
 const logger = getDefaultLogger()
+
+const SCRIPT_META: ScriptMeta = {
+  describe: 'Build the repository prebake images.',
+  help: 'Usage: pnpm run build [--target base|binary] [--dry-run] [--push] [--platforms <list>] [--json]',
+  json: 'result',
+}
 
 /**
  * One `docker.prebakes.prebakes[]` entry, narrowed from the untyped config
@@ -277,6 +285,7 @@ export async function main(): Promise<void> {
     args: process.argv.slice(2),
     options: {
       'dry-run': { default: false, type: 'boolean' },
+      json: { default: false, type: 'boolean' },
       platforms: { type: 'string' },
       push: { default: false, type: 'boolean' },
       target: { default: 'base', type: 'string' },
@@ -305,8 +314,5 @@ export async function main(): Promise<void> {
 // Entrypoint-guarded: importing this module (unit tests of its exported
 // helpers) must not execute the script.
 if (isMainModule(import.meta.url)) {
-  main().catch((e: unknown) => {
-    logger.error(e)
-    process.exitCode = 1
-  })
+  runMain(main, SCRIPT_META)
 }

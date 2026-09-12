@@ -248,5 +248,6 @@ if (isMainModule(import.meta.url)) {
   runMain(main, {
     describe: 'Verify the committed C ABI symbol snapshot.',
     help: 'Usage: smol-tui-cabi-symbols-are-mapped [--update|--self-test]',
+    json: 'result',
   })
 }
