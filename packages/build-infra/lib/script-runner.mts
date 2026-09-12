@@ -186,7 +186,7 @@ export async function runQuiet(
   options: SpawnExtra = {},
 ) {
   return spawn(command, args, {
-    shell: WIN32,
+    shell: WIN32 === true,
     ...options,
   })
 }
