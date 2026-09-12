@@ -13,6 +13,7 @@ import { errorMessage } from './error-utils.mts'
  * Validate an ONNX model file.
  *
  * Checks:
+ *
  * - File is not empty (minimum 100 bytes)
  * - Valid ONNX protobuf magic number (0x08 or 0x0a)
  *

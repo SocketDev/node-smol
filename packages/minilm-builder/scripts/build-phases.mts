@@ -8,7 +8,7 @@
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { getFileSize } from 'local-build-infra/lib/build-steps'
 import {
   createCheckpoint,
   shouldRun,

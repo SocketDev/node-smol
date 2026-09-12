@@ -1,5 +1,5 @@
 /**
- * @file Tests for version-helpers utilities.
+ * @file Tests for tool-versions utilities.
  *   Validates .gitmodules version and checksum parsing.
  */
 
@@ -16,7 +16,7 @@ import {
   getSubmoduleChecksum,
   getSubmoduleVersion,
   verifyNodeChecksum,
-} from '../lib/version-helpers.mts'
+} from '../lib/tool-versions.mts'
 import { REPO_ROOT as monorepoRoot } from '../../../scripts/fleet/paths.mts'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
@@ -59,7 +59,7 @@ afterEach(() => {
   nock.cleanAll()
 })
 
-describe('version-helpers', () => {
+describe('tool-versions', () => {
   describe(getNodeVersion, () => {
     it('should return a valid semver-like version string', () => {
       const version = getNodeVersion()

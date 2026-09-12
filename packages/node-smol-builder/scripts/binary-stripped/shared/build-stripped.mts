@@ -20,7 +20,7 @@ import {
   exec,
   getFileSize,
   smokeTestBinary,
-} from 'local-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'

@@ -11,14 +11,24 @@ import {
   checkDiskSpace,
   checkPythonVersion,
   freeDiskSpace,
-} from './build-helpers.mts'
+} from './build-steps.mts'
 import { printError } from './build-output.mts'
 import { loadAllTools } from './pinned-versions.mts'
 import { ensureAllPythonPackages } from './python-installer-ops.mts'
 import { ensureToolInstalled } from './tool-installer.mts'
-import { getMinPythonVersion } from './version-helpers.mts'
+import { getMinPythonVersion } from './tool-versions.mts'
 
 const logger = getDefaultLogger()
+
+export async function checkModelBuildDiskSpace(
+  buildDir,
+  requiredDiskGB,
+  quiet,
+) {
+  if (buildDir && !(await checkDiskSpace(buildDir, requiredDiskGB)) && !quiet) {
+    logger.warn('Could not check disk space')
+  }
+}
 
 /**
  * Run preflight checks for model builds: free and check disk space, install
@@ -51,15 +61,7 @@ export async function checkModelBuildPrerequisites(config) {
   // Free up disk space (CI environments).
   await freeDiskSpace()
 
-  // Check disk space.
-  if (buildDir) {
-    const diskOk = await checkDiskSpace(buildDir, requiredDiskGB)
-    if (!diskOk) {
-      if (!quiet) {
-        logger.warn('Could not check disk space')
-      }
-    }
-  }
+  await checkModelBuildDiskSpace(buildDir, requiredDiskGB, quiet)
 
   // Ensure Python 3 is installed.
   const requiredPythonVersion = getMinPythonVersion()
@@ -129,6 +131,7 @@ export async function checkModelBuildPrerequisites(config) {
   }
 
   return {
+    __proto__: null,
     externalTools,
     pythonPackages,
   }
@@ -162,7 +165,7 @@ export function extractPythonPackages(externalTools) {
     .map(([name]) => {
       // Handle packages that need special import names
       if (name === 'onnxruntime') {
-        return { importName: 'onnxruntime', name }
+        return { __proto__: null, importName: 'onnxruntime', name }
       }
       return name
     })

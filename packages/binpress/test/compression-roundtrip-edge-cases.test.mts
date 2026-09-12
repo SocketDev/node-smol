@@ -11,7 +11,7 @@ import path from 'node:path'
 import process from 'node:process'
 import crypto from 'node:crypto'
 
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 import { getBuildMode } from 'local-build-infra/lib/constants'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'

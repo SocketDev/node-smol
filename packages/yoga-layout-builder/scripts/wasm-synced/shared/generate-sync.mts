@@ -14,7 +14,7 @@ import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import * as acorn from 'acorn'
 import * as walk from 'acorn-walk'
-import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { getFileSize } from 'local-build-infra/lib/build-steps'
 import { generateWasmSyncWrapper } from 'local-build-infra/wasm-synced/wasm-sync-wrapper'
 import MagicString from 'magic-string'
 

@@ -1,12 +1,12 @@
 /**
- * @file Tests for model-build-helpers utilities (pure helpers).
+ * @file Tests for model-build utilities (pure helpers).
  */
 
 import { describe, expect, it } from 'vitest'
 
-import { extractPythonPackages } from '../lib/model-build-helpers.mts'
+import { extractPythonPackages } from '../lib/model-build.mts'
 
-describe('model-build-helpers', () => {
+describe('model-build', () => {
   describe(extractPythonPackages, () => {
     it('should return Python packages from packageManager shape', () => {
       const packages = extractPythonPackages({
@@ -47,7 +47,7 @@ describe('model-build-helpers', () => {
         onnxruntime: { packageManager: 'pip', version: '1.24.4' },
       })
       expect(packages).toStrictEqual([
-        { importName: 'onnxruntime', name: 'onnxruntime' },
+        { __proto__: null, importName: 'onnxruntime', name: 'onnxruntime' },
       ])
     })
   })

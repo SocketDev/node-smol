@@ -26,7 +26,7 @@
  */
 
 import crypto from 'node:crypto'
-import { existsSync, promises as fs, readFileSync } from 'node:fs'
+import { existsSync, promises as fs, readFileSync, writeSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
@@ -44,7 +44,7 @@ import {
   getCurrentPlatformArch,
   parsePlatformArch,
 } from './platform-mappings.mts'
-import { getNodeVersion } from './version-helpers.mts'
+import { getNodeVersion } from './tool-versions.mts'
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 
 import type { ExternalToolsFile } from './external-tools-schema.mts'
@@ -263,7 +263,7 @@ export async function runPipeline(config, cliOverrides) {
   })
 
   if (flags.printCacheKey) {
-    process.stdout.write(`${cacheKey}\n`) // socket-hook: allow logger -- shell capture of cache key
+    writeSync(1, `${cacheKey}\n`)
     return undefined
   }
 

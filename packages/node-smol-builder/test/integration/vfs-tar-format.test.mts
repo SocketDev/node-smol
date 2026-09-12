@@ -10,7 +10,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'

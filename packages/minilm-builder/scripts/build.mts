@@ -25,9 +25,9 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { formatDuration } from 'local-build-infra/lib/build-helpers'
+import { formatDuration } from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
-import { checkModelBuildPrerequisites } from 'local-build-infra/lib/model-build-helpers'
+import { checkModelBuildPrerequisites } from 'local-build-infra/lib/model-build'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

@@ -30,7 +30,7 @@ import {
   createCheckpoint,
 } from 'local-build-infra/lib/checkpoint-manager'
 import { CHECKPOINTS } from 'local-build-infra/lib/constants'
-import { checkModelBuildPrerequisites } from 'local-build-infra/lib/model-build-helpers'
+import { checkModelBuildPrerequisites } from 'local-build-infra/lib/model-build'
 import { getPythonCommand } from 'local-build-infra/lib/python-installer'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 

@@ -1,7 +1,7 @@
 /**
  * Re-export barrel for version-helper sub-modules.
  *
- * Consumers importing from `build-infra/lib/version-helpers` continue to work
+ * Consumers importing from `build-infra/lib/tool-versions` continue to work
  * unchanged; the implementation is split across:
  *
  * - External-tools-loader.mts (loadExternalTools*)

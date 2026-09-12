@@ -30,7 +30,7 @@ import {
   needsCacheRebuild,
   saveBuildLog,
   smokeTestBinary,
-} from 'local-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 import {

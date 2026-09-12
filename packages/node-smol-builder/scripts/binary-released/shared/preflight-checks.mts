@@ -11,7 +11,7 @@ import {
   checkNetworkConnectivity,
   checkPythonVersion,
   exec,
-} from 'local-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import {
   ensureGccVersion,
@@ -23,7 +23,7 @@ import {
   getInstallInstructions,
   getPackageManagerInstructions,
 } from 'local-build-infra/lib/tool-installer'
-import { getMinPythonVersion } from 'local-build-infra/lib/version-helpers'
+import { getMinPythonVersion } from 'local-build-infra/lib/tool-versions'
 
 import { whichSync } from '@socketsecurity/lib-stable/exe/path/which'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

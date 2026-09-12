@@ -18,7 +18,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

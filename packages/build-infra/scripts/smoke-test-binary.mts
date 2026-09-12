@@ -25,7 +25,7 @@ import process from 'node:process'
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
-import { smokeTestBinary } from '../lib/build-helpers.mts'
+import { smokeTestBinary } from '../lib/build-steps.mts'
 
 const logger = getDefaultLogger()
 

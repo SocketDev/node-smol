@@ -21,7 +21,7 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 import { getPlatformBuildDir } from 'local-build-infra/lib/constants'
 import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 

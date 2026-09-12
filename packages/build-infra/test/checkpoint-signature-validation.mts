@@ -16,6 +16,42 @@ export interface CreateCheckpointCallError {
   line: number
 }
 
+function collectCreateCheckpointCall(lines: string[], start: number): string {
+  const paramLines: string[] = []
+  let braceCount = 0
+  let foundStart = false
+  for (
+    let index = start;
+    index < Math.min(start + 15, lines.length);
+    index += 1
+  ) {
+    const line = lines[index]
+    if (line === undefined) {
+      continue
+    }
+    if (line.includes('createCheckpoint(')) {
+      foundStart = true
+    }
+    if (!foundStart) {
+      continue
+    }
+    paramLines.push(line)
+    braceCount += (line.match(/\(/g) || []).length
+    braceCount -= (line.match(/\)/g) || []).length
+    if (braceCount === 0) {
+      break
+    }
+  }
+  return paramLines.join('\n')
+}
+
+function isCreateCheckpointInvocation(line: string): boolean {
+  return (
+    line.includes('createCheckpoint(') &&
+    (line.includes('await') || line.trim().startsWith('createCheckpoint('))
+  )
+}
+
 /**
  * Recursively find all `.mts` files below a directory.
  */
@@ -59,10 +95,7 @@ export function validateCreateCheckpointCall(
     if (line === undefined) {
       continue
     }
-    if (
-      line.includes('createCheckpoint(') &&
-      (line.includes('await') || line.trim().startsWith('createCheckpoint('))
-    ) {
+    if (isCreateCheckpointInvocation(line)) {
       const context = lines.slice(i, Math.min(i + 10, lines.length)).join('\n')
       const hasAsyncCallback =
         /async\s*\(\s*\)\s*=>/.test(context) ||
@@ -85,29 +118,7 @@ export function validateCreateCheckpointCall(
         continue
       }
 
-      const paramLines: string[] = []
-      let braceCount = 0
-      let foundStart = false
-
-      for (let j = i; j < Math.min(i + 15, lines.length); j += 1) {
-        const paramLine = lines[j]
-        if (paramLine === undefined) {
-          continue
-        }
-        if (paramLine.includes('createCheckpoint(')) {
-          foundStart = true
-        }
-        if (foundStart) {
-          paramLines.push(paramLine)
-          braceCount += (paramLine.match(/\(/g) || []).length
-          braceCount -= (paramLine.match(/\)/g) || []).length
-          if (braceCount === 0) {
-            break
-          }
-        }
-      }
-
-      const fullCall = paramLines.join('\n')
+      const fullCall = collectCreateCheckpointCall(lines, i)
       if (/createCheckpoint\([^,]+,\s*packageName\s*,/.test(fullCall)) {
         errors.push({
           context: fullCall.substring(0, 200),

@@ -20,7 +20,7 @@ import {
 import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 import { verifyReleaseChecksum } from 'local-build-infra/lib/release-checksums/core'
 import { extractTarball } from 'local-build-infra/lib/tarball-utils'
-import { getSubmoduleVersion } from 'local-build-infra/lib/version-helpers'
+import { getSubmoduleVersion } from 'local-build-infra/lib/tool-versions'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'

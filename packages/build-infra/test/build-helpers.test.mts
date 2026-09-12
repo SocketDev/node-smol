@@ -1,5 +1,5 @@
 /**
- * @file Tests for build-helpers utilities (pure functions).
+ * @file Tests for build-steps utilities (pure functions).
  */
 
 import { describe, expect, it } from 'vitest'
@@ -8,9 +8,9 @@ import {
   estimateBuildTime,
   formatDuration,
   selectCrossCompileSmokeTestStrategy,
-} from '../lib/build-helpers.mts'
+} from '../lib/build-steps.mts'
 
-describe('build-helpers', () => {
+describe('build-steps', () => {
   describe(formatDuration, () => {
     it('should format seconds', () => {
       expect(formatDuration(0)).toBe('0s')

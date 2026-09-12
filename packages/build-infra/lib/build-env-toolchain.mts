@@ -14,7 +14,7 @@ import { envAsBoolean } from '@socketsecurity/lib-stable/env/boolean'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { DOCKER_ENV_FILE, PODMAN_ENV_FILE } from './constants.mts'
-import { getMinPythonVersion } from './version-helpers.mts'
+import { getMinPythonVersion } from './tool-versions.mts'
 
 /**
  * Throw an error if download is blocked by BUILD_*_FROM_SOURCE flags. Use this

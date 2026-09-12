@@ -20,7 +20,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 import { getBuildMode } from 'local-build-infra/lib/constants'
 import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 

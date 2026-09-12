@@ -6,10 +6,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 
-import type * as BuildHelpers from '../lib/build-helpers.mts'
+import type * as BuildHelpers from '../lib/build-steps.mts'
 import type * as BuildOutput from '../lib/build-output.mts'
 import type * as LoggerDefault from '@socketsecurity/lib-stable/logger/default'
-import type * as VersionHelpers from '../lib/version-helpers.mts'
+import type * as VersionHelpers from '../lib/tool-versions.mts'
 
 import {
   runPreflightChecks,
@@ -29,7 +29,7 @@ vi.mock<typeof LoggerDefault>(
   }),
 )
 
-vi.mock<typeof BuildHelpers>(import('../lib/build-helpers.mts'), () => ({
+vi.mock<typeof BuildHelpers>(import('../lib/build-steps.mts'), () => ({
   checkCompiler: vi.fn(),
   checkDiskSpace: vi.fn(),
   checkPythonVersion: vi.fn(),
@@ -39,7 +39,7 @@ vi.mock<typeof BuildOutput>(import('../lib/build-output.mts'), () => ({
   printError: vi.fn(),
 }))
 
-vi.mock<typeof VersionHelpers>(import('../lib/version-helpers.mts'), () => ({
+vi.mock<typeof VersionHelpers>(import('../lib/tool-versions.mts'), () => ({
   getMinPythonVersion: vi.fn().mockReturnValue('3.6'),
 }))
 
@@ -51,7 +51,7 @@ describe('preflight-checks', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
 
-    const buildHelpers = await import('../lib/build-helpers.mts')
+    const buildHelpers = await import('../lib/build-steps.mts')
     mockCheckDiskSpace = vi.mocked(buildHelpers.checkDiskSpace)
     mockCheckCompiler = vi.mocked(buildHelpers.checkCompiler)
     mockCheckPythonVersion = vi.mocked(buildHelpers.checkPythonVersion)
