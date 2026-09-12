@@ -4,11 +4,13 @@
   "tools": {
     "cmake": {
       "description": "CMake build system generator. Dawn's CMakeLists.txt is the island-build entry; we use the cmake CLI to configure and drive Ninja.",
-      "version": "3.30.5"
+      "version": "3.30.5",
+      "origin": "system"
     },
     "ninja": {
       "description": "Ninja build system. Dawn's CMake setup generates Ninja files for fast parallel builds.",
-      "version": "1.12.1"
+      "version": "1.12.1",
+      "origin": "system"
     }
   }
 }

@@ -4,16 +4,19 @@
   "tools": {
     "cmake": {
       "description": "CMake build system (required for ONNX Runtime)",
-      "version": "3.31.4"
+      "version": "3.31.4",
+      "origin": "system"
     },
     "emscripten": {
       "description": "Emscripten WASM compiler toolchain",
       "version": "4.0.20",
-      "notes": "Installed via emsdk. Version 4.0+ required for correct WASM module generation."
+      "notes": "Installed via emsdk. Version 4.0+ required for correct WASM module generation.",
+      "origin": "system"
     },
     "python3": {
       "description": "Python 3 interpreter (required for Emscripten and build scripts)",
-      "version": "3.13.1"
+      "version": "3.13.1",
+      "origin": "system"
     }
   }
 }

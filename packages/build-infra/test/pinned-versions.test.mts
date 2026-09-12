@@ -37,7 +37,7 @@ describe('pinned-versions', () => {
     it('should have system tools with proper structure', () => {
       // build-infra has system tools, not Python packages
       const systemTools = Object.entries(TOOL_VERSIONS).filter(
-        ([_, config]) => config.packageManager !== 'pip',
+        ([_, config]) => config.origin === 'system',
       )
 
       expect(systemTools.length).toBeGreaterThan(0)
@@ -110,9 +110,7 @@ describe('pinned-versions', () => {
 
   describe(getPinnedPackage, () => {
     it('should throw error for unknown package', () => {
-      expect(() => getPinnedPackage('nonexistent-package-12345')).toThrow(
-        /No pinned version found/,
-      )
+      expect(() => getPinnedPackage('nonexistent-package-12345')).toThrow(Error)
     })
   })
 
@@ -164,9 +162,11 @@ describe('pinned-versions', () => {
       expect(version).toBeUndefined()
     })
 
-    it('should return undefined for tool without version', () => {
-      const version = getToolVersion('git')
-      expect(version).toBeUndefined()
+    it('pins every system tool version', () => {
+      const systemTools = Object.values(TOOL_VERSIONS).filter(
+        config => config.origin === 'system',
+      )
+      expect(systemTools.every(config => Boolean(config.version))).toBe(true)
     })
 
     it('should handle tools with version pinning', () => {

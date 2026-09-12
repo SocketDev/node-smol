@@ -153,14 +153,7 @@ export function extractPythonPackages(externalTools) {
         // --break-system-packages (no RECORD file on the dpkg copy).
         // Treat it as bootstrap; pin via external-tools.json for docs
         // but don't auto-reinstall it.
-        name !== 'pip' &&
-        // Two equivalent shapes exist in external-tools.json files:
-        //   { packageManager: "pip", ... }                  (newer)
-        //   { type: "python", versions: { pip: "x.y.z" } }  (shared ml-tools)
-        // Both should count as a Python package to auto-install via pip.
-        (config.packageManager === 'pip' ||
-          config.type === 'python' ||
-          (config.versions && Object.hasOwn(config.versions, 'pip'))),
+        name !== 'pip' && config.origin === 'pypi',
     )
     .map(([name]) => {
       // Handle packages that need special import names

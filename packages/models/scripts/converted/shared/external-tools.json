@@ -5,22 +5,22 @@
     "torch": {
       "description": "PyTorch machine learning framework",
       "version": "2.10.0",
-      "packageManager": "pip"
+      "origin": "pypi"
     },
     "transformers": {
       "description": "HuggingFace Transformers library for NLP models",
       "version": "4.53.3",
-      "packageManager": "pip"
+      "origin": "pypi"
     },
     "onnx": {
       "description": "ONNX (Open Neural Network Exchange) format library",
       "version": "1.20.1",
-      "packageManager": "pip"
+      "origin": "pypi"
     },
     "sentence_transformers": {
       "description": "Sentence Transformers for sentence embeddings",
       "version": "3.3.1",
-      "packageManager": "pip"
+      "origin": "pypi"
     }
   }
 }

@@ -18,6 +18,18 @@ import type { Static } from '@sinclair/typebox'
 
 const toolSchema = Type.Object(
   {
+    origin: Type.Union([
+      Type.Literal('cargo'),
+      Type.Literal('gh-archive'),
+      Type.Literal('gh-asset'),
+      Type.Literal('git'),
+      Type.Literal('manager'),
+      Type.Literal('native'),
+      Type.Literal('node-dist'),
+      Type.Literal('npm'),
+      Type.Literal('pypi'),
+      Type.Literal('system'),
+    ]),
     // Common fields (all repos).
     description: Type.Optional(
       Type.String({ description: 'What the tool is used for' }),
@@ -33,14 +45,6 @@ const toolSchema = Type.Object(
           'Publish date (ISO-8601 YYYY-MM-DD). Source-of-truth for the soak policy in lib/soak-policy.mts. Required when adding a pin inside the 7-day soak window.',
         pattern: '^\\d{4}-\\d{2}-\\d{2}$',
       }),
-    ),
-    packageManager: Type.Optional(
-      Type.Union(
-        [Type.Literal('npm'), Type.Literal('pip'), Type.Literal('pnpm')],
-        {
-          description: 'Package manager for installation. Absent = system tool',
-        },
-      ),
     ),
     notes: Type.Optional(
       Type.Union([Type.String(), Type.Array(Type.String())], {
@@ -58,6 +62,8 @@ const toolSchema = Type.Object(
     repository: Type.Optional(
       Type.String({ description: 'Repository in "github:owner/repo" format' }),
     ),
+    ref: Type.Optional(Type.String()),
+    sha: Type.Optional(Type.String()),
     release: Type.Optional(
       Type.Union([Type.Literal('asset'), Type.Literal('archive')], {
         description:

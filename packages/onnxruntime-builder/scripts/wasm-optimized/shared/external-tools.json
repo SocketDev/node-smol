@@ -4,7 +4,8 @@
   "tools": {
     "binaryen": {
       "description": "Binaryen WebAssembly optimizer (wasm-opt)",
-      "version": "120"
+      "version": "120",
+      "origin": "system"
     }
   }
 }
