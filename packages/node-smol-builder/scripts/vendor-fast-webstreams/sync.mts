@@ -19,6 +19,7 @@ import {
   readFileSync,
   writeFileSync,
 } from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -45,8 +46,10 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const PACKAGE_NAME = 'experimental-fast-webstreams'
-const PACKAGE_ROOT = path.resolve(__dirname, '../..')
-const NODE_MODULES_PKG = path.join(PACKAGE_ROOT, 'node_modules', PACKAGE_NAME)
+const NODE_MODULES_PKG = path.resolve(
+  path.dirname(createRequire(import.meta.url).resolve(PACKAGE_NAME)),
+  '..',
+)
 const VENDOR_DIR = path.resolve(
   __dirname,
   '../../additions/source-patched/deps/fast-webstreams',
