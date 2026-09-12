@@ -10,7 +10,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { isMainModule } from '../fleet/process/is-main-module.mts'
@@ -47,11 +47,11 @@ function main(): void {
     repoRoot,
     'node_modules',
     '.bin',
-    WIN32 ? 'vitest.cmd' : 'vitest',
+    isWin32() ? 'vitest.cmd' : 'vitest',
   )
   const result = spawnSync(vitest, ['run', ...testFiles], {
     cwd: packageRoot,
-    shell: WIN32,
+    shell: isWin32(),
     stdio: 'inherit',
   })
   process.exitCode = result.status ?? 1
