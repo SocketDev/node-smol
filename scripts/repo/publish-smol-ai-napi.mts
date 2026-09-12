@@ -19,6 +19,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
 
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { REPO_ROOT } from '../fleet/paths.mts'
@@ -76,8 +77,12 @@ export function readMachine(bytes: Buffer, platform: string): number {
 
 export function stageNapiArtifacts(
   artifactsDir: string,
-  npmRoot = path.join(REPO_ROOT, 'packages', 'npm', '@node-smol'),
+  options?: { npmRoot?: string | undefined } | undefined,
 ): StagedNapiArtifact[] {
+  const { npmRoot = path.join(REPO_ROOT, 'packages', 'npm', '@node-smol') } = {
+    __proto__: null,
+    ...options,
+  }
   const staged: StagedNapiArtifact[] = []
   for (const target of SMOL_AI_NAPI_TARGETS) {
     const packageName = packageNameFor(target.platform)
@@ -182,16 +187,21 @@ export function tarballName(name: string, version: string): string {
   return `${name.replace(/^@/u, '').replace('/', '-')}-${version}.tgz`
 }
 
-async function main(): Promise<void> {
+function readPublishInputs(): readonly [
+  boolean,
+  boolean,
+  string,
+  string,
+  string,
+] {
   const dryRun = process.argv.includes('--dry-run')
   const shouldStage = process.argv.includes('--staged')
   if (dryRun === shouldStage) {
     throw new Error('Pass exactly one of --dry-run or --staged.')
   }
-  if (shouldStage && process.env['GITHUB_ACTIONS'] !== 'true') {
+  if (shouldStage && getEnvValue('GITHUB_ACTIONS') !== 'true') {
     throw new Error('Staged publishing must run in GitHub Actions with OIDC.')
   }
-
   const artifactsArg = readArg('--artifacts-dir')
   if (!artifactsArg) {
     throw new Error('Pass --artifacts-dir <downloaded workflow artifacts>.')
@@ -200,31 +210,41 @@ async function main(): Promise<void> {
   if (!bundleArg) {
     throw new Error('Pass --bundle-dir <exact tarball output directory>.')
   }
-  const artifactsDir = path.resolve(artifactsArg)
-  const bundleDir = path.resolve(bundleArg)
-  mkdirSync(bundleDir, { recursive: true })
-  const tag = readArg('--tag') ?? 'latest'
-  const staged = stageNapiArtifacts(artifactsDir)
-  const release = validateReleaseVersion(staged, {
-    allowPlaceholder: dryRun,
-  })
+  return [
+    dryRun,
+    shouldStage,
+    artifactsArg,
+    bundleArg,
+    readArg('--tag') ?? 'latest',
+  ]
+}
 
-  for (const artifact of staged) {
-    logger.log(
-      `${artifact.packageName}: ${artifact.size} bytes, sha256 ${artifact.sha256}`,
-    )
-  }
-
-  if (shouldStage) {
-    for (const name of release.packageNames) {
-      if (await isAlreadyPublished(name, release.version)) {
-        throw new Error(
-          `${name}@${release.version} is already published. Nothing was staged.`,
-        )
-      }
+async function assertPackagesAreUnpublished(
+  packageNames: readonly string[],
+  version: string,
+): Promise<void> {
+  for (const name of packageNames) {
+    if (await isAlreadyPublished(name, version)) {
+      throw new Error(
+        `${name}@${version} is already published. Nothing was staged.`,
+      )
     }
   }
+}
 
+async function packAndUploadRelease(
+  release: { packageDirs: string[]; packageNames: string[]; version: string },
+  config: {
+    bundleDir: string
+    dryRun: boolean
+    shouldStage: boolean
+    tag: string
+  },
+): Promise<void> {
+  const { bundleDir, dryRun, shouldStage, tag } = {
+    __proto__: null,
+    ...config,
+  }
   const checksums: string[] = []
   for (let index = 0; index < release.packageDirs.length; index += 1) {
     const directory = release.packageDirs[index]!
@@ -248,29 +268,9 @@ async function main(): Promise<void> {
       path.join(bundleDir, 'SHA256SUMS'),
       `${checksums.join('\n')}\n`,
     )
-
     logger.log(
       `${dryRun ? 'Dry-running' : 'Staging'} ${name}@${release.version}`,
     )
-    // The upload itself is the fleet's, not ours. uploadNpmPackage owns the
-    // argv, decides provenance from the runner AND the repository visibility,
-    // and asserts the trusted-publishing auth posture on both sides of the
-    // spawn. Everything around it stays local orchestration: which packages go
-    // in what order, the shared-version guard, the already-published check, and
-    // the staged-tarball verification below.
-    //
-    // cwd is the package directory, and no manifest here redirects the publish
-    // with publishConfig.directory, so the primitive's default manifestPath of
-    // <cwd>/package.json already names the manifest being published.
-    //
-    // The manifests' `publishConfig.provenance: true` is not a competing
-    // provenance decision: it is the fleet's source-side floor, required by
-    // scripts/fleet/check/publish-config-is-hardened.mts (release tier)
-    // because an attestation can never be attached retroactively (see
-    // docs/agents.md/fleet/release-tag-escape-hatch.md). It agrees with
-    // resolveUploadProvenance() everywhere this family can publish — a real
-    // stage runs only in GitHub Actions on this PUBLIC repo — so do not
-    // "reconcile" the keys away: that turns the hardening gate red.
     const upload = await uploadNpmPackage({
       cwd: directory,
       dryRun,
@@ -280,11 +280,6 @@ async function main(): Promise<void> {
     if (upload.code !== 0) {
       throw new Error(`${name} stage publish exited ${upload.code}`)
     }
-    // A zero exit is not proof the OIDC exchange worked — pnpm reports the
-    // failure and carries on under whatever other credential the environment
-    // holds. uploadNpmPackage has already logged which posture refused and why;
-    // this is where the run stops instead of staging the rest of the family
-    // under the same wrong identity.
     if (!upload.postureOk) {
       throw new Error(
         `${name}@${release.version} failed the publish auth posture check`,
@@ -308,6 +303,35 @@ async function main(): Promise<void> {
       }
     }
   }
+}
+
+async function main(): Promise<void> {
+  const {
+    0: dryRun,
+    1: shouldStage,
+    2: artifactsArg,
+    3: bundleArg,
+    4: tag,
+  } = readPublishInputs()
+  const artifactsDir = path.resolve(artifactsArg)
+  const bundleDir = path.resolve(bundleArg)
+  mkdirSync(bundleDir, { recursive: true })
+  const staged = stageNapiArtifacts(artifactsDir)
+  const release = validateReleaseVersion(staged, {
+    allowPlaceholder: dryRun,
+  })
+
+  for (const artifact of staged) {
+    logger.log(
+      `${artifact.packageName}: ${artifact.size} bytes, sha256 ${artifact.sha256}`,
+    )
+  }
+
+  if (shouldStage) {
+    await assertPackagesAreUnpublished(release.packageNames, release.version)
+  }
+
+  await packAndUploadRelease(release, { bundleDir, dryRun, shouldStage, tag })
 
   if (dryRun) {
     logger.success(

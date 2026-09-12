@@ -10,6 +10,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
+import { isAgent } from '@socketsecurity/lib-stable/env/agents'
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
@@ -46,6 +47,12 @@ import type {
 export * from './smol-tui-cabi-symbols-are-mapped/audit.mts'
 
 const logger = getDefaultLogger()
+
+function reportSuccess(message: string): void {
+  if (!isAgent()) {
+    logger.success(message)
+  }
+}
 
 /**
  * Compare the snapshot's symbol set against a live extraction from `stuieDir`.
@@ -182,7 +189,7 @@ export async function main(): Promise<void> {
   const argv = process.argv.slice(2)
   if (argv.includes('--self-test')) {
     if (runSelfTest()) {
-      logger.success(`${LOG_PREFIX} self-test: the phantom symbol was caught.`)
+      reportSuccess(`${LOG_PREFIX} self-test: the phantom symbol was caught.`)
       return
     }
     logger.fail(
@@ -197,7 +204,7 @@ export async function main(): Promise<void> {
     const stuieDir = await verifyStuieSource(REPO_ROOT)
     const snapshot = extractSnapshotFromCheckout(stuieDir)
     writeFileSync(snapshotPath, `${JSON.stringify(snapshot, undefined, 2)}\n`)
-    logger.success(
+    reportSuccess(
       `${LOG_PREFIX} wrote ${SNAPSHOT_REL_PATH}: ${snapshot.symbols.length} symbols from stuie ${snapshot.stuieCommit.slice(0, 12)}.`,
     )
     return
@@ -257,7 +264,7 @@ export async function main(): Promise<void> {
     process.exitCode = 1
     return
   }
-  logger.success(
+  reportSuccess(
     `${LOG_PREFIX} all ${snapshot.symbols.length} stuie-cabi symbols are mapped across ${map.rows.length} rows.`,
   )
 }

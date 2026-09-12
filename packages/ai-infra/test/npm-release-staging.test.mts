@@ -92,7 +92,7 @@ describe('smol-ai N-API release staging', () => {
     const { artifactsDir, npmRoot } = makeScratch()
     writeFixtureTree(artifactsDir, npmRoot)
 
-    const staged = stageNapiArtifacts(artifactsDir, npmRoot)
+    const staged = stageNapiArtifacts(artifactsDir, { npmRoot })
 
     expect(staged).toHaveLength(8)
     for (const item of staged) {
@@ -110,7 +110,7 @@ describe('smol-ai N-API release staging', () => {
       badPlatform: 'linux-x64-gnu',
     })
 
-    expect(() => stageNapiArtifacts(artifactsDir, npmRoot)).toThrow(
+    expect(() => stageNapiArtifacts(artifactsDir, { npmRoot })).toThrow(
       'linux-x64-gnu has the wrong file signature',
     )
   })
@@ -121,7 +121,7 @@ describe('smol-ai N-API release staging', () => {
       badMachine: 'win32-arm64-msvc',
     })
 
-    expect(() => stageNapiArtifacts(artifactsDir, npmRoot)).toThrow(
+    expect(() => stageNapiArtifacts(artifactsDir, { npmRoot })).toThrow(
       'win32-arm64-msvc has machine 0; expected 43620',
     )
   })
@@ -135,7 +135,7 @@ describe('smol-ai N-API release staging', () => {
       path.join(wrapperDir, 'package.json'),
       `${JSON.stringify({ name: '@node-smol/ai', version: '0.0.0' })}\n`,
     )
-    const staged = stageNapiArtifacts(artifactsDir, npmRoot)
+    const staged = stageNapiArtifacts(artifactsDir, { npmRoot })
 
     expect(() =>
       validateReleaseVersion(staged, {
