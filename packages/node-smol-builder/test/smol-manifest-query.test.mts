@@ -398,10 +398,6 @@ importers:
       },
     )
 
-    for (let i = 0, { length } = FIXTURES; i < length; i += 1) {
-      const fixture = FIXTURES[i]
-      it.todo(`${fixture.dir}: smol parseLockfile output matches expected.json`)
-    }
   })
 
   describe('uv-lock fixtures', () => {
@@ -439,11 +435,5 @@ importers:
       }
     })
 
-    for (let i = 0, { length } = UV_FIXTURES; i < length; i += 1) {
-      const fixture = UV_FIXTURES[i]
-      it.todo(
-        `${fixture.dir}: smol parseLockfile output matches ${fixture.dir}.golden.json (rides the next smol binary build)`,
-      )
-    }
   })
 })

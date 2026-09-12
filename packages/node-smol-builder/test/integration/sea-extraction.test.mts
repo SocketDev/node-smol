@@ -21,10 +21,6 @@
  * 3. A clean bundle yields NO secret hits in the extracted region — even though
  *    the whole binary does contain Node's own crypto strings (proving the
  *    extraction, not the binary, is what we scan).
- *
- * The snapshot case (a V8 startup snapshot stores compiled heap, not source, so
- * the payload must NOT be recoverable as plaintext) lands with the build-sea
- * snapshot wrapper — marked it.todo below.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -210,8 +206,4 @@ describe.skipIf(skipTests)('SEA extraction / leak guard', () => {
     expect(hits).toStrictEqual([])
   })
 
-  // Added when build-sea snapshot mode lands: a V8 startup snapshot serializes
-  // compiled heap, not source text, so extractBundle() must return undefined
-  // The fenced source is not present as plaintext.
-  it.todo('a snapshot SEA does not leak its source as plaintext')
 })

@@ -161,10 +161,4 @@ describe('node-smol package', () => {
     })
   })
 
-  // Build execution requires a compilation toolchain (gcc, make, python),
-  // ~1GB disk, 5-10 minutes, and is platform-specific — covered by manual
-  // runs and dedicated CI jobs only.
-  it.todo('should build custom Node.js binary')
-  it.todo('should apply Socket patches')
-  it.todo('should produce binary under 30MB')
 })

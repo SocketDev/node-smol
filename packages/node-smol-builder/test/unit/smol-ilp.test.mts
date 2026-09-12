@@ -194,11 +194,3 @@ describe('node:smol-ilp API surface', () => {
     expect(BUFFER_PRESSURE_CRITICAL).toBe(0.9)
   })
 })
-
-// The Sender class requires internalBinding('smol_ilp') which only exists
-// inside the custom Node.js binary built with SEA support. Full coverage
-// lives in test/integration/ where tests run inside the SEA environment
-// against a real ILP server (QuestDB/InfluxDB).
-describe('node:smol-ilp integration tests', () => {
-  it.todo('cannot test Sender class outside SEA environment')
-})
