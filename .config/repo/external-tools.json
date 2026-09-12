@@ -3,47 +3,6 @@
   "description": "Socket-btm root manifest. Inherits the foundational tool set from packages/build-infra. Package-specific tools live in each packages/<name>/external-tools.json and are loaded alongside these via the hierarchical merging in packages/build-infra/lib/pinned-versions.mts.",
   "extends": "./packages/build-infra/external-tools.json",
   "tools": {
-    "sfw-free": {
-      "notes": [
-        "SFW (Socket Firewall) free flavor (public, SocketDev/sfw-free). Ships a 7-platform set: linux-{x64,arm64}{,-musl}, darwin-{x64,arm64}, win-x64. Windows 11 ARM64 setup uses the verified win32-x64 asset through x64 emulation when a native asset is unavailable. SFW remains mandatory and must execute successfully before installation continues.",
-        "Installed when neither SOCKET_API_KEY nor SOCKET_API_TOKEN is set; the enterprise flavor (sfw-enterprise) is selected when one of those is present. The two flavors share a version and install to the same `sfw` binary name."
-      ],
-      "description": "Socket Firewall (free tier) — package manager command wrapper",
-      "version": "1.15.1",
-      "repository": "github:SocketDev/sfw-free",
-      "binaryName": "sfw",
-      "platforms": {
-        "darwin-arm64": {
-          "asset": "sfw-free-macos-arm64",
-          "integrity": "sha512-WmTGyJa3O56uX0elw06UX0al/3S/Is0xWDkxb+rdrdW1s/Ud86fQi0XIwFdh77AGdDg568mDbzTdo5bucPobfQ=="
-        },
-        "darwin-x64": {
-          "asset": "sfw-free-macos-x86_64",
-          "integrity": "sha512-EVBcuWNBwQZ0G7dRwYPMSgFNC16i/fYa40XHgDy/oOPLNFP5lkRJq4mZGe9a0gmf79ghIkZCCINRZZ3ZrkobeQ=="
-        },
-        "linux-arm64": {
-          "asset": "sfw-free-linux-arm64",
-          "integrity": "sha512-YkiVl7cpvwsqszMEqWs4EQK2iQUViu7Y7k/JNjz74GtuJycmoo+7ZXVAXeaaMUVg69cy5v1aWO5+r8tUY8wuHQ=="
-        },
-        "linux-arm64-musl": {
-          "asset": "sfw-free-musl-linux-arm64",
-          "integrity": "sha512-ZMVyhhUxTamnQkIAhwjOx1vp3syFwl6nWqDL5ydL8YAdiMHC6280K28W+KPP7yeUlXekcKueNO0Sd/N4LIkSmQ=="
-        },
-        "linux-x64": {
-          "asset": "sfw-free-linux-x86_64",
-          "integrity": "sha512-vi3s1mQ6YXoSBii8KWL/2nJ15judW6KTZKxY+nzp60VVSNR36lUAmLYfW+PH2Ta4jYu8+zHeZwXZvzWImBQFcQ=="
-        },
-        "linux-x64-musl": {
-          "asset": "sfw-free-musl-linux-x86_64",
-          "integrity": "sha512-RwsULiuR2DM6lepxNTzdMcAZvMAunMg/ccsfnccxNKBAtHIUZkriPbbAJAHUUrLG7BhgKFHr3V+P4juwrfKoEQ=="
-        },
-        "win32-x64": {
-          "asset": "sfw-free-windows-x86_64.exe",
-          "integrity": "sha512-ZRuz2N0CmEXJuyhADFyqXU3bBDPp6UmDuXBSMoxcFyzUO/q3/5QRgVCimyOU09cG1XS9TRGvPSyL5y6sFN6D2A=="
-        }
-      },
-      "origin": "gh-asset"
-    },
     "sfw-enterprise": {
       "notes": [
         "SFW (Socket Firewall) enterprise flavor (private, SocketDev/firewall-release). Same 7-platform set as sfw-free. Enterprise downloads require GITHUB_TOKEN auth (private repo); install-tool.mjs forwards GITHUB_TOKEN automatically when set.",
@@ -85,6 +44,47 @@
       },
       "origin": "gh-asset"
     },
+    "sfw-free": {
+      "notes": [
+        "SFW (Socket Firewall) free flavor (public, SocketDev/sfw-free). Ships a 7-platform set: linux-{x64,arm64}{,-musl}, darwin-{x64,arm64}, win-x64. Windows 11 ARM64 setup uses the verified win32-x64 asset through x64 emulation when a native asset is unavailable. SFW remains mandatory and must execute successfully before installation continues.",
+        "Installed when neither SOCKET_API_KEY nor SOCKET_API_TOKEN is set; the enterprise flavor (sfw-enterprise) is selected when one of those is present. The two flavors share a version and install to the same `sfw` binary name."
+      ],
+      "description": "Socket Firewall (free tier) — package manager command wrapper",
+      "version": "1.15.1",
+      "repository": "github:SocketDev/sfw-free",
+      "binaryName": "sfw",
+      "platforms": {
+        "darwin-arm64": {
+          "asset": "sfw-free-macos-arm64",
+          "integrity": "sha512-WmTGyJa3O56uX0elw06UX0al/3S/Is0xWDkxb+rdrdW1s/Ud86fQi0XIwFdh77AGdDg568mDbzTdo5bucPobfQ=="
+        },
+        "darwin-x64": {
+          "asset": "sfw-free-macos-x86_64",
+          "integrity": "sha512-EVBcuWNBwQZ0G7dRwYPMSgFNC16i/fYa40XHgDy/oOPLNFP5lkRJq4mZGe9a0gmf79ghIkZCCINRZZ3ZrkobeQ=="
+        },
+        "linux-arm64": {
+          "asset": "sfw-free-linux-arm64",
+          "integrity": "sha512-YkiVl7cpvwsqszMEqWs4EQK2iQUViu7Y7k/JNjz74GtuJycmoo+7ZXVAXeaaMUVg69cy5v1aWO5+r8tUY8wuHQ=="
+        },
+        "linux-arm64-musl": {
+          "asset": "sfw-free-musl-linux-arm64",
+          "integrity": "sha512-ZMVyhhUxTamnQkIAhwjOx1vp3syFwl6nWqDL5ydL8YAdiMHC6280K28W+KPP7yeUlXekcKueNO0Sd/N4LIkSmQ=="
+        },
+        "linux-x64": {
+          "asset": "sfw-free-linux-x86_64",
+          "integrity": "sha512-vi3s1mQ6YXoSBii8KWL/2nJ15judW6KTZKxY+nzp60VVSNR36lUAmLYfW+PH2Ta4jYu8+zHeZwXZvzWImBQFcQ=="
+        },
+        "linux-x64-musl": {
+          "asset": "sfw-free-musl-linux-x86_64",
+          "integrity": "sha512-RwsULiuR2DM6lepxNTzdMcAZvMAunMg/ccsfnccxNKBAtHIUZkriPbbAJAHUUrLG7BhgKFHr3V+P4juwrfKoEQ=="
+        },
+        "win32-x64": {
+          "asset": "sfw-free-windows-x86_64.exe",
+          "integrity": "sha512-ZRuz2N0CmEXJuyhADFyqXU3bBDPp6UmDuXBSMoxcFyzUO/q3/5QRgVCimyOU09cG1XS9TRGvPSyL5y6sFN6D2A=="
+        }
+      },
+      "origin": "gh-asset"
+    },
     "zizmor": {
       "description": "GitHub Actions security linter — audits .github/ for workflow-injection / credential-leak patterns.",
       "version": "1.30.0",
@@ -116,57 +116,6 @@
         }
       },
       "origin": "gh-asset"
-    },
-    "pnpm": {
-      "notes": [
-        "Eight supported platforms use native binaries from the pnpm v12.4.1 GitHub release, including darwin-x64.",
-        "Linux glibc and musl platforms use distinct assets and integrity values.",
-        "Release asset bytes were verified against upstream SHA-256 digests before computing each SHA-512 SRI.",
-        "User approved this soak exception on 2026-09-10 for pnpm 12.4.1 pipeline symlink and input hashing fixes. Remove it on 2026-09-17."
-      ],
-      "description": "Fast, disk space efficient package manager",
-      "repository": "github:pnpm/pnpm",
-      "version": "12.4.1",
-      "platforms": {
-        "darwin-arm64": {
-          "asset": "pnpm-darwin-arm64.tar.gz",
-          "integrity": "sha512-jLS7YCM5I32wC2OHQBvE9wy54NKOKkQ2Urr3uwNt0qsAMpS148N09PkwPnzvZenk/4kJuS09ANbigXVukDEmKg=="
-        },
-        "darwin-x64": {
-          "asset": "pnpm-darwin-x64.tar.gz",
-          "integrity": "sha512-QHkx3MhxzKkDxnCujyPn7gaBuAtlkl6YLPq+HI7Jan+ngLYAoeFQYv0Nk37DwK9kdo0QmT3TaeH2iSTklPc4IQ=="
-        },
-        "linux-arm64": {
-          "asset": "pnpm-linux-arm64.tar.gz",
-          "integrity": "sha512-dDo8TY09lfdCLKDtc7ujE8WsxM4OjguQZYBZBRoZVqwYVq4rx3b6ZBrE6ZVVhnO6Gcu2KAsPcB8Wq6++DmzAQw=="
-        },
-        "linux-arm64-musl": {
-          "asset": "pnpm-linux-arm64-musl.tar.gz",
-          "integrity": "sha512-zlaNJj5erpbQwBoCzHhWmzIl2TAlfac9WE//tK30ez1Z126hbalggljqGI5W9cAUTMrB/DtUT+rv3839RjCLYA=="
-        },
-        "linux-x64": {
-          "asset": "pnpm-linux-x64.tar.gz",
-          "integrity": "sha512-HvJiD/dQTqAX/aO4rCSKESABd59+KvRjBwyJpOejKG7e6TgxSb7UqHX7xwiJHXnMeoDgP+H8GKKrR2J5ZHRJsg=="
-        },
-        "linux-x64-musl": {
-          "asset": "pnpm-linux-x64-musl.tar.gz",
-          "integrity": "sha512-VdTUaaTQjNZgyjzzUa20IcjPe+lDir19uM/IzzVoiMzwyBkuQ2buo6rxbSKeK+l64ae64JXTSNY0iHj3lTDr5w=="
-        },
-        "win32-arm64": {
-          "asset": "pnpm-win32-arm64.zip",
-          "integrity": "sha512-EZtHSXMWgpqyx6rDCNnZtQxWFiuPIdREvDqMpY9C+mhBYW+1JOjlWxXGqvf7hrRBPxuhNbZtQSvFSZTDL3Zxsw=="
-        },
-        "win32-x64": {
-          "asset": "pnpm-win32-x64.zip",
-          "integrity": "sha512-5Uq2JunTNv7QSED/1EzeV0+zBDSW2wlMMe3g3wcF3PjsQjQ7gfFL8LZgXjmkqdeAURMIIrCrf3NdHx6o+DXPuA=="
-        }
-      },
-      "origin": "gh-asset",
-      "soakBypass": {
-        "published": "2026-09-10",
-        "removable": "2026-09-17",
-        "version": "12.4.1"
-      }
     }
   }
 }
