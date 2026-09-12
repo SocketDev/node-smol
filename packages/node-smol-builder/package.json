@@ -40,9 +40,9 @@
     "@vitest/coverage-v8": "catalog:",
     "acorn": "catalog:",
     "acorn-walk": "catalog:",
-    "experimental-fast-webstreams": "0.0.19",
+    "experimental-fast-webstreams": "catalog:",
     "octokit": "catalog:",
-    "snappy": "7.3.3",
+    "snappy": "catalog:",
     "vitest": "catalog:"
   }
 }

@@ -16,6 +16,7 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { isMainModule } from '../../fleet/process/is-main-module.mts'
 import { runMain } from '../../fleet/process/run-main.mts'
+import type { ScriptMeta } from '../../fleet/process/run-main.mts'
 import { repositoryContainsTarget } from '../../../.git-hooks/_shared/repo-containment.mts'
 import {
   assertStuieSourcePath,
@@ -47,6 +48,12 @@ import type {
 export * from './smol-tui-cabi-symbols-are-mapped/audit.mts'
 
 const logger = getDefaultLogger()
+
+const SCRIPT_META: ScriptMeta = {
+  describe: 'Verify the committed C ABI symbol snapshot.',
+  help: 'Usage: smol-tui-cabi-symbols-are-mapped [--update|--self-test]',
+  json: 'result',
+}
 
 function reportSuccess(message: string): void {
   if (!isAgent()) {
@@ -245,9 +252,5 @@ export async function main(): Promise<void> {
 }
 
 if (isMainModule(import.meta.url)) {
-  runMain(main, {
-    describe: 'Verify the committed C ABI symbol snapshot.',
-    help: 'Usage: smol-tui-cabi-symbols-are-mapped [--update|--self-test]',
-    json: 'result',
-  })
+  runMain(main, SCRIPT_META)
 }

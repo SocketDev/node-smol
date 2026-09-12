@@ -119,6 +119,9 @@ catalog:
   '@vitest/ui': 5.0.0
   'sharp': 0.35.4
   c8: 12.0.0
+  experimental-fast-webstreams: 0.0.19
+  onnxruntime-node: 1.20.1
+  snappy: 7.3.3
 
   '@anthropic-ai/claude-code': 2.1.220
   # comptime 0.1.0 — Zig-inspired build-time evaluation for Rolldown/Vite.

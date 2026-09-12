@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
-    "onnxruntime-node": "1.20.1",
+    "onnxruntime-node": "catalog:",
     "vitest": "catalog:"
   },
   "sources": {
