@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs'
 import process from 'node:process'
 
 import { whichSync } from '@socketsecurity/lib-stable/bin/which'
-import { getCI } from '@socketsecurity/lib-stable/env/ci'
+import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -189,7 +189,7 @@ export async function runCheckTools(config: Parameters<typeof checkTools>[0]) {
     const autoInstall = !process.argv.includes('--no-auto-install')
     const autoYes =
       process.argv.includes('--yes') ||
-      getCI() ||
+      isCIEnvironment() ||
       'CONTINUOUS_INTEGRATION' in process.env
 
     const success = await checkTools(config, { autoInstall, autoYes })

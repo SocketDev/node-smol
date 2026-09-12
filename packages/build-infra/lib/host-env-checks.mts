@@ -12,7 +12,7 @@ import process from 'node:process'
 
 import binPkg from '@socketsecurity/lib-stable/bin/which'
 import platformPkg from '@socketsecurity/lib-stable/constants/platform'
-import { getCI } from '@socketsecurity/lib-stable/env/ci'
+import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import spawnPkg from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -102,7 +102,7 @@ export async function checkNetworkConnectivity(): Promise<{
   try {
     // In CI, assume network connectivity is available.
     // The build will fail later if it's actually not available.
-    if (getCI()) {
+    if (isCIEnvironment()) {
       return { connected: true, statusCode: 'skipped-in-ci' }
     }
 
@@ -245,7 +245,7 @@ export async function checkPythonVersion(
  */
 export async function freeDiskSpace(): Promise<void> {
   // Only run in CI environments (GitHub Actions, GitLab CI, etc.)
-  if (!getCI()) {
+  if (!isCIEnvironment()) {
     logger.substep('Skipping disk space cleanup (not running in CI)')
     return
   }

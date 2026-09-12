@@ -23,7 +23,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import { DARWIN, WIN32 } from '@socketsecurity/lib-stable/constants/platform'
-import { getCI } from '@socketsecurity/lib-stable/env/ci'
+import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { isErrnoException } from '@socketsecurity/lib-stable/errors/predicates'
 import {
   safeDelete,
@@ -692,11 +692,11 @@ export async function createCheckpoint(
   // may not be available for recovery. If a build needs to restart from an earlier stage
   // (e.g., source-copied), it will need to rebuild from scratch rather than restoring
   // from checkpoint. This is intentional to optimize CI storage usage.
-  // @socketsecurity/lib-stable's getCI() already checks GITHUB_ACTIONS,
+  // @socketsecurity/lib-stable's isCI() already checks GITHUB_ACTIONS,
   // GITLAB_CI, CIRCLECI, TRAVIS, and ~25 other CI env vars — keep
   // the fleet's single source of truth so cleanup semantics stay
   // consistent with the rest of the build pipeline.
-  const isCI = getCI()
+  const isCI = isCIEnvironment()
 
   if (isCI && checkpointChain && data.artifactPath) {
     try {
