@@ -51,7 +51,7 @@ export interface StagedNapiArtifact {
 }
 
 export function packageNameFor(platform: string): string {
-  return `@node-smol/ai.node-${platform}`
+  return `@node-smol/ai.node.${platform}`
 }
 
 function readManifest(directory: string): {

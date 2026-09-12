@@ -1,7 +1,7 @@
 {
-  "name": "@node-smol/ai.node-linux-arm64-gnu",
+  "name": "@node-smol/ai.node.linux-arm64-musl",
   "version": "0.0.0",
-  "description": "Native node:smol-ai backend for Linux arm64 glibc",
+  "description": "Native node:smol-ai backend for Linux arm64 musl",
   "license": "MIT",
   "files": [
     "build/smol_ai.node"
@@ -13,7 +13,7 @@
     "arm64"
   ],
   "libc": [
-    "glibc"
+    "musl"
   ],
   "type": "commonjs",
   "main": "./build/smol_ai.node",

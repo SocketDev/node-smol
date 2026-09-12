@@ -4383,46 +4383,46 @@ importers:
         specifier: 'catalog:'
         version: 5.0.0(patch_hash=555bbde80f3e83833e33f6825435e36659d4e2a927e2a3cb5dbc4d6eaeef976b)(@types/node@26.4.1)(@vitest/coverage-v8@5.0.0)(@vitest/ui@5.0.0)(vite@8.2.2(@types/node@26.4.1)(jiti@2.7.0)(yaml@2.9.0))
     optionalDependencies:
-      '@node-smol/ai.node-darwin-arm64':
+      '@node-smol/ai.node.darwin-arm64':
         specifier: workspace:0.0.0
-        version: link:../ai.node-darwin-arm64
-      '@node-smol/ai.node-darwin-x64':
+        version: link:../ai.node.darwin-arm64
+      '@node-smol/ai.node.darwin-x64':
         specifier: workspace:0.0.0
-        version: link:../ai.node-darwin-x64
-      '@node-smol/ai.node-linux-arm64-gnu':
+        version: link:../ai.node.darwin-x64
+      '@node-smol/ai.node.linux-arm64-gnu':
         specifier: workspace:0.0.0
-        version: link:../ai.node-linux-arm64-gnu
-      '@node-smol/ai.node-linux-arm64-musl':
+        version: link:../ai.node.linux-arm64-gnu
+      '@node-smol/ai.node.linux-arm64-musl':
         specifier: workspace:0.0.0
-        version: link:../ai.node-linux-arm64-musl
-      '@node-smol/ai.node-linux-x64-gnu':
+        version: link:../ai.node.linux-arm64-musl
+      '@node-smol/ai.node.linux-x64-gnu':
         specifier: workspace:0.0.0
-        version: link:../ai.node-linux-x64-gnu
-      '@node-smol/ai.node-linux-x64-musl':
+        version: link:../ai.node.linux-x64-gnu
+      '@node-smol/ai.node.linux-x64-musl':
         specifier: workspace:0.0.0
-        version: link:../ai.node-linux-x64-musl
-      '@node-smol/ai.node-win32-arm64-msvc':
+        version: link:../ai.node.linux-x64-musl
+      '@node-smol/ai.node.win32-arm64-msvc':
         specifier: workspace:0.0.0
-        version: link:../ai.node-win32-arm64-msvc
-      '@node-smol/ai.node-win32-x64-msvc':
+        version: link:../ai.node.win32-arm64-msvc
+      '@node-smol/ai.node.win32-x64-msvc':
         specifier: workspace:0.0.0
-        version: link:../ai.node-win32-x64-msvc
+        version: link:../ai.node.win32-x64-msvc
 
-  packages/npm/@node-smol/ai.node-darwin-arm64: {}
+  packages/npm/@node-smol/ai.node.darwin-arm64: {}
 
-  packages/npm/@node-smol/ai.node-darwin-x64: {}
+  packages/npm/@node-smol/ai.node.darwin-x64: {}
 
-  packages/npm/@node-smol/ai.node-linux-arm64-gnu: {}
+  packages/npm/@node-smol/ai.node.linux-arm64-gnu: {}
 
-  packages/npm/@node-smol/ai.node-linux-arm64-musl: {}
+  packages/npm/@node-smol/ai.node.linux-arm64-musl: {}
 
-  packages/npm/@node-smol/ai.node-linux-x64-gnu: {}
+  packages/npm/@node-smol/ai.node.linux-x64-gnu: {}
 
-  packages/npm/@node-smol/ai.node-linux-x64-musl: {}
+  packages/npm/@node-smol/ai.node.linux-x64-musl: {}
 
-  packages/npm/@node-smol/ai.node-win32-arm64-msvc: {}
+  packages/npm/@node-smol/ai.node.win32-arm64-msvc: {}
 
-  packages/npm/@node-smol/ai.node-win32-x64-msvc: {}
+  packages/npm/@node-smol/ai.node.win32-x64-msvc: {}
 
   packages/onnxruntime-builder:
     dependencies:

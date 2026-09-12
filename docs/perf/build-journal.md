@@ -26,6 +26,9 @@ so an entry that does not name its cache state cannot be read as a delta.
 
 ## 1. Replace gold with mold on the Linux release link
 
+<details>
+<summary>Experiment evidence and decision</summary>
+
 **Hypothesis.** mold links several times faster than gold on ELF targets, so
 swapping the Linux release linker would cut the link phase of a release build.
 
@@ -75,3 +78,5 @@ nothing while a pinned one carries version upkeep.
   Clang. Changing the compiler changes the optimizer, so that experiment owes
   binary-size and startup numbers against the current GCC baseline before it
   could ship.
+
+</details>

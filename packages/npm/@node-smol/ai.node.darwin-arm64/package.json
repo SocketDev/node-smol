@@ -1,13 +1,13 @@
 {
-  "name": "@node-smol/ai.node-win32-arm64-msvc",
+  "name": "@node-smol/ai.node.darwin-arm64",
   "version": "0.0.0",
-  "description": "Native node:smol-ai backend for Windows arm64 MSVC",
+  "description": "Native node:smol-ai backend for Darwin arm64",
   "license": "MIT",
   "files": [
     "build/smol_ai.node"
   ],
   "os": [
-    "win32"
+    "darwin"
   ],
   "cpu": [
     "arm64"

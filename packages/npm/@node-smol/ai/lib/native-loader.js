@@ -41,7 +41,7 @@ function loadNativeBinding(config) {
 }
 
 function nativePackageName(target) {
-  return `@node-smol/ai.node-${target}`
+  return `@node-smol/ai.node.${target}`
 }
 
 function resolveNativeTarget(inputs) {

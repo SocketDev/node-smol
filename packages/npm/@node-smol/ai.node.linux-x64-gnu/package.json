@@ -1,5 +1,5 @@
 {
-  "name": "@node-smol/ai.node-linux-x64-gnu",
+  "name": "@node-smol/ai.node.linux-x64-gnu",
   "version": "0.0.0",
   "description": "Native node:smol-ai backend for Linux x64 glibc",
   "license": "MIT",

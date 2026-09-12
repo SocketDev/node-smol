@@ -71,7 +71,7 @@ describe('@node-smol/ai package family', () => {
         name: string
         os: string[]
       }
-      const [platform, arch, abi] = target.split('-')
+      const { 0: platform, 1: arch, 2: abi } = target.split('-')
       expect(manifest).toMatchObject({
         cpu: [arch],
         main: './build/smol_ai.node',
@@ -86,9 +86,9 @@ describe('@node-smol/ai package family', () => {
 
     expect(
       readdirSync(npmRoot)
-        .filter(name => name.startsWith('ai.node-'))
+        .filter(name => name.startsWith('ai.node.'))
         .toSorted(),
-    ).toEqual(expectedTargets.map(target => `ai.node-${target}`).toSorted())
+    ).toEqual(expectedTargets.map(target => `ai.node.${target}`).toSorted())
   })
 
   it('resolves libc and CPU without crossing naming domains', () => {

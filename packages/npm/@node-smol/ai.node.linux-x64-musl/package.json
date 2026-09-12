@@ -1,16 +1,19 @@
 {
-  "name": "@node-smol/ai.node-darwin-arm64",
+  "name": "@node-smol/ai.node.linux-x64-musl",
   "version": "0.0.0",
-  "description": "Native node:smol-ai backend for Darwin arm64",
+  "description": "Native node:smol-ai backend for Linux x64 musl",
   "license": "MIT",
   "files": [
     "build/smol_ai.node"
   ],
   "os": [
-    "darwin"
+    "linux"
   ],
   "cpu": [
-    "arm64"
+    "x64"
+  ],
+  "libc": [
+    "musl"
   ],
   "type": "commonjs",
   "main": "./build/smol_ai.node",

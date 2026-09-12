@@ -1,19 +1,16 @@
 {
-  "name": "@node-smol/ai.node-linux-arm64-musl",
+  "name": "@node-smol/ai.node.win32-arm64-msvc",
   "version": "0.0.0",
-  "description": "Native node:smol-ai backend for Linux arm64 musl",
+  "description": "Native node:smol-ai backend for Windows arm64 MSVC",
   "license": "MIT",
   "files": [
     "build/smol_ai.node"
   ],
   "os": [
-    "linux"
+    "win32"
   ],
   "cpu": [
     "arm64"
-  ],
-  "libc": [
-    "musl"
   ],
   "type": "commonjs",
   "main": "./build/smol_ai.node",
