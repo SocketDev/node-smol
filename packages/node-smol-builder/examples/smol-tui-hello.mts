@@ -36,6 +36,7 @@ import {
   stringWidth,
   TextAttributes,
 } from 'node:smol-tui'
+import { writeSync } from 'node:fs'
 
 // Constants matching tui::BorderStyle enum (see include/tui/renderables.hpp).
 const BORDER_SINGLE = 0
@@ -74,7 +75,7 @@ export function drawFrame(rendererId: number): void {
   )
 
   // Title bar (manual since rendererDrawBox doesn't take title yet —
-  // see the tui-infra-renderables row in .config/lockstep.json
+  // see the tui-infra-renderables row in .config/repo/lockstep.json
   // deviations).
   const title = ' node:smol-tui demo '
   const titleBytes = new TextEncoder().encode(title)
@@ -150,11 +151,9 @@ export function getTerminalSize(): { width: number; height: number } {
   return { width: cols, height: rows }
 }
 
-// Raw ANSI writes go through stdout directly — logger.info() would
-// re-encode + prefix the bytes which breaks the terminal sequences.
-// stdoutWrite isolates the marker into one helper.
+// Raw ANSI writes preserve bytes without logger encoding or prefixes.
 export function stdoutWrite(data: Uint8Array | string): void {
-  process.stdout.write(data) // socket-hook: allow console
+  writeSync(process.stdout.fd, data)
 }
 
 // Quick verification — these checks run before the render loop so a

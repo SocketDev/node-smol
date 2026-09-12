@@ -67,7 +67,7 @@ import {
  */
 export const EXTERNAL_PIN_FILES = [
   path.join(PACKAGE_ROOT, '..', '..', '.gitmodules'),
-  path.join(PACKAGE_ROOT, '..', '..', '.config', 'lockstep.json'),
+  path.join(PACKAGE_ROOT, '..', '..', '.config', 'repo', 'lockstep.json'),
   path.join(LANGUAGE_MODEL_INFRA_DIR, 'CMakeLists.txt'),
 ]
 
