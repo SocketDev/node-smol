@@ -129,11 +129,14 @@ export async function ensureGccVersion({
   const currentCheck = await checkGccVersion('gcc', minVersion)
 
   if (currentCheck.meetsRequirements) {
-    if (!quiet) {
-      logger.success(
-        `GCC ${currentCheck.version} meets requirements (>= ${minVersion})`,
-      )
-    }
+    reportGccUnlessQuiet(
+      () => {
+        logger.success(
+          `GCC ${currentCheck.version} meets requirements (>= ${minVersion})`,
+        )
+      },
+      { quiet },
+    )
     return {
       __proto__: null,
       available: true,
@@ -142,11 +145,16 @@ export async function ensureGccVersion({
     }
   }
 
-  if (currentCheck.installed && !quiet) {
-    logger.warn(
-      `GCC ${currentCheck.version} is installed but does not meet minimum version ${minVersion}`,
+  if (currentCheck.installed) {
+    reportGccUnlessQuiet(
+      () => {
+        logger.warn(
+          `GCC ${currentCheck.version} is installed but does not meet minimum version ${minVersion}`,
+        )
+        logger.info(requirement.reason)
+      },
+      { quiet },
     )
-    logger.info(requirement.reason)
   }
 
   if (!autoInstall) {
@@ -161,9 +169,11 @@ export async function ensureGccVersion({
   // Attempt to install GCC 12
   const platform = getPlatform()
   if (platform !== 'linux') {
-    if (!quiet) {
-      logger.warn('Automatic GCC installation is only supported on Linux')
-    }
+    reportGccUnlessQuiet(
+      () =>
+        logger.warn('Automatic GCC installation is only supported on Linux'),
+      { quiet },
+    )
     return {
       __proto__: null,
       available: false,
@@ -175,9 +185,11 @@ export async function ensureGccVersion({
   // Check if apt is available
   const managers = detectPackageManagers()
   if (!managers.includes('apt')) {
-    if (!quiet) {
-      logger.warn('Automatic GCC installation requires apt package manager')
-    }
+    reportGccUnlessQuiet(
+      () =>
+        logger.warn('Automatic GCC installation requires apt package manager'),
+      { quiet },
+    )
     return {
       __proto__: null,
       available: false,
@@ -203,9 +215,10 @@ export async function ensureGccVersion({
   // Verify installation
   const verifyCheck = await checkGccVersion('gcc', minVersion)
   if (verifyCheck.meetsRequirements) {
-    if (!quiet) {
-      logger.success(`GCC ${verifyCheck.version} installed successfully`)
-    }
+    reportGccUnlessQuiet(
+      () => logger.success(`GCC ${verifyCheck.version} installed successfully`),
+      { quiet },
+    )
     return {
       __proto__: null,
       available: true,
@@ -214,9 +227,10 @@ export async function ensureGccVersion({
     }
   }
 
-  if (!quiet) {
-    printError('GCC installation completed but version check failed')
-  }
+  reportGccUnlessQuiet(
+    () => printError('GCC installation completed but version check failed'),
+    { quiet },
+  )
   return {
     __proto__: null,
     available: false,
@@ -382,5 +396,15 @@ export function parseVersion(versionString) {
     major: Number.parseInt(match[1], 10),
     minor: Number.parseInt(match[2], 10),
     patch: Number.parseInt(match[3], 10),
+  }
+}
+
+export function reportGccUnlessQuiet(
+  action: () => void,
+  options: { quiet?: boolean | undefined } = {},
+): void {
+  const { quiet = false } = { __proto__: null, ...options }
+  if (!quiet) {
+    action()
   }
 }
