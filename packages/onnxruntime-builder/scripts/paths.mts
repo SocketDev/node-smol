@@ -54,6 +54,7 @@ export function getBuildOutputPaths(sourceDir, platform = process.platform) {
   const buildCmakeCacheFile = path.join(buildOutputDir, 'CMakeCache.txt')
 
   return {
+    __proto__: null,
     buildCmakeCacheFile,
     buildMjsFile,
     buildOutputDir,
@@ -108,6 +109,7 @@ export function getBuildPaths(mode, platformArch) {
   const outputSyncMjsFile = path.join(outputFinalDir, 'ort-sync.mjs')
 
   return {
+    __proto__: null,
     buildDir,
     buildScriptFile,
     checkpointsDir,
@@ -165,6 +167,7 @@ export function getSharedBuildPaths() {
   )
 
   return {
+    __proto__: null,
     buildDir,
     buildScriptFile,
     checkpointsDir,

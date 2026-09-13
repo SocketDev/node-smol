@@ -52,6 +52,7 @@ export function getBuildPaths(buildMode, platformArch, quantLevel) {
   const outputTokenizerFile = path.join(outputDir, 'tokenizer.json')
 
   return {
+    __proto__: null,
     buildDir,
     configFile,
     decoderFile,
