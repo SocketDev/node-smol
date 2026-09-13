@@ -13,7 +13,7 @@
  *     //github.com/SocketDev/socket-lib/blob/v5.0.0/src/dlx/binary.ts#L49-L130
  *   - DlxMetadata schema: https: Note: These tests require the final production
  *     binary at build/{dev,prod}/{platform-arch}/out/Final/node/. Run with:
- *     pnpm build --dev or pnpm build --prod
+ *     `pnpm build` --dev or `pnpm build` --prod
  */
 
 import { afterAll, beforeAll, describe, expect, expectTypeOf, it } from 'vitest'

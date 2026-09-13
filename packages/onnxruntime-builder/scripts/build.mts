@@ -37,10 +37,11 @@ import { cloneOnnxSource } from './source-cloned/shared/clone-source.mts'
 import { compileWasm } from './wasm-compiled/shared/compile-wasm.mts'
 import { optimizeWasm } from './wasm-optimized/shared/optimize-wasm.mts'
 import { copyToRelease } from './wasm-released/shared/copy-to-release.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
-const IS_CI = process.env['CI'] === '1' || process.env['CI'] === 'true'
+const IS_CI = getEnvValue('CI') === '1' || getEnvValue('CI') === 'true'
 
 export async function main() {
   const pkgJson = JSON.parse(

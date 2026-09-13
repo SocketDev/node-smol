@@ -31,7 +31,7 @@ describe('parseEnumHeader', () => {
       YGAlignAuto,
       YGAlignFlexStart,
       YGAlignCenter)`
-    const [parsed] = parseEnumHeader(header)
+    const { 0: parsed } = parseEnumHeader(header)
     expect(parsed!.name).toBe('Align')
     expect(parsed!.members).toEqual([
       { name: 'Auto', value: 0 },
@@ -49,7 +49,7 @@ describe('parseEnumHeader', () => {
       YGErrataAbsolutePercentAgainstInnerSize = 4,
       YGErrataAll = 2147483647,
       YGErrataClassic = 2147483646)`
-    const [parsed] = parseEnumHeader(header)
+    const { 0: parsed } = parseEnumHeader(header)
     expect(parsed!.name).toBe('Errata')
     expect(parsed!.members).toEqual([
       { name: 'None', value: 0 },
@@ -84,7 +84,7 @@ describe('parseEnumHeader', () => {
       YGGutter,
       YGGutterColumn, // gap between columns
       YGGutterRow)`
-    const [parsed] = parseEnumHeader(header)
+    const { 0: parsed } = parseEnumHeader(header)
     expect(parsed!.members).toEqual([
       { name: 'Column', value: 0 },
       { name: 'Row', value: 1 },

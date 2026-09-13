@@ -18,7 +18,7 @@ import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 import { createCheckpoint } from '../lib/checkpoint-manager.mts'
 import { CHECKPOINTS } from '../lib/constants.mts'
 
-const TARGET = { platform: 'linux', arch: 'x64' } as const
+const TARGET = { arch: 'x64', platform: 'linux' } as const
 
 describe('checkpoint extraction structure', () => {
   let testBuildDir: string

@@ -11,6 +11,7 @@ import process from 'node:process'
 import { Octokit } from 'octokit'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
+import { getGithubToken } from '@socketsecurity/lib-stable/env/github'
 
 const logger = getDefaultLogger()
 
@@ -27,7 +28,7 @@ const REPO = 'socket-btm'
 export async function checkGitHubAuth() {
   try {
     const octokit = new Octokit({
-      auth: process.env['GITHUB_TOKEN'],
+      auth: getGithubToken(),
     })
     await octokit.rest.users.getAuthenticated()
     return true
@@ -48,7 +49,7 @@ export async function checkGitHubAuth() {
 export async function releaseExists(tag) {
   try {
     const octokit = new Octokit({
-      auth: process.env['GITHUB_TOKEN'],
+      auth: getGithubToken(),
     })
     await octokit.rest.repos.getReleaseByTag({
       owner: OWNER,
@@ -71,7 +72,7 @@ export async function deleteRelease(tag) {
   logger.log('')
   logger.log(`Deleting existing release: ${tag}`)
   const octokit = new Octokit({
-    auth: process.env['GITHUB_TOKEN'],
+    auth: getGithubToken(),
   })
 
   // Get release by tag to get release ID.
@@ -154,7 +155,7 @@ export async function createGitHubRelease(
   }
 
   const octokit = new Octokit({
-    auth: process.env['GITHUB_TOKEN'],
+    auth: getGithubToken(),
   })
 
   // GitHub Releases ship immutable (Sigstore attestation, GA 2025-10-28):

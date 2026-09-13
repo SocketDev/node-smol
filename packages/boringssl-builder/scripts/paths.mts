@@ -12,6 +12,7 @@ import { getPlatformBuildDir } from 'local-build-infra/lib/constants'
 import { getAssetPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { detectLibc } from '@socketsecurity/lib-stable/releases/socket-btm'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -25,7 +26,7 @@ export const UPSTREAM_DIR = path.join(PACKAGE_ROOT, 'upstream', 'boringssl')
 // CI's verify-release.mts which uses the workflow-side `<platform>-<arch>`.
 const PLATFORM_ARCH = getAssetPlatformArch(
   process.platform,
-  process.env['TARGET_ARCH'] || process.arch,
+  getEnvValue('TARGET_ARCH') || process.arch,
   detectLibc(),
 )
 

@@ -20,7 +20,7 @@
  *      that cannot build — which is what happened here. A syntax-only run
  *      catches that in seconds, and skips loudly when the Node checkout or a
  *      compiler is absent. Exit codes: 0 — every check passed or skipped. 1 —
- *      at least one failed. Run via: pnpm --filter promise-infra run
+ *      at least one failed. Run via: `pnpm --filter` promise-infra run
  *      check:lockstep
  */
 

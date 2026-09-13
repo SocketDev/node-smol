@@ -13,6 +13,7 @@ import { errorMessage } from 'local-build-infra/lib/error-utils'
 import platformPkg from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const { WIN32 } = platformPkg
 const logger = getDefaultLogger()
@@ -20,7 +21,7 @@ const logger = getDefaultLogger()
 // Model pipelines run natively per host — safe to pass process.* as target.
 // createCheckpoint now requires explicit target for non-source checkpoints.
 const TARGET_PLATFORM = process.platform
-const TARGET_ARCH = process.env['TARGET_ARCH'] || process.arch
+const TARGET_ARCH = getEnvValue('TARGET_ARCH') || process.arch
 
 /**
  * Convert model to ONNX if needed.

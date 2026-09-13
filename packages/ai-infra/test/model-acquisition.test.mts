@@ -175,7 +175,7 @@ describe('GGUF model acquisition', () => {
     const cacheRoot = makeScratch()
     const openSource = sourceFor(bytes)
 
-    const [left, right] = await Promise.all([
+    const { 0: left, 1: right } = await Promise.all([
       acquireModel(manifest, { cacheRoot, openSource }),
       acquireModel(manifest, { cacheRoot, openSource }),
     ])

@@ -264,7 +264,7 @@ export function installKeyedCombinators(target: Record<string, unknown>): void {
     ['allSettledKeyed', allSettledKeyedReference],
   ]
   for (let i = 0, { length } = entries; i < length; i += 1) {
-    const [name, fn] = entries[i]!
+    const { 0: name, 1: fn } = entries[i]!
     if (target[name] !== undefined) {
       continue
     }
