@@ -45,10 +45,6 @@ import {
   NODE_BINARY,
   PACKAGE_DIR,
 } from './helpers/binpress-env.mts'
-
-const TIMEOUT_60S = tolerantTimeout(60_000)
-const TIMEOUT_90S = tolerantTimeout(90_000)
-
 import {
   countSmolSegments,
   findSmolSegments,
@@ -56,6 +52,9 @@ import {
   parseMachoHeader,
 } from './helpers/macho-segments.mts'
 import type { SmolSegment } from './helpers/macho-segments.mts'
+
+const TIMEOUT_60S = tolerantTimeout(60_000)
+const TIMEOUT_90S = tolerantTimeout(90_000)
 // Only run on macOS where Mach-O is native
 describe.skipIf(process.platform !== 'darwin' || !existsSync(BINPRESS))(
   'mach-O SMOL Segment Repacking Validation',

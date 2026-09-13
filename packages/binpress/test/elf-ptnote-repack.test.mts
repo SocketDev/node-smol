@@ -41,10 +41,6 @@ import {
   NODE_BINARY,
   PACKAGE_DIR,
 } from './helpers/binpress-env.mts'
-
-const TIMEOUT_180S = tolerantTimeout(180_000)
-const TIMEOUT_300S = tolerantTimeout(300_000)
-
 import {
   countPTNoteSegments,
   findPTNoteSegments,
@@ -52,6 +48,9 @@ import {
   parseElfHeader,
 } from './helpers/elf-segments.mts'
 import type { ElfHeaderInfo, PTNoteSegment } from './helpers/elf-segments.mts'
+
+const TIMEOUT_180S = tolerantTimeout(180_000)
+const TIMEOUT_300S = tolerantTimeout(300_000)
 // Only run on Linux where ELF is native
 describe.skipIf(process.platform !== 'linux' || !existsSync(BINPRESS))(
   'eLF PT_NOTE Repacking Validation',
