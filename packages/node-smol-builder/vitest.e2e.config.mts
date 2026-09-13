@@ -1,8 +1,10 @@
+import { fileURLToPath } from 'node:url'
+
 import { defineConfig } from 'vitest/config'
 
 // oxlint-disable-next-line socket/no-default-export -- vitest config contract
 export default defineConfig({
-  root: import.meta.dirname,
+  root: fileURLToPath(new URL('../..', import.meta.url)),
   test: {
     exclude: [
       '**/build/**',
@@ -11,7 +13,9 @@ export default defineConfig({
       '**/upstream/**',
     ],
     fileParallelism: false,
-    include: ['test/e2e/e2e.test.mts'],
-    setupFiles: ['./test/helpers/primordials-shim.mts'],
+    include: ['packages/node-smol-builder/test/e2e/e2e.test.mts'],
+    setupFiles: [
+      './packages/node-smol-builder/test/helpers/primordials-shim.mts',
+    ],
   },
 })
