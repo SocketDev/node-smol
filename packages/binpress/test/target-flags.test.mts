@@ -38,14 +38,13 @@ import {
   NODE_BINARY,
   PACKAGE_DIR,
 } from './helpers/binpress-env.mts'
+import { execCommand } from './helpers/exec-command.mts'
+import type { ExecCommandResult } from './helpers/exec-command.mts'
 
 const TIMEOUT_10S = tolerantTimeout(10_000)
 const TIMEOUT_30S = tolerantTimeout(30_000)
 
 const logger = getDefaultLogger()
-
-import { execCommand } from './helpers/exec-command.mts'
-import type { ExecCommandResult } from './helpers/exec-command.mts'
 
 beforeAll(async () => {
   // Create unique test directory with timestamp and random suffix to isolate from parallel runs

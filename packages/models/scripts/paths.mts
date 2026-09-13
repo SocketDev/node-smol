@@ -50,6 +50,7 @@ export function getBuildPaths(mode, platformArch) {
   const outputFinalDir = path.join(outDir, BUILD_STAGES.FINAL)
 
   return {
+    __proto__: null,
     buildDir,
     checkpointsDir,
     modelsDir,
@@ -84,6 +85,7 @@ export function getSharedBuildPaths() {
   const checkpointsDir = path.join(buildDir, 'checkpoints')
 
   return {
+    __proto__: null,
     buildDir,
     checkpointsDir,
     modelsDir,

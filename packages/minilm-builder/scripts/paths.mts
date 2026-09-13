@@ -42,6 +42,7 @@ export function getBuildPaths(mode, platformArch, quantLevel) {
   const cacheDir = path.join(buildDir, 'cache')
 
   return {
+    __proto__: null,
     buildDir,
     cacheDir,
     modelsDir,
@@ -86,6 +87,7 @@ export function getModelPaths(mode, platformArch, quantLevel, modelName) {
   const finalModelFile = path.join(modelsDir, `${modelName}.onnx`)
 
   return {
+    __proto__: null,
     cacheModelDir,
     finalModelFile,
     onnxModelDir,

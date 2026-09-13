@@ -263,7 +263,7 @@ function promptMessages(input) {
   const values = Array.isArray(input) ? input : [input]
   return values.map(value => {
     if (typeof value === 'string') {
-      return { content: value, role: 'user' }
+      return { __proto__: null, content: value, role: 'user' }
     }
     if (
       value === null ||
@@ -275,7 +275,7 @@ function promptMessages(input) {
         'Prompt input must be text or text messages with system, user, or assistant roles',
       )
     }
-    return { content: value.content, role: value.role }
+    return { __proto__: null, content: value.content, role: value.role }
   })
 }
 
@@ -289,6 +289,7 @@ function toAbortError(error) {
 function wrapSession(nativeSession, reproducibility) {
   let destroyed = false
   return {
+    __proto__: null,
     async clone() {
       assertActive(destroyed)
       return wrapSession(await nativeSession.clone(), reproducibility)
