@@ -61,25 +61,15 @@ async function acquireModelOnce(manifest, config) {
   const partialPath = modelPartialPath(opts.cacheRoot, manifest)
   await mkdir(path.dirname(finalPath), { recursive: true })
 
-  if (existsSync(finalPath)) {
-    const finalStat = await stat(finalPath)
-    if (
-      finalStat.size === manifest.byteSize &&
-      (await fileSha256(finalPath)) === manifest.sha256
-    ) {
-      return finalPath
-    }
-    await deleteFile(finalPath)
+  const cacheState = await prepareModelDownload(
+    finalPath,
+    partialPath,
+    manifest,
+  )
+  if (cacheState.available) {
+    return finalPath
   }
-
-  let offset = 0
-  if (existsSync(partialPath)) {
-    offset = (await stat(partialPath)).size
-    if (offset > manifest.byteSize) {
-      await deleteFile(partialPath)
-      offset = 0
-    }
-  }
+  let { offset } = cacheState
   if (opts.signal?.aborted) {
     throw abortError()
   }
@@ -101,22 +91,12 @@ async function acquireModelOnce(manifest, config) {
   }
 
   const output = createWriteStream(partialPath, { flags: offset ? 'a' : 'w' })
-  let loaded = offset
-  try {
-    for await (const chunk of source.chunks) {
-      if (opts.signal?.aborted) {
-        throw abortError()
-      }
-      await writeChunk(output, chunk)
-      loaded += chunk.byteLength
-      opts.onProgress?.({ loaded, total: manifest.byteSize })
-    }
-    if (opts.signal?.aborted) {
-      throw abortError()
-    }
-  } finally {
-    await closeOutput(output)
-  }
+  await downloadModelChunks(source, output, {
+    offset,
+    onProgress: opts.onProgress,
+    signal: opts.signal,
+    total: manifest.byteSize,
+  })
 
   const downloadedSize = (await stat(partialPath)).size
   const downloadedSha256 = await fileSha256(partialPath)
@@ -194,6 +174,29 @@ function defaultModelCacheRoot() {
 
 async function deleteFile(filePath) {
   await rm(filePath, { force: true })
+}
+
+async function downloadModelChunks(
+  source,
+  output,
+  { offset, onProgress, signal, total },
+) {
+  let loaded = offset
+  try {
+    for await (const chunk of source.chunks) {
+      if (signal?.aborted) {
+        throw abortError()
+      }
+      await writeChunk(output, chunk)
+      loaded += chunk.byteLength
+      onProgress?.({ loaded, total })
+    }
+    if (signal?.aborted) {
+      throw abortError()
+    }
+  } finally {
+    await closeOutput(output)
+  }
 }
 
 async function fileSha256(filePath) {
@@ -302,6 +305,28 @@ async function openHttpsSource(request, redirects = 0) {
       opts.signal?.removeEventListener('abort', onAbort)
     })
   })
+}
+
+async function prepareModelDownload(finalPath, partialPath, manifest) {
+  if (existsSync(finalPath)) {
+    const finalStat = await stat(finalPath)
+    if (
+      finalStat.size === manifest.byteSize &&
+      (await fileSha256(finalPath)) === manifest.sha256
+    ) {
+      return { __proto__: null, available: true, offset: 0 }
+    }
+    await deleteFile(finalPath)
+  }
+  if (!existsSync(partialPath)) {
+    return { __proto__: null, available: false, offset: 0 }
+  }
+  const offset = (await stat(partialPath)).size
+  if (offset <= manifest.byteSize) {
+    return { __proto__: null, available: false, offset }
+  }
+  await deleteFile(partialPath)
+  return { __proto__: null, available: false, offset: 0 }
 }
 
 function responseTotalBytes(response, offset) {
