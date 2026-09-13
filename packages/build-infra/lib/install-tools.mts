@@ -238,7 +238,7 @@ export async function installTools(toolNames, options = {}) {
     }
   }
 
-  return { failed, installed }
+  return { __proto__: null, failed, installed }
 }
 
 /**

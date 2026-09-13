@@ -64,7 +64,7 @@ export async function runPreflightChecks(options = {}) {
         printError(msg)
       }
       if (failFast) {
-        return { failures, passed: false }
+        return { __proto__: null, failures, passed: false }
       }
     }
   }
@@ -81,7 +81,7 @@ export async function runPreflightChecks(options = {}) {
         printError(msg)
       }
       if (failFast) {
-        return { failures, passed: false }
+        return { __proto__: null, failures, passed: false }
       }
     }
   }
@@ -96,7 +96,7 @@ export async function runPreflightChecks(options = {}) {
         printError(msg)
       }
       if (failFast) {
-        return { failures, passed: false }
+        return { __proto__: null, failures, passed: false }
       }
     }
   }
@@ -112,6 +112,7 @@ export async function runPreflightChecks(options = {}) {
   }
 
   return {
+    __proto__: null,
     failures,
     passed: !failures.length,
   }
