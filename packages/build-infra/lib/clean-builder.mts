@@ -108,9 +108,7 @@ export function resolvePackageDirectory(packageDir) {
   }
   const stackLines = new Error().stack?.split(/\r?\n/) ?? []
   const callerUrl =
-    stackLines.length > 2
-      ? stackLines[2].match(/\(([^)]+)\)/)?.[1]
-      : undefined
+    stackLines.length > 2 ? stackLines[2].match(/\(([^)]+)\)/)?.[1] : undefined
   if (!callerUrl) {
     throw new Error('packageDir must be provided or auto-detectable')
   }

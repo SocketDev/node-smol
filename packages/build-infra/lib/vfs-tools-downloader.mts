@@ -192,7 +192,12 @@ export async function downloadVfsTool(
 
   if (!assetConfig) {
     logger.warn(`${toolName} not available for ${key}`)
-    return { __proto__: null, success: false, toolDir: '', version: toolConfig.version }
+    return {
+      __proto__: null,
+      success: false,
+      toolDir: '',
+      version: toolConfig.version,
+    }
   }
 
   // Handle both old format (string URL) and new format (object with url/sha256)
@@ -328,7 +333,6 @@ export async function downloadAllVfsTools({
   }
 
   return {
-
     __proto__: null,
     downloaded,
     failed,
