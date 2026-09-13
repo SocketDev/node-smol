@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url'
 import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
-import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
+import { parseArgs } from '@socketsecurity/lib-stable/exe/argv/parse'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
