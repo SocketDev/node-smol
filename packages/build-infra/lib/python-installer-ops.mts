@@ -336,22 +336,22 @@ export async function ensurePythonPackage(
             quiet,
             upgrade: true,
           })
-          return { available: installed, installed }
+          return { __proto__: null, available: installed, installed }
         }
-        return { available: false, installed: false }
+        return { __proto__: null, available: false, installed: false }
       } catch {
         // Could not check version, proceed with reinstall if autoInstall
       }
     } else if (hasCorrectVersion) {
-      return { available: true, installed: false }
+      return { __proto__: null, available: true, installed: false }
     }
   } else if (isInstalled) {
     // No version pinning for this package, accept whatever is installed
-    return { available: true, installed: false }
+    return { __proto__: null, available: true, installed: false }
   }
 
   if (!autoInstall) {
-    return { available: false, installed: false }
+    return { __proto__: null, available: false, installed: false }
   }
 
   // Attempt to install.
@@ -367,6 +367,7 @@ export async function ensurePythonPackage(
   })
 
   return {
+    __proto__: null,
     available: installed,
     installed,
   }
@@ -450,6 +451,7 @@ export async function ensureAllPythonPackages(
   }
 
   return {
+    __proto__: null,
     allAvailable: missing.length === 0,
     installed,
     missing,

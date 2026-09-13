@@ -110,7 +110,7 @@ export async function activateEmscriptenSDK() {
  */
 export async function findEmscriptenSDK() {
   if (process.env['EMSDK'] && existsSync(process.env['EMSDK'])) {
-    return { path: process.env['EMSDK'], type: 'emsdk' }
+    return { __proto__: null, path: process.env['EMSDK'], type: 'emsdk' }
   }
 
   if (await commandExists('emcc')) {
@@ -146,7 +146,7 @@ export async function findEmscriptenSDK() {
               'libexec/cmake/Modules/Platform/Emscripten.cmake',
             )
             if (existsSync(cmakeFile)) {
-              return { path: homebrewPath, type: 'homebrew' }
+              return { __proto__: null, path: homebrewPath, type: 'homebrew' }
             }
           }
         }
@@ -161,7 +161,7 @@ export async function findEmscriptenSDK() {
         )
 
         if (existsSync(emsdkScript)) {
-          return { path: emsdkPath, type: 'emsdk' }
+          return { __proto__: null, path: emsdkPath, type: 'emsdk' }
         }
       }
     } catch {
@@ -179,7 +179,7 @@ export async function findEmscriptenSDK() {
     )
 
     if (existsSync(emsdkScript)) {
-      return { path: emsdkPath, type: 'emsdk' }
+      return { __proto__: null, path: emsdkPath, type: 'emsdk' }
     }
   }
 

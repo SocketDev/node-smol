@@ -42,7 +42,7 @@ export async function activateEmscripten({
     if (!quiet) {
       printError(`Emscripten SDK not found at ${resolvedEmsdkPath}`)
     }
-    return { activated: false, env: {} }
+    return { __proto__: null, activated: false, env: {} }
   }
 
   try {
@@ -64,7 +64,7 @@ export async function activateEmscripten({
       if (!quiet) {
         printError(`Failed to activate Emscripten ${version}`)
       }
-      return { activated: false, env: {} }
+      return { __proto__: null, activated: false, env: {} }
     }
 
     // Source the environment (construct_env).
@@ -122,12 +122,12 @@ export async function activateEmscripten({
       logger.success(`Emscripten ${version} activated`)
     }
 
-    return { activated: true, env: envVars }
+    return { __proto__: null, activated: true, env: envVars }
   } catch (e) {
     if (!quiet) {
       printError(`Error activating Emscripten: ${errorMessage(e)}`)
     }
-    return { activated: false, env: {} }
+    return { __proto__: null, activated: false, env: {} }
   }
 }
 
@@ -214,7 +214,12 @@ export async function ensureEmscripten({
         }
       }
     }
-    return { activated: false, available: true, installed: false }
+    return {
+      __proto__: null,
+      activated: false,
+      available: true,
+      installed: false,
+    }
   }
 
   const emsdkPath = installPath || getEmsdkPath()
@@ -248,6 +253,7 @@ export async function ensureEmscripten({
       }
     }
     return {
+      __proto__: null,
       activated: activation.activated,
       available: activation.activated,
       installed: repaired,
@@ -255,7 +261,12 @@ export async function ensureEmscripten({
   }
 
   if (!autoInstall) {
-    return { activated: false, available: false, installed: false }
+    return {
+      __proto__: null,
+      activated: false,
+      available: false,
+      installed: false,
+    }
   }
 
   // Install Emscripten SDK.
@@ -269,7 +280,12 @@ export async function ensureEmscripten({
     version,
   })
   if (!installed) {
-    return { activated: false, available: false, installed: false }
+    return {
+      __proto__: null,
+      activated: false,
+      available: false,
+      installed: false,
+    }
   }
 
   // Activate after installation.
@@ -280,6 +296,7 @@ export async function ensureEmscripten({
   })
 
   return {
+    __proto__: null,
     activated: activation.activated,
     available: activation.activated,
     installed: true,
