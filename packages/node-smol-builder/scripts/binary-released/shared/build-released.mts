@@ -77,6 +77,7 @@ import {
   computePatchChainCachePaths,
   computeSourcePatchedCachePaths,
 } from '../../source-patched/shared/apply-patches.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
@@ -176,11 +177,11 @@ export async function buildRelease(config, buildOptions = {}) {
    */
   const CPU_COUNT = (() => {
     // Check for explicit override via environment variable
-    if (process.env['BUILD_JOBS']) {
-      const envJobs = Number.parseInt(process.env['BUILD_JOBS'], 10)
+    if (getEnvValue('BUILD_JOBS')) {
+      const envJobs = Number.parseInt(getEnvValue('BUILD_JOBS'), 10)
       if (Number.isNaN(envJobs) || envJobs < 1) {
         throw new Error(
-          `Invalid BUILD_JOBS value: ${process.env['BUILD_JOBS']} (must be a positive integer)`,
+          `Invalid BUILD_JOBS value: ${getEnvValue('BUILD_JOBS')} (must be a positive integer)`,
         )
       }
       return envJobs
@@ -408,7 +409,7 @@ export async function buildRelease(config, buildOptions = {}) {
           resumeFromCheckpoint = checkpoint
           logger.success('Build already complete')
           logger.log('')
-          return { releaseBinaryPath: outputReleaseBinary }
+          return { __proto__: null, releaseBinaryPath: outputReleaseBinary }
         }
 
         logger.warn(
@@ -460,7 +461,11 @@ export async function buildRelease(config, buildOptions = {}) {
       logger.log('')
       logger.success('Cached build is ready to use')
       logger.log('')
-      return { cached: true, releaseBinaryPath: outputReleaseBinary }
+      return {
+        __proto__: null,
+        cached: true,
+        releaseBinaryPath: outputReleaseBinary,
+      }
     }
   }
 
@@ -848,8 +853,8 @@ export async function buildRelease(config, buildOptions = {}) {
     // through to GYP-generated build files, which propagates to ninja.
     const buildEnv = {
       ...process.env,
-      CFLAGS: appendCCRemapFlags(process.env['CFLAGS']),
-      CXXFLAGS: appendCCRemapFlags(process.env['CXXFLAGS']),
+      CFLAGS: appendCCRemapFlags(getEnvValue('CFLAGS')),
+      CXXFLAGS: appendCCRemapFlags(getEnvValue('CXXFLAGS')),
     }
 
     await exec(configureCommand, configureArgs, {
@@ -884,7 +889,7 @@ export async function buildRelease(config, buildOptions = {}) {
     const totalCpus = os.cpus().length
     const totalRamGB = Math.floor(os.totalmem() / (1024 * 1024 * 1024))
     const isMemoryConstrained = jobCount < totalCpus
-    const isEnvOverride = Boolean(process.env['BUILD_JOBS'])
+    const isEnvOverride = Boolean(getEnvValue('BUILD_JOBS'))
 
     logger.log(
       `⏱️  Estimated time: ${timeEstimate.estimatedMinutes} minutes (${timeEstimate.minMinutes}-${timeEstimate.maxMinutes} min range)`,
@@ -944,7 +949,7 @@ export async function buildRelease(config, buildOptions = {}) {
     const ninjaPath = path.join(modeSourceDir, 'out/Release/build.ninja')
     const gypPath = path.join(modeSourceDir, 'node.gyp')
     try {
-      const [ninjaStat, gypStat] = await Promise.all([
+      const { 0: ninjaStat, 1: gypStat } = await Promise.all([
         // oxlint-disable-next-line socket/prefer-exists-sync -- need mtimeMs for staleness comparison
         fs.stat(ninjaPath),
         // oxlint-disable-next-line socket/prefer-exists-sync -- need mtimeMs for staleness comparison
@@ -1106,6 +1111,7 @@ export async function buildRelease(config, buildOptions = {}) {
   }
 
   return {
+    __proto__: null,
     buildSourcePaths,
     isCrossCompiling,
     releaseBinaryPath: outputReleaseBinary,
