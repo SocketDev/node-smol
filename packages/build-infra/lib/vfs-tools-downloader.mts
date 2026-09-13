@@ -192,7 +192,7 @@ export async function downloadVfsTool(
 
   if (!assetConfig) {
     logger.warn(`${toolName} not available for ${key}`)
-    return { success: false, toolDir: '', version: toolConfig.version }
+    return { __proto__: null, success: false, toolDir: '', version: toolConfig.version }
   }
 
   // Handle both old format (string URL) and new format (object with url/sha256)
@@ -209,7 +209,7 @@ export async function downloadVfsTool(
     const existingVersion = await fs.readFile(versionFile, 'utf8')
     if (existingVersion.trim() === version) {
       logger.info(`${toolName} ${version} already downloaded for ${key}`)
-      return { success: true, toolDir, version }
+      return { __proto__: null, success: true, toolDir, version }
     }
   }
 
@@ -254,7 +254,7 @@ export async function downloadVfsTool(
     await fs.writeFile(versionFile, version)
 
     logger.success(`Downloaded ${toolName} ${version} for ${key}`)
-    return { success: true, toolDir, version }
+    return { __proto__: null, success: true, toolDir, version }
   } finally {
     // Cleanup temp directory
     await safeDelete(tmpDir).catch(() => {})
@@ -328,6 +328,8 @@ export async function downloadAllVfsTools({
   }
 
   return {
+
+    __proto__: null,
     downloaded,
     failed,
     success: failed.length === 0,
@@ -377,5 +379,5 @@ export async function createVfsToolsTarball({
     `Created ${outputPath} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`,
   )
 
-  return { size: stats.size, success: true }
+  return { __proto__: null, size: stats.size, success: true }
 }

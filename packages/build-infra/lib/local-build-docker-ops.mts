@@ -162,7 +162,7 @@ export async function setupDockerBuilds(options = {}) {
       const error = errors[i]
       printError(error)
     }
-    return { ok: false, results }
+    return { __proto__: null, ok: false, results }
   }
 
   printSuccess('Docker is available and running')
@@ -170,7 +170,7 @@ export async function setupDockerBuilds(options = {}) {
   // 2. Setup buildx builder
   if (!(await ensureBuildxBuilder())) {
     printError('Failed to setup buildx builder')
-    return { ok: false, results }
+    return { __proto__: null, ok: false, results }
   }
 
   // 3. Setup QEMU for cross-arch (unless skipped)
@@ -220,11 +220,11 @@ export async function setupDockerBuilds(options = {}) {
 
   if (successful === total) {
     printSuccess(`All ${total} builder images ready`)
-    return { ok: true, results }
+    return { __proto__: null, ok: true, results }
   }
 
   printError(`${successful}/${total} builder images ready`)
-  return { ok: false, results }
+  return { __proto__: null, ok: false, results }
 }
 
 /**

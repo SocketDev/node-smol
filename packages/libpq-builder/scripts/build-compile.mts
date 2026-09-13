@@ -101,6 +101,8 @@ export function getNodeOpenSSLPaths() {
   const opensslLib = path.join(nodeUpstream, 'deps', 'openssl', 'openssl')
 
   return {
+
+    __proto__: null,
     includeDir: opensslInclude,
     libDir: opensslLib,
   }

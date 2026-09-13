@@ -76,7 +76,7 @@ export async function checkDockerSetup() {
     errors.push(
       'Docker is not installed. Install Docker Desktop (macOS/Windows) or Docker Engine (Linux).',
     )
-    return { errors, ok: false }
+    return { __proto__: null, errors, ok: false }
   }
 
   // Check Docker daemon is running
@@ -84,7 +84,7 @@ export async function checkDockerSetup() {
     errors.push(
       'Docker daemon is not running. Start Docker Desktop or the docker service.',
     )
-    return { errors, ok: false }
+    return { __proto__: null, errors, ok: false }
   }
 
   // Check buildx is available
@@ -92,10 +92,10 @@ export async function checkDockerSetup() {
     errors.push(
       'Docker Buildx is not available. Update Docker or enable buildx plugin.',
     )
-    return { errors, ok: false }
+    return { __proto__: null, errors, ok: false }
   }
 
-  return { errors, ok: true }
+  return { __proto__: null, errors, ok: true }
 }
 
 /**
@@ -182,7 +182,7 @@ export function getHostInfo() {
     target = `win32-${arch}`
   }
 
-  return { arch, platform, target }
+  return { __proto__: null, arch, platform, target }
 }
 
 /**

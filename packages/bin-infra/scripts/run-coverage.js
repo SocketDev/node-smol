@@ -112,7 +112,7 @@ async function main() {
 
   const coveragePromises = packagesToRun.map(async pkg => {
     const success = await runCoverageForPackage(pkg)
-    return { pkg, success }
+    return { __proto__: null, pkg, success }
   })
 
   const coverageResults = await Promise.allSettled(coveragePromises)

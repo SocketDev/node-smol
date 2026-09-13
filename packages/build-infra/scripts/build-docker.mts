@@ -181,12 +181,12 @@ async function main() {
     // For now, we only support Docker builds from this script
     download: async () => {
       printError('Download not implemented in this script')
-      return { ok: false }
+      return { __proto__: null, ok: false }
     },
     nativeBuild: async () => {
       printError('Native build not implemented in this script')
       printInfo('Use the package build script directly for native builds')
-      return { ok: false }
+      return { __proto__: null, ok: false }
     },
   })
 

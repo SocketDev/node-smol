@@ -58,7 +58,7 @@ export async function buildForTarget(config) {
     case 'native': {
       if (!nativeBuild) {
         printError('Native build function not provided')
-        return { ok: false, strategy }
+        return { __proto__: null, ok: false, strategy }
       }
       const result = await nativeBuild({
         buildMode,
@@ -67,7 +67,7 @@ export async function buildForTarget(config) {
         packageName,
         target,
       })
-      return { ...result, strategy }
+      return { __proto__: null, ...result, strategy }
     }
 
     case 'docker': {
@@ -78,21 +78,21 @@ export async function buildForTarget(config) {
         packageName,
         target,
       })
-      return { ...result, strategy }
+      return { __proto__: null, ...result, strategy }
     }
 
     case 'download': {
       if (!download) {
         printError('Download function not provided')
-        return { ok: false, strategy }
+        return { __proto__: null, ok: false, strategy }
       }
       const result = await download({ outputDir, packageName, target })
-      return { ...result, strategy }
+      return { __proto__: null, ...result, strategy }
     }
 
     default: {
       printError(`Unknown build strategy: ${String(strategy)}`)
-      return { ok: false, strategy }
+      return { __proto__: null, ok: false, strategy }
     }
   }
 }
@@ -121,7 +121,7 @@ export async function buildWithDocker(config) {
   // Validate target is Docker-buildable
   if (!LINUX_TARGETS.includes(target)) {
     printError(`Target ${target} is not Docker-buildable`)
-    return { ok: false }
+    return { __proto__: null, ok: false }
   }
 
   // Check image exists
@@ -130,7 +130,7 @@ export async function buildWithDocker(config) {
     printError(
       `Builder image ${imageTag} not found. Run setup-docker-builds.mts first.`,
     )
-    return { ok: false }
+    return { __proto__: null, ok: false }
   }
 
   const platform = getDockerPlatform(target)
@@ -194,7 +194,7 @@ export async function buildWithDocker(config) {
     const logContent = `=== STDOUT ===\n${result.stdout}\n\n=== STDERR ===\n${result.stderr}`
     await fs.writeFile(logPath, logContent, 'utf8')
     printInfo(`Full build output written to: ${logPath}`)
-    return { ok: false }
+    return { __proto__: null, ok: false }
   }
 
   printSuccess(`Build completed for ${target}`)
@@ -212,11 +212,11 @@ export async function buildWithDocker(config) {
   )
 
   if (existsSync(artifactPath)) {
-    return { artifactPath, ok: true }
+    return { __proto__: null, artifactPath, ok: true }
   }
   // Artifact not at expected path
   printInfo(`Note: Artifact not found at expected path: ${artifactPath}`)
-  return { ok: true }
+  return { __proto__: null, ok: true }
 }
 
 /**
@@ -361,12 +361,14 @@ export async function runInDocker(config) {
         stdio: 'inherit',
       })
       return {
+        __proto__: null,
         code: result.code ?? 0,
         stderr: '',
         stdout: '',
       }
     } catch (e) {
       return {
+        __proto__: null,
         code: e.code ?? 1,
         stderr: '',
         stdout: '',
@@ -392,12 +394,14 @@ export async function runInDocker(config) {
   try {
     const { code, stderr, stdout } = await result
     return {
+      __proto__: null,
       code: code ?? 0,
       stderr: stderr ?? '',
       stdout: stdout ?? '',
     }
   } catch (e) {
     return {
+      __proto__: null,
       code: e.code ?? 1,
       stderr: e.stderr?.toString() ?? '',
       stdout: e.stdout?.toString() ?? '',
