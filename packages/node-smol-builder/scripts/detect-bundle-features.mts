@@ -384,7 +384,9 @@ function collectFeatureVerdicts(
       !dropSet.has(feature.name) &&
       verdict.drop &&
       feature.policy !== 'soft'
-    if (isAmbiguous) {ambiguous.push(feature.name)}
+    if (isAmbiguous) {
+      ambiguous.push(feature.name)
+    }
   }
   return { __proto__: null, ambiguous, features }
 }
@@ -396,7 +398,9 @@ function resolveAmbiguousFeatures(
 ): void {
   for (let i = 0, { length } = ambiguous; i < length; i += 1) {
     const name = ambiguous[i]!
-    if (dropSet.has(name)) {continue}
+    if (dropSet.has(name)) {
+      continue
+    }
     const verdict = features[name]!
     verdict.drop = false
     verdict.note =

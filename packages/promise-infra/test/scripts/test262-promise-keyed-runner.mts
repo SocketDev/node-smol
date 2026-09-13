@@ -252,9 +252,15 @@ function collectCandidates(args: ParsedArgs): string[] {
 function getScenarios(
   attrs: TestCase['attrs'],
 ): Array<'strict' | 'sloppy' | 'raw'> {
-  if (attrs.raw) {return ['raw']}
-  if (attrs.onlyStrict) {return ['strict']}
-  if (attrs.noStrict) {return ['sloppy']}
+  if (attrs.raw) {
+    return ['raw']
+  }
+  if (attrs.onlyStrict) {
+    return ['strict']
+  }
+  if (attrs.noStrict) {
+    return ['sloppy']
+  }
   return ['strict', 'sloppy']
 }
 
