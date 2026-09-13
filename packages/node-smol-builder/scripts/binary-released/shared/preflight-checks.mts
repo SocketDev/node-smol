@@ -110,45 +110,8 @@ export async function checkBuildEnvironment(buildDir) {
   }
 
   // Check 3c: Xcode version (macOS only).
-  if (process.platform === 'darwin') {
-    logger.log('Checking Xcode version…')
-    try {
-      const result = await exec('xcodebuild', ['-version'], {
-        encoding: 'utf8',
-        shell: false,
-      })
-      const match = result.stdout?.match(/Xcode (\d+\.\d+)/)
-      if (match) {
-        const version = match[1]
-        const parts = version.split('.')
-        const majorVersion = Number.parseInt(parts[0], 10)
-        if (Number.isNaN(majorVersion)) {
-          logger.warn(`Invalid Xcode version format: ${version}`)
-          allChecks = false
-        } else if (majorVersion >= 16) {
-          logger.success(`Xcode ${version} meets requirements (clang 19+)`)
-        } else {
-          logger.fail(`Xcode ${version} is too old (need Xcode 16+)`)
-          logger.substep(
-            'Node.js v24 requires Xcode 16+ with clang 19+ for C++20 support',
-          )
-          logger.substep(
-            'Older clang versions crash on large V8 files with -O3 optimization',
-          )
-          logger.substep(
-            'Install Xcode 16.1+ from: https://developer.apple.com/xcode/',
-          )
-          logger.substep(
-            'After install, run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer',
-          )
-          allChecks = false
-        }
-      } else {
-        logger.warn('Could not parse Xcode version (continuing anyway)')
-      }
-    } catch {
-      logger.warn('Could not check Xcode version (continuing anyway)')
-    }
+  if (process.platform === 'darwin' && !(await checkXcodeVersion())) {
+    allChecks = false
   }
 
   // Check 4: Network connectivity.
@@ -181,6 +144,48 @@ export async function checkBuildEnvironment(buildDir) {
 
   logger.success('Build environment is ready')
   logger.logNewline()
+}
+
+export async function checkXcodeVersion() {
+  logger.log('Checking Xcode version…')
+  try {
+    const result = await exec('xcodebuild', ['-version'], {
+      encoding: 'utf8',
+      shell: false,
+    })
+    const match = result.stdout?.match(/Xcode (\d+\.\d+)/)
+    if (!match) {
+      logger.warn('Could not parse Xcode version (continuing anyway)')
+      return true
+    }
+    const version = match[1]
+    const majorVersion = Number.parseInt(version.split('.')[0], 10)
+    if (Number.isNaN(majorVersion)) {
+      logger.warn(`Invalid Xcode version format: ${version}`)
+      return false
+    }
+    if (majorVersion >= 16) {
+      logger.success(`Xcode ${version} meets requirements (clang 19+)`)
+      return true
+    }
+    logger.fail(`Xcode ${version} is too old (need Xcode 16+)`)
+    logger.substep(
+      'Node.js v24 requires Xcode 16+ with clang 19+ for C++20 support',
+    )
+    logger.substep(
+      'Older clang versions crash on large V8 files with -O3 optimization',
+    )
+    logger.substep(
+      'Install Xcode 16.1+ from: https://developer.apple.com/xcode/',
+    )
+    logger.substep(
+      'After install, run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer',
+    )
+    return false
+  } catch {
+    logger.warn('Could not check Xcode version (continuing anyway)')
+    return true
+  }
 }
 
 /**
