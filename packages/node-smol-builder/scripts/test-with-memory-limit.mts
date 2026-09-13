@@ -6,7 +6,7 @@
 
 import process from 'node:process'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import platformPkg from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import {
   spawn,
@@ -14,9 +14,10 @@ import {
 } from '@socketsecurity/lib-stable/process/spawn/child'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
-import { isOnAcPower } from '../../../scripts/fleet/power-state.mts'
+import { getPowerState } from '../../../scripts/fleet/power-state.mts'
 
 const logger = getDefaultLogger()
+const { WIN32 } = platformPkg
 
 const MAX_MEMORY_MB = 2048 // 2GB limit
 const CHECK_INTERVAL_MS = 1000 // Check every 1 second
@@ -76,7 +77,7 @@ export function killProcessTree(pid) {
 }
 
 async function main() {
-  const ON_AC = await isOnAcPower()
+  const ON_AC = (await getPowerState()) === 'ac'
 
   // Test suite builds full SEA binaries (~5s each, ~30 of them) plus
   // VFS extraction tests. On battery, macOS especially throttles CPU
@@ -149,16 +150,12 @@ async function main() {
       return
     }
 
-    // Show progress (only if memory is being used). Direct stdout
-    // write is intentional here: this is a TTY progress bar that
-    // overwrites itself with `\r`; piping through a logger would
-    // newline-terminate each frame and flood the output.
     if (memoryMB > 0) {
       const memPercent = Math.floor((memoryMB / MAX_MEMORY_MB) * 100)
       const bar = '\u2588'.repeat(Math.floor(memPercent / 5))
       const empty = '\u2591'.repeat(20 - Math.floor(memPercent / 5))
-      const status = `\r Memory: ${memoryMB}MB / ${MAX_MEMORY_MB}MB [${bar}${empty}] ${memPercent}% | ${elapsed}s`
-      process.stdout.write(status) // socket-hook: allow console -- TTY progress bar with \r overwrite
+      const status = `Memory: ${memoryMB}MB / ${MAX_MEMORY_MB}MB [${bar}${empty}] ${memPercent}% | ${elapsed}s`
+      logger.info(status)
     }
   }, CHECK_INTERVAL_MS)
 

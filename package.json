@@ -35,6 +35,7 @@
     "security": "node scripts/fleet/security.mts",
     "sync-package-manager-pins": "node scripts/fleet/sync-package-manager-pins.mts",
     "test": "node scripts/fleet/test.mts",
+    "test:e2e": "node packages/node-smol-builder/scripts/test-with-memory-limit.mts --config packages/node-smol-builder/vitest.e2e.config.mts",
     "update": "node scripts/fleet/update.mts",
     "weekly-update": "node scripts/fleet/weekly-update.mts",
     "clean": "node scripts/fleet/clean.mts",

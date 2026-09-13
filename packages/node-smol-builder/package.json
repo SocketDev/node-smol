@@ -20,7 +20,7 @@
     "glibc:audit": "node scripts/audit-glibc-symbols.mts",
     "postinstall": "node scripts/setup-build-toolchain.mts",
     "test": "node scripts/test-with-memory-limit.mts",
-    "test:e2e": "node scripts/test-with-memory-limit.mts test/e2e/e2e.test.mts",
+    "test:e2e": "node scripts/test-with-memory-limit.mts --config vitest.e2e.config.mts",
     "test:linux-x64-docker": "node scripts/test-linux-x64-docker.mts",
     "test:linux-x64-docker:musl": "node scripts/test-linux-x64-docker.mts --musl",
     "test:node-suite": "node scripts/test-node-suite.mts",
