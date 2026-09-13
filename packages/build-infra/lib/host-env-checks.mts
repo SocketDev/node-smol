@@ -197,28 +197,10 @@ export async function checkPythonVersion(
         continue
       }
 
-      const versionParts = version.split('.').map(Number)
-      const minParts = effectiveMinVersion.split('.').map(Number)
-
-      const major = versionParts[0]
-      const minor = versionParts[1]
-      const minMajor = minParts[0]
-      const minMinor = minParts[1]
-
-      // Validate that we have at least major.minor and no NaN values
-      if (
-        major === undefined ||
-        minor === undefined ||
-        minMajor === undefined ||
-        minMinor === undefined ||
-        versionParts.some(n => Number.isNaN(n)) ||
-        minParts.some(n => Number.isNaN(n))
-      ) {
+      const sufficient = parsePythonVersion(version, effectiveMinVersion)
+      if (sufficient === undefined) {
         continue
       }
-
-      const sufficient =
-        major > minMajor || (major === minMajor && minor >= minMinor)
 
       return {
         available: true,
@@ -371,4 +353,22 @@ export async function freeDiskSpace(): Promise<void> {
   } catch (e) {
     logger.warn(`Disk space cleanup encountered errors: ${errorMessage(e)}`)
   }
+}
+
+export function parsePythonVersion(version: string, minVersion: string) {
+  const versionParts = version.split('.').map(Number)
+  const minParts = minVersion.split('.').map(Number)
+  const { 0: major, 1: minor } = versionParts
+  const { 0: minMajor, 1: minMinor } = minParts
+  if (
+    major === undefined ||
+    minor === undefined ||
+    minMajor === undefined ||
+    minMinor === undefined ||
+    versionParts.some(Number.isNaN) ||
+    minParts.some(Number.isNaN)
+  ) {
+    return undefined
+  }
+  return major > minMajor || (major === minMajor && minor >= minMinor)
 }
