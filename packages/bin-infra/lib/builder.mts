@@ -145,7 +145,7 @@ export async function buildBinSuitePackage(config: BuildBinSuitePackageConfig) {
       }
     }
 
-    logger.info(`🔨 Building ${packageName}...`)
+    logger.info(`Building ${packageName}...`)
     logger.error('')
 
     // Check required build tools
