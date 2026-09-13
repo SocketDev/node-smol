@@ -298,10 +298,10 @@ export async function createCheckpoint(
     // Include timestamp and crypto-random suffix to prevent PID reuse collisions
     const randomId = crypto.randomBytes(8).toString('hex')
     const tempTarballPath = `${tarballPath}.tmp.${process.pid}.${Date.now()}.${randomId}`
-    const unixTempTarballPath = WIN32
-      ? toUnixPath(tempTarballPath)
-      : tempTarballPath
-    const unixTarDir = WIN32 ? toUnixPath(tarDir) : tarDir
+    const relativeTempTarballPath = path.relative(tarDir, tempTarballPath)
+    const tarOutputPath = WIN32
+      ? toUnixPath(relativeTempTarballPath)
+      : relativeTempTarballPath
 
     // Build tar args: default macOS-resource-fork exclude, plus any
     // caller-supplied excludes (e.g. `out` for source checkpoints to
@@ -311,11 +311,9 @@ export async function createCheckpoint(
     const extraExcludes = Array.isArray(tarExcludes) ? tarExcludes : []
     const tarArgs = [
       '-czf',
-      unixTempTarballPath,
+      tarOutputPath,
       '--exclude=._*',
       ...extraExcludes.map(p => `--exclude=${p}`),
-      '-C',
-      unixTarDir,
       tarBase,
     ]
 
@@ -371,6 +369,7 @@ export async function createCheckpoint(
           // AppleDouble resource fork files (._* files) which cause
           // compilation errors when extracted on Linux.
           env: DARWIN ? { ...process.env, COPYFILE_DISABLE: '1' } : process.env,
+          cwd: tarDir,
           stdio: 'pipe',
         })
       } catch (tarError) {
