@@ -313,34 +313,14 @@ export async function ensurePythonPackage(
       expectedVersion,
     )
     if (!hasCorrectVersion) {
-      const pythonCmd = await getPythonCommand()
-      try {
-        const result = await spawn(
-          pythonCmd,
-          ['-c', `import ${checkName}; print(${checkName}.__version__)`],
-          { stdio: 'pipe' },
-        )
-        const installedVersion = (result.stdout || '').trim()
-        if (!quiet) {
-          logger.warn(
-            `Python package '${packageName}' version mismatch: installed ${installedVersion}, expected ${expectedVersion}`,
-          )
-        }
-        // Version mismatch - need to reinstall
-        if (autoInstall) {
-          if (!quiet) {
-            logger.substep(`Reinstalling ${packageName} with pinned version…`)
-          }
-          const installed = await installPythonPackage(packageName, {
-            consumerPackageJsonPath,
-            quiet,
-            upgrade: true,
-          })
-          return { __proto__: null, available: installed, installed }
-        }
-        return { __proto__: null, available: false, installed: false }
-      } catch {
-        // Could not check version, proceed with reinstall if autoInstall
+      const mismatchResult = await resolvePythonVersionMismatch(
+        packageName,
+        checkName,
+        expectedVersion,
+        { autoInstall, consumerPackageJsonPath, quiet },
+      )
+      if (mismatchResult) {
+        return mismatchResult
       }
     } else if (hasCorrectVersion) {
       return { __proto__: null, available: true, installed: false }
@@ -492,4 +472,48 @@ export function reportPythonPackageSummary(config) {
   logger.warn(
     `${packageCount - missing.length}/${packageCount} Python packages available (${missing.length} missing: ${missing.join(', ')})`,
   )
+}
+
+export async function resolvePythonVersionMismatch(
+  packageName,
+  checkName,
+  expectedVersion,
+  options = {},
+) {
+  const {
+    autoInstall = true,
+    consumerPackageJsonPath,
+    quiet = false,
+  } = {
+    __proto__: null,
+    ...options,
+  }
+  const pythonCmd = await getPythonCommand()
+  try {
+    const result = await spawn(
+      pythonCmd,
+      ['-c', `import ${checkName}; print(${checkName}.__version__)`],
+      { stdio: 'pipe' },
+    )
+    const installedVersion = (result.stdout || '').trim()
+    if (!quiet) {
+      logger.warn(
+        `Python package '${packageName}' version mismatch: installed ${installedVersion}, expected ${expectedVersion}`,
+      )
+    }
+    if (!autoInstall) {
+      return { __proto__: null, available: false, installed: false }
+    }
+    if (!quiet) {
+      logger.substep(`Reinstalling ${packageName} with pinned version…`)
+    }
+    const installed = await installPythonPackage(packageName, {
+      consumerPackageJsonPath,
+      quiet,
+      upgrade: true,
+    })
+    return { __proto__: null, available: installed, installed }
+  } catch {
+    return undefined
+  }
 }
