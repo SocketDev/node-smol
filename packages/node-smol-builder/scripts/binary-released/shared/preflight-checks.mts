@@ -247,7 +247,7 @@ export async function checkRequiredTools({ arch, autoYes }) {
   }
 
   // Step 6: Check manual tools.
-  let allManualAvailable = true
+  const manualMissingTools = []
   // Loop variable is destructured.
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const { cmd, name } of manualTools) {
@@ -256,44 +256,40 @@ export async function checkRequiredTools({ arch, autoYes }) {
       logger.success(`${name} is available`)
     } else {
       logger.fail(`${name} is NOT available`)
-      allManualAvailable = false
+      manualMissingTools.push(name)
     }
   }
 
   // Step 7: Handle missing tools.
-  if (!result.allAvailable || !allManualAvailable) {
-    const missingTools = [
-      ...result.missing,
-      ...manualTools
-        .filter(t => !whichSync(t.cmd, { nothrow: true }))
-        .map(t => t.name),
-    ]
+  const missingTools = collectMissingTools(result.missing, manualMissingTools)
+  if (missingTools.length > 0) {
+    const instructions = []
+    instructions.push('Missing required build tools:')
+    instructions.push('')
 
-    if (missingTools.length > 0) {
-      const instructions = []
-      instructions.push('Missing required build tools:')
+    for (let i = 0, { length } = missingTools; i < length; i += 1) {
+      const tool = missingTools[i]
+      const toolInstructions = getInstallInstructions(tool)
+      instructions.push(...toolInstructions)
       instructions.push('')
-
-      for (let i = 0, { length } = missingTools; i < length; i += 1) {
-        const tool = missingTools[i]
-        const toolInstructions = getInstallInstructions(tool)
-        instructions.push(...toolInstructions)
-        instructions.push('')
-      }
-
-      if (IS_MACOS) {
-        instructions.push('For Xcode Command Line Tools:')
-        instructions.push('  xcode-select --install')
-      }
-
-      printError(
-        'Missing Required Tools',
-        'Some required build tools are not available.',
-        instructions,
-      )
-      throw new Error('Missing required build tools')
     }
+
+    if (IS_MACOS) {
+      instructions.push('For Xcode Command Line Tools:')
+      instructions.push('  xcode-select --install')
+    }
+
+    printError(
+      'Missing Required Tools',
+      'Some required build tools are not available.',
+      instructions,
+    )
+    throw new Error('Missing required build tools')
   }
 
   logger.log('')
+}
+
+export function collectMissingTools(missingTools, manualMissingTools) {
+  return [...missingTools, ...manualMissingTools]
 }
