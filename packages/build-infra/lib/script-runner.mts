@@ -16,6 +16,10 @@ const PNPM_NOT_FOUND_MSG = 'pnpm not found in PATH'
 // The lib spawn's options parameter — reused so every runner forwards the
 // exact shape spawn accepts without re-declaring it.
 export type SpawnExtra = NonNullable<Parameters<typeof spawn>[2]>
+export type CommandOptions = SpawnExtra & { args?: string[] | undefined }
+export type PackageCommandOptions = SpawnExtra & {
+  packageName?: string | undefined
+}
 
 export interface CommandSpec {
   readonly args?: string[] | undefined
@@ -122,9 +126,9 @@ export async function runParallel(
 export async function runPnpmScript(
   packageName: string,
   scriptName: string,
-  args: string[] = [],
-  options: SpawnExtra = {},
+  options: CommandOptions = {},
 ) {
+  const { args = [], ...spawnOptions } = options
   const pnpmResolved = await which('pnpm', { nothrow: true })
   // which() may return string[] under some option shapes — take the first hit.
   const pnpmPath = Array.isArray(pnpmResolved) ? pnpmResolved[0] : pnpmResolved
@@ -137,7 +141,7 @@ export async function runPnpmScript(
   return spawn(pnpmPath, pnpmArgs, {
     shell: WIN32,
     stdio: 'inherit',
-    ...options,
+    ...spawnOptions,
   })
 }
 
@@ -152,9 +156,9 @@ export async function runPnpmScript(
  */
 export async function runPnpmScriptAll(
   scriptName: string,
-  args: string[] = [],
-  options: SpawnExtra = {},
+  options: CommandOptions = {},
 ) {
+  const { args = [], ...spawnOptions } = options
   const pnpmResolved = await which('pnpm', { nothrow: true })
   // which() may return string[] under some option shapes — take the first hit.
   const pnpmPath = Array.isArray(pnpmResolved) ? pnpmResolved[0] : pnpmResolved
@@ -167,7 +171,7 @@ export async function runPnpmScriptAll(
   return spawn(pnpmPath, pnpmArgs, {
     shell: WIN32,
     stdio: 'inherit',
-    ...options,
+    ...spawnOptions,
   })
 }
 
@@ -180,14 +184,11 @@ export async function runPnpmScriptAll(
  *
  * @returns {Promise<{ code: number; stdout: string; stderr: string }>}
  */
-export async function runQuiet(
-  command: string,
-  args: string[] = [],
-  options: SpawnExtra = {},
-) {
+export async function runQuiet(command: string, options: CommandOptions = {}) {
+  const { args = [], ...spawnOptions } = options
   return spawn(command, args, {
     shell: WIN32 === true,
-    ...options,
+    ...spawnOptions,
   })
 }
 
@@ -239,7 +240,8 @@ export const pnpm = {
   /**
    * Build all packages or specific package.
    */
-  build: async (packageName?: string | undefined, options: SpawnExtra = {}) => {
+  build: async (options: PackageCommandOptions = {}) => {
+    const { packageName, ...spawnOptions } = options
     logger.step(packageName ? `Building ${packageName}` : 'Building packages')
     const pnpmResolved = await which('pnpm', { nothrow: true })
     // which() may return string[] under some option shapes — take the first hit.
@@ -256,12 +258,12 @@ export const pnpm = {
     return spawn(pnpmPath, args, {
       shell: WIN32,
       stdio: 'inherit',
-      ...options,
+      ...spawnOptions,
     })
   },
 
   /**
-   * Run pnpm install with frozen lockfile.
+   * Run `pnpm install` with frozen lockfile.
    */
   install: async (options: SpawnExtra = {}) => {
     logger.step('Installing dependencies')
@@ -283,7 +285,8 @@ export const pnpm = {
   /**
    * Run tests in specific package or all packages.
    */
-  test: async (packageName?: string | undefined, options: SpawnExtra = {}) => {
+  test: async (options: PackageCommandOptions = {}) => {
+    const { packageName, ...spawnOptions } = options
     logger.step(packageName ? `Testing ${packageName}` : 'Running tests')
     const pnpmResolved = await which('pnpm', { nothrow: true })
     // which() may return string[] under some option shapes — take the first hit.
@@ -300,7 +303,7 @@ export const pnpm = {
     return spawn(pnpmPath, args, {
       shell: WIN32,
       stdio: 'inherit',
-      ...options,
+      ...spawnOptions,
     })
   },
 }
