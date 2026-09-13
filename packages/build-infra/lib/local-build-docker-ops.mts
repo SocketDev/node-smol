@@ -174,17 +174,7 @@ export async function setupDockerBuilds(options = {}) {
   }
 
   // 3. Setup QEMU for cross-arch (unless skipped)
-  const hostArch = getArch()
-  const needsCrossArch = targets.some(t => {
-    const targetArch = t.includes('arm64') ? 'arm64' : 'x64'
-    return targetArch !== hostArch
-  })
-
-  if (needsCrossArch && !skipQemu) {
-    if (!(await setupQemuEmulation())) {
-      printError('QEMU setup failed - cross-architecture builds may not work')
-    }
-  }
+  await setupQemuForTargets(targets, { skipQemu })
 
   // 4. Build images for each target
   // Note: Sequential builds are intentional for clearer output and to avoid
@@ -260,5 +250,20 @@ export async function setupQemuEmulation() {
   } catch (e) {
     printError(`QEMU setup error: ${errorMessage(e)}`)
     return false
+  }
+}
+
+export async function setupQemuForTargets(
+  targets: readonly string[],
+  options: { skipQemu?: boolean | undefined } = {},
+): Promise<void> {
+  const { skipQemu = false } = { __proto__: null, ...options }
+  const hostArch = getArch()
+  const needsCrossArch = targets.some(target => {
+    const targetArch = target.includes('arm64') ? 'arm64' : 'x64'
+    return targetArch !== hostArch
+  })
+  if (needsCrossArch && !skipQemu && !(await setupQemuEmulation())) {
+    printError('QEMU setup failed - cross-architecture builds may not work')
   }
 }
