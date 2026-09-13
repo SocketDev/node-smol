@@ -100,6 +100,7 @@ export async function ensureAllToolsInstalled(
   }
 
   return {
+    __proto__: null,
     allAvailable: missing.length === 0,
     installed,
     missing,
@@ -128,6 +129,7 @@ export async function ensurePackageManagerAvailable({
   const managers = detectPackageManagers()
   if (managers.length > 0) {
     return {
+      __proto__: null,
       available: true,
       installed: false,
       manager: managers[0],
@@ -136,6 +138,7 @@ export async function ensurePackageManagerAvailable({
 
   if (!autoInstall) {
     return {
+      __proto__: null,
       available: false,
       installed: false,
       manager: undefined,
@@ -146,6 +149,7 @@ export async function ensurePackageManagerAvailable({
   const preferred = getPreferredPackageManager()
   if (!preferred) {
     return {
+      __proto__: null,
       available: false,
       installed: false,
       manager: undefined,
@@ -158,6 +162,7 @@ export async function ensurePackageManagerAvailable({
   const installed = await installPackageManager(preferred, { autoYes })
 
   return {
+    __proto__: null,
     available: installed,
     installed,
     manager: installed ? preferred : undefined,
@@ -183,6 +188,7 @@ export async function ensurePinnedTool(tool, config, autoInstall) {
   const requiredVersion = config.version
   if (!requiredVersion) {
     return {
+      __proto__: null,
       available: false,
       installed: false,
       error: `Pinned tool ${tool} missing version`,
@@ -198,7 +204,12 @@ export async function ensurePinnedTool(tool, config, autoInstall) {
       const version = (result.stdout?.toString() || '').trim()
       if (version === requiredVersion) {
         logger.substep(`${tool} ${version} found at ${String(binPath)}`)
-        return { available: true, installed: false, path: binPath }
+        return {
+          __proto__: null,
+          available: true,
+          installed: false,
+          path: binPath,
+        }
       }
       if (version) {
         logger.warn(`System ${tool} is ${version}, need ${requiredVersion}`)
@@ -210,6 +221,7 @@ export async function ensurePinnedTool(tool, config, autoInstall) {
 
   if (!autoInstall) {
     return {
+      __proto__: null,
       available: false,
       installed: false,
       error: `${tool} ${requiredVersion} not found`,
@@ -220,6 +232,7 @@ export async function ensurePinnedTool(tool, config, autoInstall) {
   const artifact = resolvePinnedArtifact(tool, requiredVersion)
   if (!artifact) {
     return {
+      __proto__: null,
       available: false,
       installed: false,
       error: `No checksum data for ${tool} ${requiredVersion} on this platform`,
@@ -238,7 +251,12 @@ export async function ensurePinnedTool(tool, config, autoInstall) {
     )
     if (cachedBin) {
       logger.substep(`Using cached ${tool} ${requiredVersion}`)
-      return { available: true, installed: false, path: cachedBin }
+      return {
+        __proto__: null,
+        available: true,
+        installed: false,
+        path: cachedBin,
+      }
     }
 
     logger.substep(`${tool} ${requiredVersion} not found, downloading…`)
@@ -249,11 +267,16 @@ export async function ensurePinnedTool(tool, config, autoInstall) {
       process.platform,
       process.arch,
     )
-    return { available: true, installed: true, path: downloadedPath }
+    return {
+      __proto__: null,
+      available: true,
+      installed: true,
+      path: downloadedPath,
+    }
   } catch (e) {
     const msg = errorMessage(e)
     logger.error(`Failed to get ${tool} ${requiredVersion}: ${msg}`)
-    return { available: false, installed: false, error: msg }
+    return { __proto__: null, available: false, installed: false, error: msg }
   }
 }
 
@@ -295,7 +318,12 @@ export async function ensureToolInstalled(
     const verifyArgs = config?.verify || ['--version']
     const works = await verifyToolWorks(tool, verifyArgs)
     if (works) {
-      return { available: true, installed: false, packageManager: undefined }
+      return {
+        __proto__: null,
+        available: true,
+        installed: false,
+        packageManager: undefined,
+      }
     }
 
     // Tool exists but doesn't work - likely missing dependency.
@@ -313,6 +341,7 @@ export async function ensureToolInstalled(
         if (!depResult.available) {
           const depConfig = getToolConfig(dep, toolOptions)
           return {
+            __proto__: null,
             available: false,
             error: `Dependency ${dep} not available: ${depConfig?.note || 'install required'}`,
             installed: false,
@@ -323,7 +352,12 @@ export async function ensureToolInstalled(
       // Dependencies installed, try verifying again.
       const worksAfterDeps = await verifyToolWorks(tool, verifyArgs)
       if (worksAfterDeps) {
-        return { available: true, installed: false, packageManager: undefined }
+        return {
+          __proto__: null,
+          available: true,
+          installed: false,
+          packageManager: undefined,
+        }
       }
     }
 
@@ -341,6 +375,7 @@ export async function ensureToolInstalled(
     }
 
     return {
+      __proto__: null,
       available: false,
       error: `${tool} exists but failed to run (possible broken dependency)`,
       installed: false,
@@ -349,7 +384,12 @@ export async function ensureToolInstalled(
   }
 
   if (!autoInstall) {
-    return { available: false, installed: false, packageManager: undefined }
+    return {
+      __proto__: null,
+      available: false,
+      installed: false,
+      packageManager: undefined,
+    }
   }
 
   // Install dependencies first.
@@ -365,6 +405,7 @@ export async function ensureToolInstalled(
       })
       if (!depResult.available) {
         return {
+          __proto__: null,
           available: false,
           error: `Failed to install dependency: ${dep}`,
           installed: false,
@@ -378,7 +419,12 @@ export async function ensureToolInstalled(
   const managers = detectPackageManagers()
   if (!managers.length) {
     logger.warn(`No package manager detected for auto-installing ${tool}`)
-    return { available: false, installed: false, packageManager: undefined }
+    return {
+      __proto__: null,
+      available: false,
+      installed: false,
+      packageManager: undefined,
+    }
   }
 
   // Try to install using the first available package manager.
@@ -386,7 +432,12 @@ export async function ensureToolInstalled(
   if (!packageManager) {
     // Defensive fallback for race conditions
     logger.error('Package manager became unavailable')
-    return { available: false, installed: false, packageManager: undefined }
+    return {
+      __proto__: null,
+      available: false,
+      installed: false,
+      packageManager: undefined,
+    }
   }
   logger.substep(`Attempting to install ${tool} using ${packageManager}`)
 
@@ -399,6 +450,7 @@ export async function ensureToolInstalled(
     if (!works) {
       logger.error(`${tool} installed but failed verification`)
       return {
+        __proto__: null,
         available: false,
         error: `${tool} installed but failed to run`,
         installed: true,
@@ -408,6 +460,7 @@ export async function ensureToolInstalled(
   }
 
   return {
+    __proto__: null,
     available: installed,
     installed,
     packageManager: installed ? packageManager : undefined,
