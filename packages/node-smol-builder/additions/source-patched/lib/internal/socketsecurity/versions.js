@@ -75,7 +75,7 @@ class VersionError extends Error {
 }
 
 // LRU cache using SafeMap (insertion-ordered, O(1) eviction)
-const CACHE_SIZE = 50000
+const CACHE_SIZE = 50_000
 let cache = new SafeMap()
 let cacheHits = 0
 let cacheMisses = 0
@@ -131,7 +131,7 @@ const SEMVER_REGEX = hardenRegExp(
 const NUMERIC_IDENTIFIER = hardenRegExp(/^[0-9]+$/)
 
 // Hoisted regexes for Maven/PyPI/range parsing (avoids inline regex in hot paths)
-const MAVEN_SPLIT_REGEX = hardenRegExp(/[.\-]/)
+const MAVEN_SPLIT_REGEX = hardenRegExp(/[.-]/)
 // Match a Maven qualifier like `alpha1`: `^([a-z]+)` a leading run of letters
 // (group 1, the qualifier name), `(\d+)$` a trailing run of digits to end
 // (group 2, the qualifier number). Whole string must be name-then-number.
@@ -208,7 +208,7 @@ function computePacked(major, minor, patch) {
   if (major >= 1024 || minor >= 1024 || patch >= 1024) {
     return -1
   }
-  return major * 1048576 + minor * 1024 + patch
+  return major * 1_048_576 + minor * 1024 + patch
 }
 
 // Parse npm/SemVer version. Field extraction stays in JS because
@@ -546,7 +546,7 @@ function parseNuget(version) {
 function parseGem(version) {
   // Replace - with .pre. per RubyGems convention.
   // Use split+join since StringPrototypeReplaceAll may not be in primordials.
-  let normalized = ArrayPrototypeJoin(
+  const normalized = ArrayPrototypeJoin(
     StringPrototypeSplit(version, '-'),
     '.pre.',
   )
@@ -582,8 +582,8 @@ function parseGem(version) {
     if (typeof segments[i] === 'number') {
       if (numIdx === 0) {
         major = segments[i]
-      } else if (numIdx === 1) minor = segments[i]
-      else if (numIdx === 2) patch = segments[i]
+      } else if (numIdx === 1) {minor = segments[i]}
+      else if (numIdx === 2) {patch = segments[i]}
       numIdx++
     } else {
       break // First string segment ends the release part
@@ -915,7 +915,7 @@ function compare(a, b, ecosystem = 'npm') {
     if (aPhase === 0) {
       // Both dev: compare dev number.
       if ((va.devNum || 0) !== (vb.devNum || 0))
-        return (va.devNum || 0) < (vb.devNum || 0) ? -1 : 1
+        {return (va.devNum || 0) < (vb.devNum || 0) ? -1 : 1}
     } else if (aPhase === 1) {
       // Both prerelease: compare prerelease arrays.
       const preResult = comparePrerelease(va.prerelease, vb.prerelease)
@@ -925,7 +925,7 @@ function compare(a, b, ecosystem = 'npm') {
     } else if (aPhase === 3) {
       // Both post: compare post number.
       if ((va.postNum || 0) !== (vb.postNum || 0))
-        return (va.postNum || 0) < (vb.postNum || 0) ? -1 : 1
+        {return (va.postNum || 0) < (vb.postNum || 0) ? -1 : 1}
     }
 
     return 0
@@ -1232,8 +1232,7 @@ function prereleaseAllowed(version, comp) {
 
   // If comparator's version has prerelease on same tuple, allow it
   if (
-    comp.version &&
-    comp.version.prerelease &&
+    comp.version?.prerelease &&
     comp.version.prerelease.length > 0
   ) {
     // Check if same major.minor.patch
@@ -1333,8 +1332,7 @@ function rangeHasMatchingPrerelease(version, comparators) {
   for (let i = 0; i < comparators.length; i++) {
     const comp = comparators[i]
     if (
-      comp &&
-      comp.version &&
+      comp?.version &&
       comp.version.prerelease &&
       comp.version.prerelease.length > 0
     ) {
@@ -1393,17 +1391,17 @@ function compileRange(range, ecosystem) {
         const lower = tryParseOrCoerce(andParts[j], ecosystem)
         const upperBound = coerceHyphenUpper(andParts[j + 2], ecosystem)
         if (lower)
-          ArrayPrototypePush(comparators, {
+          {ArrayPrototypePush(comparators, {
             __proto__: null,
             op: '>=',
             version: lower,
-          })
+          })}
         if (upperBound)
-          ArrayPrototypePush(comparators, {
+          {ArrayPrototypePush(comparators, {
             __proto__: null,
             op: upperBound.op,
             version: upperBound.version,
-          })
+          })}
         ArrayPrototypePush(hyphenRanges, {
           __proto__: null,
           lower,
@@ -1415,7 +1413,7 @@ function compileRange(range, ecosystem) {
         const comp = parseComparator(andParts[j], ecosystem)
         if (comp) {
           ArrayPrototypePush(comparators, comp)
-        } else ArrayPrototypePush(comparators, undefined)
+        } else {ArrayPrototypePush(comparators, undefined)}
       }
     }
 

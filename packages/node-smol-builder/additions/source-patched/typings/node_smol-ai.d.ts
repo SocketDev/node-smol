@@ -1,14 +1,14 @@
 declare module 'node:smol-ai' {
   export interface LanguageModelCreateOptions {
-    readonly expectedInputs?: readonly LanguageModelModality[]
-    readonly expectedOutputs?: readonly LanguageModelModality[]
-    readonly maxTokens?: number
+    readonly expectedInputs?: readonly LanguageModelModality[] | undefined
+    readonly expectedOutputs?: readonly LanguageModelModality[] | undefined
+    readonly maxTokens?: number | undefined
     monitor?(monitor: LanguageModelMonitor): void
-    readonly seed?: number
-    readonly signal?: AbortSignal
-    readonly temperature?: number
-    readonly threads?: number
-    readonly topK?: number
+    readonly seed?: number | undefined
+    readonly signal?: AbortSignal | undefined
+    readonly temperature?: number | undefined
+    readonly threads?: number | undefined
+    readonly topK?: number | undefined
   }
 
   export interface LanguageModelMessage {
@@ -17,7 +17,7 @@ declare module 'node:smol-ai' {
   }
 
   export interface LanguageModelModality {
-    readonly languages?: readonly string[]
+    readonly languages?: readonly string[] | undefined
     readonly type: string
   }
 
@@ -45,11 +45,11 @@ declare module 'node:smol-ai' {
     measureInputUsage(input: LanguageModelPrompt): Promise<number>
     prompt(
       input: LanguageModelPrompt,
-      options?: { readonly signal?: AbortSignal },
+      options?: { readonly signal?: AbortSignal | undefined } | undefined,
     ): Promise<string>
     promptStreaming(
       input: LanguageModelPrompt,
-      options?: { readonly signal?: AbortSignal },
+      options?: { readonly signal?: AbortSignal | undefined } | undefined,
     ): ReadableStream<string>
   }
 
@@ -68,7 +68,7 @@ declare module 'node:smol-ai' {
       tools: false
       vision: false
     }>
-    create(options?: LanguageModelCreateOptions): Promise<LanguageModelSession>
+    create(options?: LanguageModelCreateOptions | undefined): Promise<LanguageModelSession>
     params(): Promise<Readonly<{
       defaultTemperature: number
       defaultTopK: number

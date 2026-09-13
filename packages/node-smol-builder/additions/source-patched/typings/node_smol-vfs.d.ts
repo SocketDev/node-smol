@@ -32,8 +32,8 @@
  * @module
  */
 declare module 'node:smol-vfs' {
-  import { Readable } from 'node:stream'
-  import { Stats, Dirent } from 'node:fs'
+  import type { Readable } from 'node:stream'
+  import type { Dirent, Stats } from 'node:fs'
 
   /** VFS operation modes */
   export const MODE_COMPAT: number
@@ -46,12 +46,12 @@ declare module 'node:smol-vfs' {
   /** Error class for VFS operations */
   export class VFSError extends Error {
     code: string
-    path?: string
-    syscall?: string
-    errno?: number
+    path?: string | undefined
+    syscall?: string | undefined
+    errno?: number | undefined
     constructor(
       message: string,
-      options?: { code?: string; path?: string; syscall?: string },
+      options?: { code?: string | undefined; path?: string | undefined; syscall?: string | undefined },
     )
   }
 
@@ -65,9 +65,9 @@ declare module 'node:smol-vfs' {
   /** Get VFS configuration */
   export function config(): {
     available: boolean
-    prefix?: string
-    mode?: number
-    source?: string
+    prefix?: string | undefined
+    mode?: number | undefined
+    source?: string | undefined
   }
 
   /** Get the VFS mount prefix (e.g., '/snapshot') */
@@ -98,27 +98,27 @@ declare module 'node:smol-vfs' {
   ): string
   export function readFileSync(
     filepath: string,
-    options?: { encoding?: BufferEncoding } | BufferEncoding,
+    options?: { encoding?: BufferEncoding | undefined } | BufferEncoding | undefined,
   ): Buffer | string
 
   /** Get file stats from VFS */
-  export function statSync(filepath: string, options?: object): Stats
+  export function statSync(filepath: string, options?: object | undefined): Stats
 
   /** Get file stats without following symlinks */
-  export function lstatSync(filepath: string, options?: object): Stats
+  export function lstatSync(filepath: string, options?: object | undefined): Stats
 
   /** Read directory contents from VFS */
   export function readdirSync(
     filepath: string,
-    options?: { withFileTypes?: false; recursive?: boolean },
+    options?: { withFileTypes?: false | undefined; recursive?: boolean | undefined } | undefined,
   ): string[]
   export function readdirSync(
     filepath: string,
-    options: { withFileTypes: true; recursive?: boolean },
+    options: { withFileTypes: true; recursive?: boolean | undefined },
   ): Dirent[]
   export function readdirSync(
     filepath: string,
-    options: { recursive: true; withFileTypes?: false },
+    options: { recursive: true; withFileTypes?: false | undefined },
   ): string[]
   export function readdirSync(
     filepath: string,
@@ -126,13 +126,13 @@ declare module 'node:smol-vfs' {
   ): Dirent[]
 
   /** Check file accessibility */
-  export function accessSync(filepath: string, mode?: number): void
+  export function accessSync(filepath: string, mode?: number | undefined): void
 
   /** Get real path (resolves symlinks) */
-  export function realpathSync(filepath: string, options?: object): string
+  export function realpathSync(filepath: string, options?: object | undefined): string
 
   /** Read symlink target */
-  export function readlinkSync(filepath: string, options?: object): string
+  export function readlinkSync(filepath: string, options?: object | undefined): string
 
   // ============================================================================
   // File Descriptor Operations
@@ -141,8 +141,8 @@ declare module 'node:smol-vfs' {
   /** Open a VFS file and return a real file descriptor */
   export function openSync(
     filepath: string,
-    flags?: string | number,
-    mode?: number,
+    flags?: string | number | undefined,
+    mode?: number | undefined,
   ): number
 
   /** Close a file descriptor */
@@ -158,7 +158,7 @@ declare module 'node:smol-vfs' {
   ): number
 
   /** Get stats for an open file descriptor */
-  export function fstatSync(fd: number, options?: object): Stats
+  export function fstatSync(fd: number, options?: object | undefined): Stats
 
   /** Check if a file descriptor was opened via VFS */
   export function isVfsFd(fd: number): boolean
@@ -177,45 +177,45 @@ declare module 'node:smol-vfs' {
     export function exists(filepath: string): Promise<boolean>
     export function readFile(
       filepath: string,
-      options?: { encoding?: BufferEncoding } | BufferEncoding,
+      options?: { encoding?: BufferEncoding | undefined } | BufferEncoding | undefined,
     ): Promise<Buffer | string>
-    export function stat(filepath: string, options?: object): Promise<Stats>
-    export function lstat(filepath: string, options?: object): Promise<Stats>
+    export function stat(filepath: string, options?: object | undefined): Promise<Stats>
+    export function lstat(filepath: string, options?: object | undefined): Promise<Stats>
     export function readdir(
       filepath: string,
-      options?: { withFileTypes?: boolean },
+      options?: { withFileTypes?: boolean | undefined } | undefined,
     ): Promise<string[] | Dirent[]>
-    export function access(filepath: string, mode?: number): Promise<void>
+    export function access(filepath: string, mode?: number | undefined): Promise<void>
     export function realpath(
       filepath: string,
-      options?: object,
+      options?: object | undefined,
     ): Promise<string>
     export function readlink(
       filepath: string,
-      options?: object,
+      options?: object | undefined,
     ): Promise<string>
     export function open(
       filepath: string,
-      flags?: string | number,
-      mode?: number,
+      flags?: string | number | undefined,
+      mode?: number | undefined,
     ): Promise<number>
-    export function fstat(fd: number, options?: object): Promise<Stats>
+    export function fstat(fd: number, options?: object | undefined): Promise<Stats>
 
     // Convenience methods (async wrappers)
     export function readFileAsJSON<T = unknown>(filepath: string): Promise<T>
     export function readFileAsText(
       filepath: string,
-      encoding?: BufferEncoding,
+      encoding?: BufferEncoding | undefined,
     ): Promise<string>
     export function readFileAsBuffer(filepath: string): Promise<Buffer>
     export function readMultiple(
       filepaths: string[],
-      options?: { encoding?: BufferEncoding } | BufferEncoding,
+      options?: { encoding?: BufferEncoding | undefined } | BufferEncoding | undefined,
     ): Promise<
       Array<{
         path: string
         content: Buffer | string | undefined
-        error?: Error
+        error?: Error | undefined
       }>
     >
   }
@@ -228,11 +228,11 @@ declare module 'node:smol-vfs' {
   export function createReadStream(
     filepath: string,
     options?: {
-      start?: number
-      end?: number
-      encoding?: BufferEncoding
-      highWaterMark?: number
-    },
+      start?: number | undefined
+      end?: number | undefined
+      encoding?: BufferEncoding | undefined
+      highWaterMark?: number | undefined
+    } | undefined,
   ): Readable
 
   // ============================================================================
@@ -241,20 +241,20 @@ declare module 'node:smol-vfs' {
 
   /** List all files in the VFS */
   export function listFiles(options?: {
-    prefix?: string
-    extension?: string
-  }): string[]
+    prefix?: string | undefined
+    extension?: string | undefined
+  } | undefined): string[]
 
   /** Extract a VFS file to the real filesystem */
   export function mount(
     vfsPath: string,
-    options?: { destPath?: string },
+    options?: { destPath?: string | undefined } | undefined,
   ): Promise<string>
 
   /** Extract a VFS file to the real filesystem (sync) */
   export function mountSync(
     vfsPath: string,
-    options?: { destPath?: string },
+    options?: { destPath?: string | undefined } | undefined,
   ): string
 
   // ============================================================================
@@ -280,7 +280,7 @@ declare module 'node:smol-vfs' {
   /** Read a file from VFS as a text string */
   export function readFileAsText(
     filepath: string,
-    encoding?: BufferEncoding,
+    encoding?: BufferEncoding | undefined,
   ): string
 
   /** Read a file from VFS as a Buffer */
@@ -289,11 +289,11 @@ declare module 'node:smol-vfs' {
   /** Read multiple files from VFS */
   export function readMultiple(
     filepaths: string[],
-    options?: { encoding?: BufferEncoding } | BufferEncoding,
+    options?: { encoding?: BufferEncoding | undefined } | BufferEncoding | undefined,
   ): Array<{
     path: string
     content: Buffer | string | undefined
-    error?: Error
+    error?: Error | undefined
   }>
 
   /** Get comprehensive VFS stats in one call */

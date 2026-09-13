@@ -91,12 +91,13 @@ const ErrorProto = ErrorCtor.prototype
  */
 class VFSError extends ErrorCtor {
   constructor(message, options) {
-    super(message)
+    const opts = { __proto__: null, ...options }
+  super(message)
     this.name = 'VFSError'
     // Use safe property access to prevent prototype pollution
-    const code = options?.code
-    const path = options?.path
-    const syscall = options?.syscall
+    const code = opts?.code
+    const path = opts?.path
+    const syscall = opts?.syscall
     this.code = code !== undefined ? code : 'ERR_VFS'
     if (path !== undefined) {
       this.path = path
@@ -611,7 +612,7 @@ function readFileAsJSON(filepath) {
     // produce `${undefined}` in the wrapped message. Matches the
     // errorMessage() contract used elsewhere in the codebase.
     const msg =
-      err && typeof err === 'object' && err.message
+      err !== null && typeof err === 'object' && err.message
         ? err.message
         : StringCtor(err)
     const parseErr = new VFSError(

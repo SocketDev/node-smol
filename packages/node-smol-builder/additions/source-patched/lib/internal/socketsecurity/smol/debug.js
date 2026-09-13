@@ -54,87 +54,6 @@ let cachedPatterns
 let lastDebugEnv
 
 /**
- * Parse DEBUG environment variable into patterns
- */
-function parseDebugPatterns() {
-  const debugEnv = ProcessEnv.DEBUG
-
-  // Return cached if unchanged
-  if (debugEnv === lastDebugEnv && cachedPatterns) {
-    return cachedPatterns
-  }
-
-  lastDebugEnv = debugEnv
-
-  if (
-    !debugEnv ||
-    debugEnv === '' ||
-    debugEnv === '0' ||
-    debugEnv === 'false'
-  ) {
-    cachedPatterns = []
-    return cachedPatterns
-  }
-
-  // Backward compat: treat "1", "true", "yes" as enable-all
-  if (debugEnv === '1' || debugEnv === 'true' || debugEnv === 'yes') {
-    cachedPatterns = [{ negated: false, pattern: '*' }]
-    return cachedPatterns
-  }
-
-  // Parse comma-separated patterns
-  cachedPatterns = ArrayPrototypeMap(StringPrototypeSplit(debugEnv, ','), p => {
-    const trimmed = StringPrototypeTrim(p)
-    if (StringPrototypeStartsWith(trimmed, '-')) {
-      return { negated: true, pattern: StringPrototypeSlice(trimmed, 1) }
-    }
-    return { negated: false, pattern: trimmed }
-  })
-
-  return cachedPatterns
-}
-
-/**
- * Check if pattern matches namespace
- * Supports wildcards: "smol:*" matches "smol:vfs", "smol:binject", etc.
- */
-function matchesPattern(pattern, ns) {
-  const starIndex = StringPrototypeIndexOf(pattern, '*')
-
-  if (starIndex === -1) {
-    // Exact match
-    return pattern === ns
-  }
-
-  // Wildcard match: compare prefix before '*'
-  const prefix = StringPrototypeSlice(pattern, 0, starIndex)
-  return StringPrototypeStartsWith(ns, prefix)
-}
-
-/**
- * Check if namespace is enabled by DEBUG environment variable
- */
-function isDebugEnabled(ns) {
-  const patterns = parseDebugPatterns()
-
-  if (patterns.length === 0) {
-    return false
-  }
-
-  let enabled = false
-
-  // Process patterns in order (last match wins)
-  for (let i = 0, { length } = patterns; i < length; i += 1) {
-    const patternObj = patterns[i]
-    if (matchesPattern(patternObj.pattern, ns)) {
-      enabled = !patternObj.negated
-    }
-  }
-
-  return enabled
-}
-
-/**
  * Create a debug logger for a specific namespace
  * Returns a function that logs messages when the namespace is enabled
  */
@@ -189,6 +108,87 @@ function createDebug(ns) {
     // Write to stderr with namespace prefix
     ProcessStderrWrite(`[${ns}] ${formatted}\n`)
   }
+}
+
+/**
+ * Check if namespace is enabled by DEBUG environment variable
+ */
+function isDebugEnabled(ns) {
+  const patterns = parseDebugPatterns()
+
+  if (patterns.length === 0) {
+    return false
+  }
+
+  let enabled = false
+
+  // Process patterns in order (last match wins)
+  for (let i = 0, { length } = patterns; i < length; i += 1) {
+    const patternObj = patterns[i]
+    if (matchesPattern(patternObj.pattern, ns)) {
+      enabled = !patternObj.negated
+    }
+  }
+
+  return enabled
+}
+
+/**
+ * Check if pattern matches namespace
+ * Supports wildcards: "smol:*" matches "smol:vfs", "smol:binject", etc.
+ */
+function matchesPattern(pattern, ns) {
+  const starIndex = StringPrototypeIndexOf(pattern, '*')
+
+  if (starIndex === -1) {
+    // Exact match
+    return pattern === ns
+  }
+
+  // Wildcard match: compare prefix before '*'
+  const prefix = StringPrototypeSlice(pattern, 0, starIndex)
+  return StringPrototypeStartsWith(ns, prefix)
+}
+
+/**
+ * Parse DEBUG environment variable into patterns
+ */
+function parseDebugPatterns() {
+  const debugEnv = ProcessEnv.DEBUG
+
+  // Return cached if unchanged
+  if (debugEnv === lastDebugEnv && cachedPatterns) {
+    return cachedPatterns
+  }
+
+  lastDebugEnv = debugEnv
+
+  if (
+    !debugEnv ||
+    debugEnv === '' ||
+    debugEnv === '0' ||
+    debugEnv === 'false'
+  ) {
+    cachedPatterns = []
+    return cachedPatterns
+  }
+
+  // Backward compat: treat "1", "true", "yes" as enable-all
+  if (debugEnv === '1' || debugEnv === 'true' || debugEnv === 'yes') {
+    cachedPatterns = [{ negated: false, pattern: '*' }]
+    return cachedPatterns
+  }
+
+  // Parse comma-separated patterns
+  cachedPatterns = ArrayPrototypeMap(StringPrototypeSplit(debugEnv, ','), p => {
+    const trimmed = StringPrototypeTrim(p)
+    if (StringPrototypeStartsWith(trimmed, '-')) {
+      return { negated: true, pattern: StringPrototypeSlice(trimmed, 1) }
+    }
+    return { negated: false, pattern: trimmed }
+  })
+
+  return cachedPatterns
 }
 
 module.exports = ObjectFreeze({

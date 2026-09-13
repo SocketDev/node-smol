@@ -59,7 +59,7 @@ function binding() {
 
 // Time unit multipliers (nanoseconds, microseconds, milliseconds, seconds).
 // Defined at module level to avoid allocation on every convert() call.
-const TIME_UNIT_MULTIPLIERS = [1n, 1000n, 1000000n, 1000000000n]
+const TIME_UNIT_MULTIPLIERS = [1n, 1000n, 1_000_000n, 1_000_000_000n]
 
 // Pre-compiled regexes for connection string parsing (performance optimization).
 const ILP_SCHEME_REGEX = hardenRegExp(/^ilp:\/\//)
@@ -91,7 +91,7 @@ const TimeUnit = ObjectFreeze({
     const ms = DateNow()
     switch (unit) {
       case 0: // Nanoseconds
-        return BigIntCtor(ms) * 1000000n
+        return BigIntCtor(ms) * 1_000_000n
       case 1: // Microseconds
         return BigIntCtor(ms) * 1000n
       case 2: // Milliseconds
@@ -99,7 +99,7 @@ const TimeUnit = ObjectFreeze({
       case 3: // Seconds
         return BigIntCtor(MathFloor(ms / 1000))
       default:
-        return BigIntCtor(ms) * 1000000n
+        return BigIntCtor(ms) * 1_000_000n
     }
   },
 
@@ -113,7 +113,7 @@ const TimeUnit = ObjectFreeze({
     const ms = DatePrototypeGetTime(date)
     switch (unit) {
       case 0: // Nanoseconds
-        return BigIntCtor(ms) * 1000000n
+        return BigIntCtor(ms) * 1_000_000n
       case 1: // Microseconds
         return BigIntCtor(ms) * 1000n
       case 2: // Milliseconds
@@ -121,7 +121,7 @@ const TimeUnit = ObjectFreeze({
       case 3: // Seconds
         return BigIntCtor(MathFloor(ms / 1000))
       default:
-        return BigIntCtor(ms) * 1000000n
+        return BigIntCtor(ms) * 1_000_000n
     }
   },
 
@@ -252,15 +252,15 @@ class Sender extends EventsEventEmitter {
       port: opts.port ?? 9009,
       connectTimeout: opts.connectTimeout ?? 10_000,
       sendTimeout: opts.sendTimeout ?? 30_000,
-      bufferSize: opts.bufferSize ?? 65536,
-      maxBufferSize: opts.maxBufferSize ?? 104857600,
+      bufferSize: opts.bufferSize ?? 65_536,
+      maxBufferSize: opts.maxBufferSize ?? 104_857_600,
       autoFlush: opts.autoFlush ?? false,
       autoFlushRows: opts.autoFlushRows ?? 1000,
       autoFlushInterval: opts.autoFlushInterval ?? 0,
     }
 
     validateString(config.host, 'options.host')
-    validateNumber(config.port, 'options.port', 1, 65535)
+    validateNumber(config.port, 'options.port', 1, 65_535)
     validateNumber(config.connectTimeout, 'options.connectTimeout', 0)
     validateNumber(config.sendTimeout, 'options.sendTimeout', 0)
     validateNumber(config.bufferSize, 'options.bufferSize', 1024)
@@ -411,7 +411,7 @@ class Sender extends EventsEventEmitter {
     this.#checkTable()
     validateString(name, 'name')
     const type = typeof value
-    if (type !== 'number' && type !== 'bigint') {
+    if (type !== 'bigint' && type !== 'number') {
       throw new ERR_INVALID_ARG_TYPE('value', ['number', 'bigint'], value)
     }
     // Validate numbers are finite (bigints can't be NaN/Infinity)
@@ -1006,7 +1006,7 @@ class Sender extends EventsEventEmitter {
         port = url.port ? NumberParseInt(url.port, 10) : 9009
 
         // Validate port range.
-        if (port < 1 || port > 65535) {
+        if (port < 1 || port > 65_535) {
           throw new ILPError(
             `Invalid port ${port}: must be between 1 and 65535`,
             ErrorCodes.INVALID_ARGUMENT,
@@ -1016,16 +1016,16 @@ class Sender extends EventsEventEmitter {
         // Parse query params as options - use primordial forEach to avoid prototype pollution
         URLSearchParamsPrototypeForEach(url.searchParams, (value, key) => {
           if (
-            key === 'bufferSize' ||
-            key === 'maxBufferSize' ||
-            key === 'connectTimeout' ||
-            key === 'sendTimeout' ||
+            key === 'autoFlushInterval' ||
             key === 'autoFlushRows' ||
-            key === 'autoFlushInterval'
+            key === 'bufferSize' ||
+            key === 'connectTimeout' ||
+            key === 'maxBufferSize' ||
+            key === 'sendTimeout'
           ) {
             options[key] = NumberParseInt(value, 10)
           } else if (key === 'autoFlush') {
-            options[key] = value === 'true' || value === '1'
+            options[key] = value === '1' || value === 'true'
           }
         })
       } catch (err) {
@@ -1044,7 +1044,7 @@ class Sender extends EventsEventEmitter {
         if (
           !NumberIsFinite(parsedPort) ||
           parsedPort < 1 ||
-          parsedPort > 65535
+          parsedPort > 65_535
         ) {
           throw new ILPError(
             `Invalid port "${portStr}": must be a number between 1 and 65535`,

@@ -274,20 +274,35 @@ ObjectSetPrototypeOf(SQLTransactionNotStartedError, SQLError)
 // ============================================================================
 
 /**
- * Check if an error is a unique constraint violation.
- * Works for both PostgreSQL (23505) and SQLite (CONSTRAINT_UNIQUE).
+ * Check if an error is a check constraint violation.
  * @param {Error} err - Error to check.
- * @returns {boolean} True if unique violation.
+ * @returns {boolean} True if check constraint violation.
  */
-function isUniqueViolation(err) {
+function isCheckViolation(err) {
   if (err instanceof PostgresError) {
-    return err.code === PG_ERROR_CODES.UNIQUE_VIOLATION
+    return err.code === PG_ERROR_CODES.CHECK_VIOLATION
   }
   if (err instanceof SQLiteError) {
-    // Check extended error code, fall back to primary key as well
+    return err.errcode === SQLITE_ERROR_CODES.SQLITE_CONSTRAINT_CHECK
+  }
+  return false
+}
+
+/**
+ * Check if an error is a connection error.
+ * @param {Error} err - Error to check.
+ * @returns {boolean} True if connection error.
+ */
+function isConnectionError(err) {
+  if (err instanceof SQLConnectionClosedError) {
+    return true
+  }
+  if (err instanceof PostgresError) {
+    const code = err.code
     return (
-      err.errcode === SQLITE_ERROR_CODES.SQLITE_CONSTRAINT_UNIQUE ||
-      err.errcode === SQLITE_ERROR_CODES.SQLITE_CONSTRAINT_PRIMARYKEY
+      code === PG_ERROR_CODES.CONNECTION_EXCEPTION ||
+      code === PG_ERROR_CODES.CONNECTION_DOES_NOT_EXIST ||
+      code === PG_ERROR_CODES.CONNECTION_FAILURE
     )
   }
   return false
@@ -325,41 +340,6 @@ function isNotNullViolation(err) {
 }
 
 /**
- * Check if an error is a check constraint violation.
- * @param {Error} err - Error to check.
- * @returns {boolean} True if check constraint violation.
- */
-function isCheckViolation(err) {
-  if (err instanceof PostgresError) {
-    return err.code === PG_ERROR_CODES.CHECK_VIOLATION
-  }
-  if (err instanceof SQLiteError) {
-    return err.errcode === SQLITE_ERROR_CODES.SQLITE_CONSTRAINT_CHECK
-  }
-  return false
-}
-
-/**
- * Check if an error is a connection error.
- * @param {Error} err - Error to check.
- * @returns {boolean} True if connection error.
- */
-function isConnectionError(err) {
-  if (err instanceof SQLConnectionClosedError) {
-    return true
-  }
-  if (err instanceof PostgresError) {
-    const code = err.code
-    return (
-      code === PG_ERROR_CODES.CONNECTION_EXCEPTION ||
-      code === PG_ERROR_CODES.CONNECTION_DOES_NOT_EXIST ||
-      code === PG_ERROR_CODES.CONNECTION_FAILURE
-    )
-  }
-  return false
-}
-
-/**
  * Check if an error is a syntax error.
  * @param {Error} err - Error to check.
  * @returns {boolean} True if syntax error.
@@ -392,6 +372,26 @@ function isUndefinedTable(err) {
     return (
       err.errcode === SQLITE_ERROR_CODES.SQLITE_ERROR &&
       RegExpPrototypeTest(SQLITE_NO_SUCH_TABLE_REGEX, err.message)
+    )
+  }
+  return false
+}
+
+/**
+ * Check if an error is a unique constraint violation.
+ * Works for both PostgreSQL (23505) and SQLite (CONSTRAINT_UNIQUE).
+ * @param {Error} err - Error to check.
+ * @returns {boolean} True if unique violation.
+ */
+function isUniqueViolation(err) {
+  if (err instanceof PostgresError) {
+    return err.code === PG_ERROR_CODES.UNIQUE_VIOLATION
+  }
+  if (err instanceof SQLiteError) {
+    // Check extended error code, fall back to primary key as well
+    return (
+      err.errcode === SQLITE_ERROR_CODES.SQLITE_CONSTRAINT_UNIQUE ||
+      err.errcode === SQLITE_ERROR_CODES.SQLITE_CONSTRAINT_PRIMARYKEY
     )
   }
   return false

@@ -30,7 +30,7 @@ const { ReflectApply } = primordials
 const originalLocaleCompare = String.prototype.localeCompare
 
 // Wrapper that coerces locales to small-icu-compatible locale.
-function polyfillLocaleCompare(that, _locales, options) {
+export function polyfillLocaleCompare(that, _locales, options) {
   // Coerce locales to 'en-US' (small-icu always supports English).
   // This prevents errors when code passes unsupported locales like 'zh-CN', 'ar-SA', etc.
   const safeLocales = 'en-US'

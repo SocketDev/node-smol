@@ -31,14 +31,12 @@ function writeJsonResponse(response, statusCode, data) {
   })
 }
 
-// Write tarball response (binary data).
-function writeTarballResponse(response, statusCode, buffer) {
-  return withCork(response, () => {
-    response.statusCode = statusCode
-    response.setHeader('Content-Type', 'application/octet-stream')
-    response.setHeader('Content-Length', buffer.length)
-    response.end(buffer)
-  })
+// Fast path: 404 Not Found with minimal JSON error.
+function writeNotFound(response, message) {
+  const json = message
+    ? JSONStringify({ __proto__: null, error: 'Not Found', message })
+    : '{"error":"Not Found"}'
+  return writeJsonResponse(response, 404, json)
 }
 
 // Write 304 Not Modified (no body).
@@ -49,12 +47,14 @@ function writeNotModified(response) {
   })
 }
 
-// Fast path: 404 Not Found with minimal JSON error.
-function writeNotFound(response, message) {
-  const json = message
-    ? JSONStringify({ __proto__: null, error: 'Not Found', message })
-    : '{"error":"Not Found"}'
-  return writeJsonResponse(response, 404, json)
+// Write tarball response (binary data).
+function writeTarballResponse(response, statusCode, buffer) {
+  return withCork(response, () => {
+    response.statusCode = statusCode
+    response.setHeader('Content-Type', 'application/octet-stream')
+    response.setHeader('Content-Length', buffer.length)
+    response.end(buffer)
+  })
 }
 
 module.exports = {

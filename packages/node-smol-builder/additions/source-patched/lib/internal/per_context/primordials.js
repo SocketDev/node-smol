@@ -60,13 +60,13 @@ const varargsMethods = [
   'TypedArrayOf',
 ];
 
-function getNewKey(key) {
+export function getNewKey(key) {
   return typeof key === 'symbol' ?
     `Symbol${key.description[7].toUpperCase()}${key.description.slice(8)}` :
     `${key[0].toUpperCase()}${key.slice(1)}`;
 }
 
-function copyAccessor(dest, prefix, key, { enumerable, get, set }) {
+export function copyAccessor(dest, prefix, key, { enumerable, get, set }) {
   ReflectDefineProperty(dest, `${prefix}Get${key}`, {
     __proto__: null,
     value: uncurryThis(get),
@@ -81,7 +81,7 @@ function copyAccessor(dest, prefix, key, { enumerable, get, set }) {
   }
 }
 
-function copyPropsRenamed(src, dest, prefix) {
+export function copyPropsRenamed(src, dest, prefix) {
   for (const key of ReflectOwnKeys(src)) {
     const newKey = getNewKey(key);
     const desc = ReflectGetOwnPropertyDescriptor(src, key);
@@ -103,7 +103,7 @@ function copyPropsRenamed(src, dest, prefix) {
   }
 }
 
-function copyPropsRenamedBound(src, dest, prefix) {
+export function copyPropsRenamedBound(src, dest, prefix) {
   for (const key of ReflectOwnKeys(src)) {
     const newKey = getNewKey(key);
     const desc = ReflectGetOwnPropertyDescriptor(src, key);
@@ -127,7 +127,7 @@ function copyPropsRenamedBound(src, dest, prefix) {
   }
 }
 
-function copyPrototype(src, dest, prefix) {
+export function copyPrototype(src, dest, prefix) {
   for (const key of ReflectOwnKeys(src)) {
     const newKey = getNewKey(key);
     const desc = ReflectGetOwnPropertyDescriptor(src, key);
@@ -506,7 +506,7 @@ const {
  * @param {(...args: [] | [TNext]) => IteratorResult<T, TReturn>} next
  * @returns {Iterator<T, TReturn, TNext>}
  */
-const createSafeIterator = (factory, next) => {
+function createSafeIterator(factory, next) {
   class SafeIterator {
     constructor(iterable) {
       this._iterator = factory(iterable);
@@ -522,7 +522,7 @@ const createSafeIterator = (factory, next) => {
   ObjectFreeze(SafeIterator.prototype);
   ObjectFreeze(SafeIterator);
   return SafeIterator;
-};
+}
 
 primordials.SafeArrayIterator = createSafeIterator(
   primordials.ArrayPrototypeSymbolIterator,
@@ -533,7 +533,7 @@ primordials.SafeStringIterator = createSafeIterator(
   primordials.StringIteratorPrototypeNext,
 );
 
-const copyProps = (src, dest) => {
+function copyProps(src, dest) {
   ArrayPrototypeForEach(ReflectOwnKeys(src), (key) => {
     if (!ReflectGetOwnPropertyDescriptor(dest, key)) {
       ReflectDefineProperty(
@@ -542,12 +542,12 @@ const copyProps = (src, dest) => {
         { __proto__: null, ...ReflectGetOwnPropertyDescriptor(src, key) });
     }
   });
-};
+}
 
 /**
  * @type {typeof primordials.makeSafe}
  */
-const makeSafe = (unsafe, safe) => {
+function makeSafe(unsafe, safe) {
   if (SymbolIterator in unsafe.prototype) {
     const sample = new unsafe();
     let next; // We can reuse the same `next` method.
@@ -579,7 +579,7 @@ const makeSafe = (unsafe, safe) => {
   ObjectFreeze(safe.prototype);
   ObjectFreeze(safe);
   return safe;
-};
+}
 primordials.makeSafe = makeSafe;
 
 // Subclass the constructors because we need to use their prototype
@@ -645,14 +645,15 @@ primordials.AsyncIteratorPrototype =
     primordials.ReflectGetPrototypeOf(
       async function* () {}).prototype);
 
-const arrayToSafePromiseIterable = (promises, mapFn) =>
-  new primordials.SafeArrayIterator(
+function arrayToSafePromiseIterable(promises, mapFn) {
+  return new primordials.SafeArrayIterator(
     ArrayPrototypeMap(
       promises,
       (promise, i) =>
         new SafePromise((a, b) => PromisePrototypeThen(mapFn == null ? promise : mapFn(promise, i), a, b)),
     ),
-  );
+  )
+}
 
 /**
  * @template T,U
@@ -682,14 +683,14 @@ primordials.SafePromiseAllReturnArrayLike = (promises, mapFn) =>
 
     const returnVal = ArrayConstructor(length);
     ObjectSetPrototypeOf(returnVal, null);
-    if (length === 0) resolve(returnVal);
+    if (length === 0) {resolve(returnVal);}
 
     let pendingPromises = length;
     for (let i = 0; i < length; i++) {
       const promise = mapFn != null ? mapFn(promises[i], i) : promises[i];
       PromisePrototypeThen(PromiseResolve(promise), (result) => {
         returnVal[i] = result;
-        if (--pendingPromises === 0) resolve(returnVal);
+        if (--pendingPromises === 0) {resolve(returnVal);}
       }, reject);
     }
   });
@@ -705,7 +706,7 @@ primordials.SafePromiseAllReturnArrayLike = (promises, mapFn) =>
 primordials.SafePromiseAllReturnVoid = (promises, mapFn) =>
   new Promise((resolve, reject) => {
     let pendingPromises = promises.length;
-    if (pendingPromises === 0) resolve();
+    if (pendingPromises === 0) {resolve();}
     const onFulfilled = () => {
       if (--pendingPromises === 0) {
         resolve();
@@ -740,9 +741,9 @@ primordials.SafePromiseAllSettled = (promises, mapFn) =>
  */
 primordials.SafePromiseAllSettledReturnVoid = (promises, mapFn) => new Promise((resolve) => {
   let pendingPromises = promises.length;
-  if (pendingPromises === 0) resolve();
+  if (pendingPromises === 0) {resolve();}
   const onSettle = () => {
-    if (--pendingPromises === 0) resolve();
+    if (--pendingPromises === 0) {resolve();}
   };
   for (let i = 0; i < promises.length; i++) {
     const promise = mapFn != null ? mapFn(promises[i], i) : promises[i];
@@ -786,7 +787,7 @@ const {
   [SymbolSplit]: OriginalRegExpPrototypeSymbolSplit,
 } = RegExpPrototype;
 
-class RegExpLikeForStringSplitting {
+export class RegExpLikeForStringSplitting {
   #regex;
   constructor() {
     this.#regex = ReflectConstruct(RegExp, arguments);
@@ -918,12 +919,12 @@ primordials.SafeStringPrototypeSearch = (str, regexp) => {
  * @returns {ReturnType<typeof Array.prototype.push>}
  */
 primordials.SafeArrayPrototypePushApply = (arr, items) => {
-  let end = 0x10000;
+  let end = 0x1_00_00;
   if (end < items.length) {
     let start = 0;
     do {
       ArrayPrototypePushApply(arr, ArrayPrototypeSlice(items, start, start = end));
-      end += 0x10000;
+      end += 0x1_00_00;
     } while (end < items.length);
     items = ArrayPrototypeSlice(items, start);
   }

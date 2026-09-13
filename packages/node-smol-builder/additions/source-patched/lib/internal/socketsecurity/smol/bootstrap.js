@@ -25,35 +25,11 @@ const {
 } = primordials
 
 /**
- * Enhance a require function with standard properties (resolve, main, extensions, cache).
- * Uses the same approach as traditional Node.js module loading via makeRequireFunction.
- * @param {Function} baseRequire - The base require function to enhance
- * @returns {Function} Enhanced require with standard properties
+ * Check if Node.js was built with LIEF support (--build-sea capability).
  */
-function enhanceRequire(baseRequire) {
-  // Use the standard Node.js module system to create a proper require.
-  // This simulates what happens in traditional non-SEA code paths.
-  // eslint-disable-next-line n/prefer-node-protocol
-  const { Module } = require('module')
-  const { makeRequireFunction } = require('internal/modules/helpers')
-
-  // Create a temporary module for the virtual script path to get a proper require.
-  // In SEA context, the entry point is the virtual script, not the executable.
-  const scriptPath = getVirtualScriptPath()
-  const tempModule = new Module(scriptPath, undefined)
-  tempModule.filename = scriptPath
-  tempModule.paths = Module._nodeModulePaths(scriptPath)
-
-  // Use makeRequireFunction to create a fully-featured require.
-  const fullRequire = makeRequireFunction(tempModule)
-
-  // Copy all standard properties to the base require.
-  baseRequire.resolve = fullRequire.resolve
-  baseRequire.main = fullRequire.main
-  baseRequire.extensions = fullRequire.extensions
-  baseRequire.cache = fullRequire.cache
-
-  return baseRequire
+function canBuildSea() {
+  const vfsBinding = getVFSBinding()
+  return vfsBinding?.canBuildSea ? vfsBinding.canBuildSea() : false
 }
 
 /**
@@ -119,6 +95,66 @@ function createVFSRequire() {
 }
 
 /**
+ * Enhance a require function with standard properties (resolve, main, extensions, cache).
+ * Uses the same approach as traditional Node.js module loading via makeRequireFunction.
+ * @param {Function} baseRequire - The base require function to enhance
+ * @returns {Function} Enhanced require with standard properties
+ */
+function enhanceRequire(baseRequire) {
+  // Use the standard Node.js module system to create a proper require.
+  // This simulates what happens in traditional non-SEA code paths.
+  // eslint-disable-next-line n/prefer-node-protocol
+  const { Module } = require('module')
+  const { makeRequireFunction } = require('internal/modules/helpers')
+
+  // Create a temporary module for the virtual script path to get a proper require.
+  // In SEA context, the entry point is the virtual script, not the executable.
+  const scriptPath = getVirtualScriptPath()
+  const tempModule = new Module(scriptPath, undefined)
+  tempModule.filename = scriptPath
+  tempModule.paths = Module._nodeModulePaths(scriptPath)
+
+  // Use makeRequireFunction to create a fully-featured require.
+  const fullRequire = makeRequireFunction(tempModule)
+
+  // Copy all standard properties to the base require.
+  baseRequire.resolve = fullRequire.resolve
+  baseRequire.main = fullRequire.main
+  baseRequire.extensions = fullRequire.extensions
+  baseRequire.cache = fullRequire.cache
+
+  return baseRequire
+}
+
+/**
+ * Get cache directory respecting environment variable priority.
+ * Matches dlx_get_cache_base_dir from C code.
+ */
+function getCacheDir() {
+  // Priority 1: SOCKET_DLX_DIR (full override)
+  const dlxDir = ProcessEnv.SOCKET_DLX_DIR
+  if (dlxDir) {
+    return dlxDir
+  }
+
+  // Priority 2: SOCKET_HOME (base directory + _dlx)
+  const socketHome = ProcessEnv.SOCKET_HOME
+  if (socketHome) {
+    return PathJoin(socketHome, '_dlx')
+  }
+
+  // Priority 3: Default $HOME/.socket/_dlx (OsHomedir checks HOME/USERPROFILE)
+  try {
+    const home = OsHomedir()
+    return PathJoin(home, '.socket', '_dlx')
+  } catch {
+    // Fallback if OsHomedir() fails (extremely rare - filesystem/permission issues)
+    // Use execPath as base since it's always available
+    return PathJoin(PathDirname(ProcessExecPath), '.socket', '_dlx')
+  }
+}
+
+/**
  * Get virtual script path.
  * Uses /snapshot/ prefix like pkg for ecosystem compatibility.
  */
@@ -126,8 +162,6 @@ function getVirtualScriptPath() {
   const scriptName = ProcessEnv.NODE_SEA_SCRIPT || 'main.js'
   return `/snapshot/${scriptName}`
 }
-
-// getVFSBinding imported from safe-references (shared with loader.js)
 
 /**
  * Check if VFS is available and non-empty.
@@ -157,42 +191,6 @@ function hasVFS() {
 function hasVFSCompat() {
   const vfsBinding = getVFSBinding()
   return Boolean(vfsBinding?.hasVFSBlob())
-}
-
-/**
- * Check if Node.js was built with LIEF support (--build-sea capability).
- */
-function canBuildSea() {
-  const vfsBinding = getVFSBinding()
-  return vfsBinding?.canBuildSea ? vfsBinding.canBuildSea() : false
-}
-
-/**
- * Get cache directory respecting environment variable priority.
- * Matches dlx_get_cache_base_dir from C code.
- */
-function getCacheDir() {
-  // Priority 1: SOCKET_DLX_DIR (full override)
-  const dlxDir = ProcessEnv.SOCKET_DLX_DIR
-  if (dlxDir) {
-    return dlxDir
-  }
-
-  // Priority 2: SOCKET_HOME (base directory + _dlx)
-  const socketHome = ProcessEnv.SOCKET_HOME
-  if (socketHome) {
-    return PathJoin(socketHome, '_dlx')
-  }
-
-  // Priority 3: Default $HOME/.socket/_dlx (OsHomedir checks HOME/USERPROFILE)
-  try {
-    const home = OsHomedir()
-    return PathJoin(home, '.socket', '_dlx')
-  } catch {
-    // Fallback if OsHomedir() fails (extremely rare - filesystem/permission issues)
-    // Use execPath as base since it's always available
-    return PathJoin(PathDirname(ProcessExecPath), '.socket', '_dlx')
-  }
 }
 
 /**

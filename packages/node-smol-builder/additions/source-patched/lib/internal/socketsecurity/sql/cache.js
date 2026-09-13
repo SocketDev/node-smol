@@ -48,28 +48,6 @@ function lruGet(cache, key) {
 }
 
 /**
- * Set a value in a SafeMap cache with LRU eviction.
- * Evicts the oldest entry if cache is at max size.
- *
- * @param {SafeMap} cache - The cache map
- * @param {any} key - The key to set
- * @param {any} value - The value to cache
- * @param {number} maxSize - Maximum cache size
- */
-function lruSet(cache, key, value, maxSize) {
-  // If the key already exists, update-in-place. Evicting first would drop
-  // an unrelated hot entry and shrink the cache by one when we're just
-  // overwriting.
-  if (MapPrototypeHas(cache, key)) {
-    MapPrototypeDelete(cache, key)
-    MapPrototypeSet(cache, key, value)
-    return
-  }
-  lruEvictOldest(cache, maxSize)
-  MapPrototypeSet(cache, key, value)
-}
-
-/**
  * Get or create a cached value with full LRU semantics.
  * If found, returns cached value with LRU update.
  * If not found, creates new value, caches with eviction, and returns it.
@@ -93,6 +71,28 @@ function lruGetOrCreate(cache, key, maxSize, createFn) {
   value = createFn()
   MapPrototypeSet(cache, key, value)
   return value
+}
+
+/**
+ * Set a value in a SafeMap cache with LRU eviction.
+ * Evicts the oldest entry if cache is at max size.
+ *
+ * @param {SafeMap} cache - The cache map
+ * @param {any} key - The key to set
+ * @param {any} value - The value to cache
+ * @param {number} maxSize - Maximum cache size
+ */
+function lruSet(cache, key, value, maxSize) {
+  // If the key already exists, update-in-place. Evicting first would drop
+  // an unrelated hot entry and shrink the cache by one when we're just
+  // overwriting.
+  if (MapPrototypeHas(cache, key)) {
+    MapPrototypeDelete(cache, key)
+    MapPrototypeSet(cache, key, value)
+    return
+  }
+  lruEvictOldest(cache, maxSize)
+  MapPrototypeSet(cache, key, value)
 }
 
 module.exports = {

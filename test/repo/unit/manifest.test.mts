@@ -79,7 +79,8 @@ describe('seeded manifest (package.json)', () => {
     const scripts = manifest.scripts ?? {}
     const scriptNames = Object.keys(scripts)
     expect(scriptNames.length).toBeGreaterThan(0)
-    for (const name of scriptNames) {
+    for (let i = 0, { length } = scriptNames; i < length; i += 1) {
+      const name = scriptNames[i]!
       const command = scripts[name]!
       // Match each `node <path>` invocation in the (possibly &&-chained)
       // command; non-node scripts (none today) are skipped, not failed.
@@ -102,7 +103,8 @@ describe('seeded manifest (package.json)', () => {
     const devDeps = manifest.devDependencies ?? {}
     const names = Object.keys(devDeps)
     expect(names.length).toBeGreaterThan(0)
-    for (const name of names) {
+    for (let i = 0, { length } = names; i < length; i += 1) {
+      const name = names[i]!
       expect(
         devDeps[name],
         `devDependencies.${name} must use the catalog: protocol`,

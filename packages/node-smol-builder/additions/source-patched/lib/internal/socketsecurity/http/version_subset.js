@@ -255,6 +255,25 @@ const semver = {
   },
 }
 
+// Get subset statistics.
+function getSubsetStats(original, subset) {
+  const originalSize = JSONStringify(original).length
+  const subsetSize = JSONStringify(subset).length
+  // Guard against originalSize === 0 (empty packument or weird toJSON);
+  // 1 - x/0 yields NaN which JSON-serializes to null and breaks dashboards.
+  const reduction = originalSize > 0 ? 1 - subsetSize / originalSize : 0
+
+  return {
+    __proto__: null,
+    bandwidth_saved: originalSize - subsetSize,
+    original_count: ObjectKeys(original.versions || {}).length,
+    original_size: originalSize,
+    reduction_percent: NumberPrototypeToFixed(reduction * 100, 2),
+    subset_count: ObjectKeys(subset.versions || {}).length,
+    subset_size: subsetSize,
+  }
+}
+
 // Subset packument to only include matching versions.
 function subsetPackument(packument, versionRange) {
   // Validate inputs.
@@ -294,25 +313,6 @@ function subsetPackument(packument, versionRange) {
     _matched_count: matchCount,
     _original_count: ObjectKeys(packument.versions).length,
     _range: versionRange,
-  }
-}
-
-// Get subset statistics.
-function getSubsetStats(original, subset) {
-  const originalSize = JSONStringify(original).length
-  const subsetSize = JSONStringify(subset).length
-  // Guard against originalSize === 0 (empty packument or weird toJSON);
-  // 1 - x/0 yields NaN which JSON-serializes to null and breaks dashboards.
-  const reduction = originalSize > 0 ? 1 - subsetSize / originalSize : 0
-
-  return {
-    __proto__: null,
-    bandwidth_saved: originalSize - subsetSize,
-    original_count: ObjectKeys(original.versions || {}).length,
-    original_size: originalSize,
-    reduction_percent: NumberPrototypeToFixed(reduction * 100, 2),
-    subset_count: ObjectKeys(subset.versions || {}).length,
-    subset_size: subsetSize,
   }
 }
 

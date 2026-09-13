@@ -41,7 +41,7 @@ beforeEach(() => {
         {
           file: 'crates/stuie-cabi/src/cabi.rs',
           name: 'bufferClear',
-          signature: 'pub extern \"C\" fn bufferClear()',
+          signature: 'pub extern "C" fn bufferClear()',
           unsafe: false,
         },
       ],

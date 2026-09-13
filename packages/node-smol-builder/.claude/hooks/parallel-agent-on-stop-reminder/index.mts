@@ -35,6 +35,7 @@ import {
   readTouchedPaths,
 } from '../_shared/foreign-paths.mts'
 import { readStdin } from '../_shared/transcript.mts'
+import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 
 interface StopPayload {
   readonly transcript_path?: string | undefined
@@ -91,6 +92,6 @@ async function main(): Promise<void> {
 
 main().catch(e => {
   process.stderr.write(
-    `[parallel-agent-on-stop-reminder] hook bug — fail-open. ${e instanceof Error ? e.message : String(e)}\n`,
+    `[parallel-agent-on-stop-reminder] hook bug — fail-open. ${errorMessage(e)}\n`,
   )
 })

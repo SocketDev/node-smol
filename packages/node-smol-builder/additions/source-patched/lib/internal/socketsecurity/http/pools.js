@@ -32,7 +32,7 @@ function nativeGetObjectPoolStats() {
 let _httpParserBinding
 function getHTTPParser() {
   if (!_httpParserBinding)
-    _httpParserBinding = internalBinding('http_parser').HTTPParser
+    {_httpParserBinding = internalBinding('http_parser').HTTPParser}
   return _httpParserBinding
 }
 

@@ -118,12 +118,12 @@ const eventCategory = ObjectFreeze({
   TEXT: 4 << 12,
 })
 
-const CATEGORY_MASK = 0xf000
-const VALUE_MASK = 0x0fff
+const CATEGORY_MASK = 0xf0_00
+const VALUE_MASK = 0x0f_ff
 
 // parseMarkdownStream layout constants. Must stay in sync with the
 // native binding's ParseMarkdownStream (markdown_binding.cc).
-const STREAM_MAGIC = 0x534d4456  // "SMDV"
+const STREAM_MAGIC = 0x53_4d_44_56  // "SMDV"
 const STREAM_HEADER_SIZE = 12
 const STREAM_EVENT_SIZE = 16
 
@@ -213,7 +213,7 @@ function parseTree(text, flags) {
   const root = { __proto__: null, type: 'doc', children: [] }
   const stack = [root]
   for (let i = 0, { length } = events; i < length; i += 1) {
-    const [code, payload] = events[i]
+    const { 0: code, 1: payload } = events[i]
     const cat = code & CATEGORY_MASK
     const val = code & VALUE_MASK
     if (cat === eventCategory.BLOCK_ENTER) {

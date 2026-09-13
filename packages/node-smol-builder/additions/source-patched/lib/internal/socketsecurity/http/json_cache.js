@@ -102,37 +102,9 @@ class JSONCache {
 
 // Lazy global cache instance.
 let _jsonCache
-function getJSONCache() {
-  if (!_jsonCache) {
-    _jsonCache = new JSONCache()
-  }
-  return _jsonCache
-}
-
-// Get cached JSON or stringify and cache.
-function getCachedJson(obj, key) {
-  const cache = getJSONCache()
-  // Try cache first.
-  const cached = cache.get(key)
-  if (cached !== undefined) {
-    return cached
-  }
-
-  // Miss: stringify and cache.
-  const json = JSONStringify(obj)
-  cache.set(key, json)
-  return json
-}
-
-// Stringify with optional caching.
-function stringifyWithCache(obj, cacheKey) {
-  if (cacheKey === undefined) {
-    // No cache key: just stringify.
-    return JSONStringify(obj)
-  }
-
-  // Use cache if key provided.
-  return getCachedJson(obj, cacheKey)
+// Clear entire cache.
+function clearCache() {
+  getJSONCache().clear()
 }
 
 // Create cache key from request URL, optionally folding in a body digest.
@@ -157,19 +129,47 @@ function createCacheKey(method, url, body) {
   return `${method}:${url}:${digest}`
 }
 
-// Invalidate cache entry.
-function invalidate(key) {
-  MapPrototypeDelete(getJSONCache().cache, key)
-}
+// Get cached JSON or stringify and cache.
+function getCachedJson(obj, key) {
+  const cache = getJSONCache()
+  // Try cache first.
+  const cached = cache.get(key)
+  if (cached !== undefined) {
+    return cached
+  }
 
-// Clear entire cache.
-function clearCache() {
-  getJSONCache().clear()
+  // Miss: stringify and cache.
+  const json = JSONStringify(obj)
+  cache.set(key, json)
+  return json
 }
 
 // Get cache stats.
 function getCacheStats() {
   return getJSONCache().stats()
+}
+
+function getJSONCache() {
+  if (!_jsonCache) {
+    _jsonCache = new JSONCache()
+  }
+  return _jsonCache
+}
+
+// Invalidate cache entry.
+function invalidate(key) {
+  MapPrototypeDelete(getJSONCache().cache, key)
+}
+
+// Stringify with optional caching.
+function stringifyWithCache(obj, cacheKey) {
+  if (cacheKey === undefined) {
+    // No cache key: just stringify.
+    return JSONStringify(obj)
+  }
+
+  // Use cache if key provided.
+  return getCachedJson(obj, cacheKey)
 }
 
 module.exports = {

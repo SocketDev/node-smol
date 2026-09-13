@@ -394,7 +394,7 @@ function parsePackageLock(content) {
       for (let di = 0, dlen = depKeys.length; di < dlen; di++) {
         const aliasName = depKeys[di]
         const pkg = deps[aliasName]
-        let rawVersion = pkg.version || '0.0.0'
+        const rawVersion = pkg.version || '0.0.0'
         // Aliased installs in npm v1 lockfiles encode the real identity
         // in the version field as `npm:<real-name>@<real-version>`.
         // Emitting the alias directly would produce a malformed purl
@@ -594,7 +594,7 @@ function parseYarnLock(content) {
         const neol = StringPrototypeIndexOf(content, '\n', pos)
         const nend = neol === -1 ? content.length : neol
         const nline = StringPrototypeSlice(content, pos, nend)
-        if (nline.length === 0 || (nline[0] !== ' ' && nline[0] !== '\t')) {
+        if (nline.length === 0 || (nline[0] !== '\t' && nline[0] !== ' ')) {
           break
         }
         pos = nend + 1
@@ -630,8 +630,8 @@ function parseYarnLock(content) {
           const neol = StringPrototypeIndexOf(content, '\n', pos)
           const nend = neol === -1 ? content.length : neol
           const nline = StringPrototypeSlice(content, pos, nend)
-          if (nline.length === 0 || (nline[0] !== ' ' && nline[0] !== '\t'))
-            break
+          if (nline.length === 0 || (nline[0] !== '\t' && nline[0] !== ' '))
+            {break}
           pos = nend + 1
         }
         continue
@@ -645,8 +645,8 @@ function parseYarnLock(content) {
       let resolved
       let integrity
       let checksum
-      let dependencies = []
-      let isOptional = false
+      const dependencies = []
+      const isOptional = false
 
       // Parse indented properties
       while (pos < content.length) {
@@ -654,7 +654,7 @@ function parseYarnLock(content) {
         const pend = peol === -1 ? content.length : peol
         const pline = StringPrototypeSlice(content, pos, pend)
 
-        if (pline.length === 0 || (pline[0] !== ' ' && pline[0] !== '\t')) {
+        if (pline.length === 0 || (pline[0] !== '\t' && pline[0] !== ' ')) {
           break
         }
 
@@ -748,7 +748,7 @@ function parseYarnLock(content) {
               dline[2] !== ' ' ||
               dline[3] !== ' '
             )
-              break
+              {break}
             const depLine = StringPrototypeTrim(dline)
             const dcolonIdx = StringPrototypeIndexOf(depLine, ':')
             if (dcolonIdx > 0) {
@@ -781,7 +781,7 @@ function parseYarnLock(content) {
               mline[2] !== ' ' ||
               mline[3] !== ' '
             )
-              break
+              {break}
             pos = mend + 1
           }
           continue
@@ -999,7 +999,7 @@ function parsePnpmLock(content) {
       let indent = 0
       while (
         indent < line.length &&
-        (line[indent] === ' ' || line[indent] === '\t')
+        (line[indent] === '\t' || line[indent] === ' ')
       ) {
         indent++
       }
@@ -1119,7 +1119,7 @@ function parsePnpmLock(content) {
     let indent = 0
     while (
       indent < line.length &&
-      (line[indent] === ' ' || line[indent] === '\t')
+      (line[indent] === '\t' || line[indent] === ' ')
     ) {
       indent++
     }
@@ -1135,7 +1135,7 @@ function parsePnpmLock(content) {
 
     if (isPackageEntry) {
       // Save previous package
-      if (currentPkg && currentPkg.name) {
+      if (currentPkg?.name) {
         // currentPkg already has a stable shape + null proto; freeze in place.
         // Strip the _inDeps sentinel so it doesn't leak into SBOM output.
         delete currentPkg._inDeps
@@ -1231,7 +1231,7 @@ function parsePnpmLock(content) {
   }
 
   // Save last package.
-  if (currentPkg && currentPkg.name) {
+  if (currentPkg?.name) {
     delete currentPkg._inDeps
     ArrayPrototypePush(packages, ObjectFreeze(currentPkg))
     addToPnpmIndex(currentPkg.name, packages.length - 1)

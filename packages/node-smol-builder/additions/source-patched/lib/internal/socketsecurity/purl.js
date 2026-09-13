@@ -226,7 +226,7 @@ function encodeQualifierValue(str) {
 // Trim leading slashes (pkg:// should be treated as pkg:)
 function trimLeadingSlashes(str) {
   let i = 0
-  while (i < str.length && str[i] === '/') i++
+  while (i < str.length && str[i] === '/') {i++}
   return i > 0 ? StringPrototypeSlice(str, i) : str
 }
 
@@ -247,7 +247,7 @@ function collapseSlashes(str) {
       // Emit up to and including the first slash, then skip any duplicates.
       ArrayPrototypePush(segments, StringPrototypeSlice(str, segStart, i + 1))
       i++
-      while (i < len && StringPrototypeCharCodeAt(str, i) === CHAR_SLASH) i++
+      while (i < len && StringPrototypeCharCodeAt(str, i) === CHAR_SLASH) {i++}
       segStart = i
     } else {
       i++
@@ -272,7 +272,7 @@ function needsTrim(str) {
     first === CHAR_CR ||
     first === CHAR_LF
   )
-    return true
+    {return true}
   const last = StringPrototypeCharCodeAt(str, len - 1)
   if (
     last === CHAR_SPACE ||
@@ -280,7 +280,7 @@ function needsTrim(str) {
     last === CHAR_CR ||
     last === CHAR_LF
   )
-    return true
+    {return true}
   return false
 }
 
@@ -593,7 +593,7 @@ function build(options) {
     throw new PurlError('build requires an options object', 'ERR_INVALID_TYPE')
   }
 
-  const { type, namespace, name, version, qualifiers, subpath } = options
+  const { type, namespace, name, version, qualifiers, subpath } = { __proto__: null, ...options }
 
   if (!type) {
     throw new PurlError('type is required', 'ERR_MISSING_TYPE')
