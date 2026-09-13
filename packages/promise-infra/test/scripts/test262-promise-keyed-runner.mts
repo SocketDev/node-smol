@@ -224,7 +224,7 @@ function resolveRunnerBinary(override?: string | undefined): string {
     return resolveBinary(override)
   } catch (e) {
     logger.error(errorMessage(e))
-    process.exit(1)
+    return process.exit(1)
   }
 }
 
