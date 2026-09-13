@@ -68,100 +68,14 @@ export async function checkTools(
     }
   }
 
-  // Check manual tools
-  let allManualAvailable = true
-  for (let i = 0, { length } = manualTools; i < length; i += 1) {
-    const tool = manualTools[i]
-    const { args, cmd, filePaths, isLibrary, name } = tool
-
-    if (isLibrary) {
-      let found = false
-
-      // First, check if any of the file paths exist (for prebuilt static libs)
-      if (filePaths?.length) {
-        for (
-          let p = 0, { length: pathCount } = filePaths;
-          p < pathCount;
-          p += 1
-        ) {
-          const filePath = filePaths[p]
-          if (existsSync(filePath)) {
-            logger.success(`${name} is available (${filePath})`)
-            found = true
-            break
-          }
-        }
-      }
-
-      // If not found via file, try pkg-config.
-      if (!found && args) {
-        const cmdPath = whichSync(cmd, { nothrow: true })
-        if (cmdPath) {
-          try {
-            // eslint-disable-next-line no-await-in-loop
-            const checkResult = await spawn(cmd, args, { stdio: 'pipe' })
-            if (checkResult.code === 0) {
-              logger.success(`${name} is available`)
-              found = true
-            }
-          } catch {
-            // pkg-config failed, continue.
-          }
-        }
-      }
-
-      if (!found) {
-        logger.fail(`${name} is NOT available`)
-        allManualAvailable = false
-      }
-    } else {
-      // For binary tools, check if they exist in PATH.
-      const binPath = whichSync(cmd, { nothrow: true })
-      if (binPath) {
-        logger.success(`${name} is available`)
-      } else {
-        logger.fail(`${name} is NOT available`)
-        allManualAvailable = false
-      }
-    }
-  }
+  const allManualAvailable = await inspectManualTools(manualTools)
 
   // Handle missing tools.
   if (!result.allAvailable || !allManualAvailable) {
     logger.fail('Some required tools are missing')
     logger.error('')
 
-    if (result.missing.length > 0) {
-      logger.warn('Missing auto-installable tools:')
-      // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
-      for (const tool of result.missing) {
-        logger.info(`  - ${tool}`)
-      }
-
-      const { platform } = process
-      if (platform === 'darwin') {
-        logger.error('')
-        logger.info('To install missing tools on macOS:')
-        const needsXcode = result.missing.some(t =>
-          ['clang', 'clang++'].includes(t),
-        )
-        if (needsXcode) {
-          logger.info('  xcode-select --install')
-        }
-        // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
-        for (const tool of result.missing) {
-          if (!['clang', 'clang++'].includes(tool)) {
-            logger.info(`  brew install ${tool}`)
-          }
-        }
-      } else if (platform === 'linux') {
-        logger.error('')
-        logger.info('To install missing tools on Linux:')
-        logger.info(
-          `  sudo apt-get install -y ${result.missing.join(' ')} build-essential`,
-        )
-      }
-    }
+    reportMissingAutoTools(result.missing)
 
     logger.error('')
     logger.info(
@@ -173,6 +87,76 @@ export async function checkTools(
   logger.success('All required tools are available')
   logger.error('')
   return true
+}
+
+export async function inspectManualTools(manualTools) {
+  let allAvailable = true
+  for (let i = 0, { length } = manualTools; i < length; i += 1) {
+    const { args, cmd, filePaths, isLibrary, name } = manualTools[i]
+    let availablePath
+    let found = false
+    if (isLibrary && filePaths?.length) {
+      for (
+        let p = 0, { length: pathCount } = filePaths;
+        p < pathCount;
+        p += 1
+      ) {
+        const filePath = filePaths[p]
+        if (existsSync(filePath)) {
+          availablePath = filePath
+          found = true
+          break
+        }
+      }
+    }
+    if (isLibrary && !found && args && whichSync(cmd, { nothrow: true })) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const result = await spawn(cmd, args, { stdio: 'pipe' })
+        found = result.code === 0
+      } catch {}
+    } else if (!isLibrary) {
+      found = Boolean(whichSync(cmd, { nothrow: true }))
+    }
+    if (found) {
+      logger.success(
+        `${name} is available${availablePath ? ` (${availablePath})` : ''}`,
+      )
+    } else {
+      logger.fail(`${name} is NOT available`)
+      allAvailable = false
+    }
+  }
+  return allAvailable
+}
+
+export function reportMissingAutoTools(missingTools) {
+  if (missingTools.length === 0) {
+    return
+  }
+  logger.warn('Missing auto-installable tools:')
+  for (let i = 0, { length } = missingTools; i < length; i += 1) {
+    logger.info(`  - ${missingTools[i]}`)
+  }
+  if (process.platform === 'darwin') {
+    logger.error('')
+    logger.info('To install missing tools on macOS:')
+    if (missingTools.some(tool => ['clang', 'clang++'].includes(tool))) {
+      logger.info('  xcode-select --install')
+    }
+    for (let i = 0, { length } = missingTools; i < length; i += 1) {
+      const tool = missingTools[i]
+      if (!['clang', 'clang++'].includes(tool)) {
+        logger.info(`  brew install ${tool}`)
+      }
+    }
+  } else if (process.platform === 'linux') {
+    logger.error('')
+    logger.info('To install missing tools on Linux:')
+    logger.info(
+      `  sudo apt-get install -y ${missingTools.join(' ')} build-essential`,
+    )
+  }
 }
 
 /**
