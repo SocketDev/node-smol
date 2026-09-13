@@ -11,6 +11,10 @@ import path from 'node:path'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { safeReadFile } from '@socketsecurity/lib-stable/fs/read-file'
+import {
+  getDefaultFormatting,
+  stringifyWithFormatting,
+} from '@socketsecurity/lib-stable/json/format'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -46,7 +50,7 @@ export async function cloneOnnxSource(config) {
     sharedCmakeWebassemblyFile,
     sharedPostBuildSourceFile,
     sharedSourceDir,
-  } = { __proto__: null, ...options } as typeof config
+  } = { __proto__: null, ...config }
 
   logger.step('Cloning ONNX Runtime Source')
 
@@ -298,7 +302,10 @@ export async function cloneOnnxSource(config) {
   if (existsSync(path.dirname(wasmScopePath))) {
     await fs.writeFile(
       wasmScopePath,
-      `${JSON.stringify({ type: 'commonjs' }, null, 2)}\n`,
+      stringifyWithFormatting(
+        { __proto__: null, type: 'commonjs' },
+        getDefaultFormatting(),
+      ),
       'utf8',
     )
     logger.success('Scoped CommonJS package.json for onnxruntime/wasm')
