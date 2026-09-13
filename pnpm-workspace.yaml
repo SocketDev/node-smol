@@ -472,6 +472,6 @@ tasks:
     dependsOn: []
 peerDependencyRules:
   allowedVersions:
-    '@socketsecurity/lib>typescript': 7.1.0-dev.20260904.1
-    '@socketsecurity/registry>typescript': 7.1.0-dev.20260904.1
-    mcp-tada>typescript: 7.1.0-dev.20260904.1
+    '@socketsecurity/lib>typescript': 7.1.0-dev.20260905.1
+    '@socketsecurity/registry>typescript': 7.1.0-dev.20260905.1
+    mcp-tada>typescript: 7.1.0-dev.20260905.1
