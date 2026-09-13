@@ -437,18 +437,12 @@ export async function ensureAllPythonPackages(
     }
   }
 
-  // Summary
-  if (!quiet && packages.length > 1) {
-    if (missing.length === 0) {
-      logger.success(
-        `All Python packages available (${packages.length}/${packages.length}${installed.length > 0 ? `, ${installed.length} newly installed` : ''})`,
-      )
-    } else {
-      logger.warn(
-        `${packages.length - missing.length}/${packages.length} Python packages available (${missing.length} missing: ${missing.join(', ')})`,
-      )
-    }
-  }
+  reportPythonPackageSummary({
+    installed,
+    missing,
+    packageCount: packages.length,
+    quiet,
+  })
 
   return {
     __proto__: null,
@@ -472,4 +466,30 @@ export function getPythonPackageInstructions(packages) {
   const instructions = ['Install required Python packages:']
   instructions.push(`  pip3 install --user ${pinnedPackages.join(' ')}`)
   return instructions
+}
+
+export function reportPythonPackageSummary(config) {
+  const {
+    installed,
+    missing,
+    packageCount,
+    quiet = false,
+  } = {
+    __proto__: null,
+    ...config,
+  }
+  if (quiet || packageCount <= 1) {
+    return
+  }
+  if (missing.length === 0) {
+    const installedSummary =
+      installed.length > 0 ? `, ${installed.length} newly installed` : ''
+    logger.success(
+      `All Python packages available (${packageCount}/${packageCount}${installedSummary})`,
+    )
+    return
+  }
+  logger.warn(
+    `${packageCount - missing.length}/${packageCount} Python packages available (${missing.length} missing: ${missing.join(', ')})`,
+  )
 }
