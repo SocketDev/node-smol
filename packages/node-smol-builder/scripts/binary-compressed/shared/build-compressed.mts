@@ -225,5 +225,5 @@ export async function buildCompressed(config, buildOptions = {}) {
   logger.success('Binary compressed successfully')
   logger.logNewline()
 
-  return { compressed: true }
+  return { __proto__: null, compressed: true }
 }

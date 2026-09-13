@@ -49,7 +49,7 @@ export function convertToCommonJS(content: string, _filename: string): string {
           parts.length > 1 && aliasPart !== undefined
             ? aliasPart.trim()
             : original
-        return { original, alias }
+        return { __proto__: null, original, alias }
       })
       const tempVar = `_reexport_${reExports.length}`
       const requirePath = toInternalPath(normalizedSource)

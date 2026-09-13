@@ -100,6 +100,7 @@ export async function generateSync(config) {
   logger.logNewline()
 
   return {
+    __proto__: null,
     artifactPath: outputSyncDir,
     binaryPath: path.relative(buildDir, outputSyncDir),
     binarySize: syncSize,

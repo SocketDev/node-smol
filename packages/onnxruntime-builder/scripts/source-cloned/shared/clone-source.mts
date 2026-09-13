@@ -93,6 +93,7 @@ export async function cloneOnnxSource(config) {
     } else {
       logger.substep('All patches already applied, skipping clone')
       return {
+        __proto__: null,
         artifactPath: sharedSourceDir,
         smokeTest: async () => {
           if (
@@ -306,6 +307,7 @@ export async function cloneOnnxSource(config) {
   logger.success('ONNX Runtime source cloned and patched')
 
   return {
+    __proto__: null,
     artifactPath: sharedSourceDir,
     smokeTest: async () => {
       if (!existsSync(path.join(sharedSourceDir, 'cmake', 'CMakeLists.txt'))) {

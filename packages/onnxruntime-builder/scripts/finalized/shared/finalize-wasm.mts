@@ -89,6 +89,7 @@ export async function finalizeWasm(config) {
   logger.logNewline()
 
   return {
+    __proto__: null,
     artifactPath: outputFinalDir,
     binaryPath: path.relative(buildDir, outputWasmFile),
     binarySize: `${wasmSize}, ${syncSize}`,

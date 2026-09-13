@@ -58,6 +58,7 @@ export async function copyToRelease(config) {
   logger.logNewline()
 
   return {
+    __proto__: null,
     artifactPath: outputReleaseDir,
     binaryPath: path.relative(buildDir, releaseWasmFile),
     binarySize: wasmSize,

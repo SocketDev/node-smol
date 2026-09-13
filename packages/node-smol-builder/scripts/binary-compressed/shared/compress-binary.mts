@@ -323,7 +323,14 @@ export function parseArgs() {
     }
   }
 
-  return { binpressPath, inputPath, outputPath, targetArch, targetLibc }
+  return {
+    __proto__: null,
+    binpressPath,
+    inputPath,
+    outputPath,
+    targetArch,
+    targetLibc,
+  }
 }
 
 /**

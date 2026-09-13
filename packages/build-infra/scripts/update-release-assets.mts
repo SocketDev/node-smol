@@ -99,7 +99,7 @@ export async function fetchToolChecksums(tool) {
     // Clean up temp file.
     await safeDelete(checksumPath).catch(() => {})
 
-    return { checksums, tag }
+    return { __proto__: null, checksums, tag }
   } catch (e) {
     logger.warn(`Failed to fetch checksums for ${tool}: ${errorMessage(e)}`)
     return undefined

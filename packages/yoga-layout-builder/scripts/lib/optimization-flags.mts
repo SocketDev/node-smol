@@ -106,5 +106,5 @@ export function getOptimizationFlags(buildMode) {
           '-sWASM_ASYNC_COMPILATION=0',
         ]
 
-  return { cxxFlags, linkerFlags }
+  return { __proto__: null, cxxFlags, linkerFlags }
 }

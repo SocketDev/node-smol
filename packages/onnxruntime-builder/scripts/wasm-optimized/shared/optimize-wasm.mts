@@ -111,6 +111,7 @@ export async function optimizeWasm(config) {
 
   const wasmSize = await getFileSize(optimizedWasmFile)
   return {
+    __proto__: null,
     artifactPath: optimizedDir,
     binaryPath: path.relative(buildDir, optimizedWasmFile),
     binarySize: wasmSize,

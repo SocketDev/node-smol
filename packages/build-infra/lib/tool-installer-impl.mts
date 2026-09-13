@@ -377,6 +377,7 @@ export function resolvePinnedArtifact(tool, version) {
       return undefined
     }
     return {
+      __proto__: null,
       ...artifact,
       binary: WIN32 ? `${tool}.exe` : tool,
       archiveFormat: artifact.url.endsWith('.zip') ? 'zip' : 'tar.xz',

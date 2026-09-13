@@ -43,6 +43,7 @@ export async function cloneYogaSource(config) {
       logger.substep('Yoga source already exists, skipping clone')
       await regenerateEnums(sharedSourceDir, yogaVersion)
       return {
+        __proto__: null,
         artifactPath: sharedSourceDir,
         smokeTest: async () => {
           if (!existsSync(path.join(sharedSourceDir, 'CMakeLists.txt'))) {
@@ -109,6 +110,7 @@ export async function cloneYogaSource(config) {
   await regenerateEnums(sharedSourceDir, yogaVersion)
 
   return {
+    __proto__: null,
     artifactPath: sharedSourceDir,
     smokeTest: async () => {
       if (!existsSync(path.join(sharedSourceDir, 'CMakeLists.txt'))) {
