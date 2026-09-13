@@ -68,6 +68,53 @@ export async function detectPackageManager() {
   return undefined
 }
 
+export function getToolInstallCommand(pkgMgr, toolName, version) {
+  const versionSuffix = version ? `=${version}-*` : ''
+  switch (pkgMgr) {
+    case 'apt': {
+      return {
+        __proto__: null,
+        args: ['apt-get', 'install', '-y', `${toolName}${versionSuffix}`],
+        command: 'sudo',
+      }
+    }
+    case 'brew': {
+      return { __proto__: null, args: ['install', toolName], command: 'brew' }
+    }
+    case 'yum':
+    case 'dnf': {
+      return {
+        __proto__: null,
+        args: [pkgMgr, 'install', '-y', `${toolName}${versionSuffix}`],
+        command: 'sudo',
+      }
+    }
+    case 'apk': {
+      return {
+        __proto__: null,
+        args: ['apk', 'add', `${toolName}${versionSuffix}`],
+        command: 'sudo',
+      }
+    }
+    case 'choco': {
+      const args = ['install', '-y', toolName]
+      if (version) {
+        args.push(`--version=${version}`)
+      }
+      return { __proto__: null, args, command: 'choco' }
+    }
+    case 'scoop': {
+      return { __proto__: null, args: ['install', toolName], command: 'scoop' }
+    }
+    default: {
+      throw new Error(
+        `Unsupported package manager: ${pkgMgr}. ` +
+          'Supported: apt, brew, yum, dnf, apk, choco, scoop.',
+      )
+    }
+  }
+}
+
 /**
  * Install a single tool with version pinning.
  *
@@ -122,54 +169,7 @@ export async function installTool(toolName, options = {}) {
     }
   }
 
-  // Build install command
-  let command
-  let args
-  const versionSuffix = version ? `=${version}-*` : ''
-
-  switch (pkgMgr) {
-    case 'apt': {
-      command = 'sudo'
-      args = ['apt-get', 'install', '-y', `${toolName}${versionSuffix}`]
-      break
-    }
-    case 'brew': {
-      // Homebrew doesn't support version pinning in the same way
-      command = 'brew'
-      args = ['install', toolName]
-      break
-    }
-    case 'yum':
-    case 'dnf': {
-      command = 'sudo'
-      args = [pkgMgr, 'install', '-y', `${toolName}${versionSuffix}`]
-      break
-    }
-    case 'apk': {
-      command = 'sudo'
-      args = ['apk', 'add', `${toolName}${versionSuffix}`]
-      break
-    }
-    case 'choco': {
-      command = 'choco'
-      args = ['install', '-y', toolName]
-      if (version) {
-        args.push(`--version=${version}`)
-      }
-      break
-    }
-    case 'scoop': {
-      command = 'scoop'
-      args = ['install', toolName]
-      break
-    }
-    default: {
-      throw new Error(
-        `Unsupported package manager: ${pkgMgr}. ` +
-          'Supported: apt, brew, yum, dnf, apk, choco, scoop.',
-      )
-    }
-  }
+  const { args, command } = getToolInstallCommand(pkgMgr, toolName, version)
 
   // Install
   logger.log(`Installing ${toolName}${version ? ` (${version})` : ''}...`)
