@@ -1,8 +1,5 @@
 /**
- * Emscripten SDK Installation Utilities.
- *
- * Provides utilities for automatically installing and activating Emscripten
- * SDK.
+ * @file Emscripten SDK installation and activation utilities.
  */
 
 import { existsSync, promises as fs, realpathSync } from 'node:fs'
@@ -21,16 +18,9 @@ import { errorMessage } from './error-utils.mts'
 const logger = getDefaultLogger()
 
 /**
- * Activate Emscripten SDK environment for current process.
- *
- * @param {object} options - Options.
- * @param {string} options.emsdkPath - Emscripten SDK path (default:
- *   auto-detect).
- * @param {string} options.version - Version to activate (default: 'latest').
- * @param {boolean} options.quiet - Suppress output.
- *
- * @returns {Promise<{ activated: boolean; env: object }>}
+ * Activate the Emscripten SDK environment for the current process.
  */
+// oxlint-disable-next-line eslint/complexity -- SDK activation dispatcher
 export async function activateEmscripten({
   emsdkPath,
   quiet = false,
@@ -132,9 +122,7 @@ export async function activateEmscripten({
 }
 
 /**
- * Check if Emscripten is available.
- *
- * @returns {boolean} True if emcc is in PATH.
+ * Check whether emcc is available.
  */
 export function checkEmscriptenAvailable() {
   return Boolean(whichSync('emcc', { nothrow: true }))
@@ -171,6 +159,7 @@ export function checkEmsdkInstalled(emsdkPath = getEmsdkPath()) {
  *   activated: boolean
  * }>}
  */
+// oxlint-disable-next-line eslint/complexity -- SDK availability dispatcher
 export async function ensureEmscripten({
   autoInstall = true,
   installPath,
@@ -304,7 +293,7 @@ export async function ensureEmscripten({
 }
 
 /**
- * Default Emscripten SDK installation path.
+ * Return the default Emscripten SDK installation path.
  */
 export function getDefaultEmsdkPath() {
   return path.join(os.homedir(), '.emsdk')
@@ -380,6 +369,7 @@ export function getEmsdkSpawnEnv() {
  *
  * @returns {Promise<boolean>} True if installation succeeded.
  */
+// oxlint-disable-next-line eslint/complexity -- SDK installation dispatcher
 export async function installEmscripten({
   installPath,
   quiet = false,

@@ -298,6 +298,7 @@ export async function ensurePinnedTool(tool, config, autoInstall) {
  *   plus optional path, packageManager, and error fields.
  *   Full discussion: docs/agents.md/repo/build-toolchain.md.
  */
+// oxlint-disable-next-line eslint/complexity -- tool availability dispatcher
 export async function ensureToolInstalled(
   tool,
   { autoInstall = true, autoYes = false, toolOptions } = {},

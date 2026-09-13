@@ -113,6 +113,7 @@ export async function cleanCheckpoint(buildDir: string, packageName: string) {
  *
  * Full discussion: docs/agents.md/repo/build-caching.md.
  */
+// oxlint-disable-next-line eslint/complexity -- checkpoint creation dispatcher
 export async function createCheckpoint(
   buildDir: string,
   checkpointName: string,
@@ -967,6 +968,7 @@ export interface RestoreCheckpointOptions {
   platform?: string | undefined
 }
 
+// oxlint-disable-next-line eslint/complexity -- checkpoint restore dispatcher
 export async function restoreCheckpoint(
   buildDir: string,
   packageName: string,
@@ -1339,6 +1341,7 @@ export async function restoreCheckpoint(
  *
  * @returns {Promise<boolean>} True if should run, false if should skip
  */
+// oxlint-disable-next-line eslint/complexity -- checkpoint policy dispatcher
 export async function shouldRun(
   buildDir: string,
   packageName: string,

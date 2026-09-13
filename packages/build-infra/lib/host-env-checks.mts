@@ -225,6 +225,7 @@ export async function checkPythonVersion(
  * Windows platforms. Only runs in CI environments to avoid deleting packages on
  * developer machines.
  */
+// oxlint-disable-next-line eslint/complexity -- platform cleanup dispatcher
 export async function freeDiskSpace(): Promise<void> {
   // Only run in CI environments (GitHub Actions, GitLab CI, etc.)
   if (!isCIEnvironment()) {

@@ -171,7 +171,7 @@ export async function installPackageManager(
  */
 // Ordered by install pipeline phase (install package manager → install tool →
 // resolve pinned → verify); alphabetizing across phases would scatter the flow.
-// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
+// oxlint-disable-next-line socket/sort-source-methods, eslint/complexity -- install flow
 export async function installTool(
   tool,
   packageManager,

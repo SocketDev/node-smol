@@ -1,8 +1,5 @@
 /**
- * Python package install/verify operations.
- *
- * Houses the install and verify functions for Python packages. Split from
- * python-installer.mts to keep each file under the 500-line soft cap.
+ * @file Python package installation and verification operations.
  */
 
 import path from 'node:path'
@@ -30,16 +27,10 @@ import {
 
 const logger = getDefaultLogger()
 
-// PEP 668 error token: substring pip prints when it rejects a system-wide
-// install on an externally-managed interpreter.
 const PEP_668_ERROR_TOKEN = 'externally-managed-environment'
 
 /**
- * Check if a Python package is installed.
- *
- * @param {string} packageName - Package name to check.
- *
- * @returns {Promise<boolean>} True if package is installed.
+ * Check whether a Python package is installed.
  */
 export async function checkPythonPackage(packageName) {
   try {
@@ -55,13 +46,7 @@ export async function checkPythonPackage(packageName) {
 }
 
 /**
- * Check if a Python package is installed with the correct pinned version.
- *
- * @param {string} packageName - Package name to check.
- * @param {string} expectedVersion - Expected version (e.g., '2.5.1').
- *
- * @returns {Promise<boolean>} True if package is installed with correct
- *   version.
+ * Check whether a Python package matches its pinned version.
  */
 // Ordered by pip-install pipeline phase; alphabetizing would scatter it.
 // oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
@@ -105,7 +90,7 @@ export async function checkPythonPackageVersion(packageName, expectedVersion) {
  * @returns {Promise<boolean>} True if installation succeeded.
  */
 // Ordered by pip-install pipeline phase; alphabetizing would scatter it.
-// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
+// oxlint-disable-next-line socket/sort-source-methods, eslint/complexity -- install flow
 export async function installPythonPackage(
   packageName,
   { consumerPackageJsonPath, quiet = false, upgrade = false, user = true } = {},
@@ -291,8 +276,7 @@ export async function ensurePythonPackage(
 ) {
   const checkName = importName || packageName
 
-  // Check if package exists and get expected version
-  // Use consumer overrides if provided
+  // Resolve the expected version from the consumer when present.
   let expectedVersion
   if (consumerPackageJsonPath) {
     // Convert package.json path to packageRoot for loadPythonVersions
@@ -433,11 +417,7 @@ export async function ensureAllPythonPackages(
 }
 
 /**
- * Get installation instructions for Python packages.
- *
- * @param {string[]} packages - Package names.
- *
- * @returns {string[]} Array of installation instruction strings.
+ * Return installation instructions for Python packages.
  */
 // Ordered by pip-install pipeline phase; alphabetizing would scatter it.
 // oxlint-disable-next-line socket/sort-source-methods -- intentional ordering

@@ -158,7 +158,7 @@ export function getDefaultVenvPath() {
  */
 // File is ordered by pip-install pipeline phase (detect → resolve → install →
 // verify); alphabetizing across phases would scatter the install flow.
-// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
+// oxlint-disable-next-line socket/sort-source-methods, eslint/complexity -- setup flow
 export async function initializeVenv({ quiet = false, venvDir } = {}) {
   // Only initialize once per process
   if (venvInitialized) {
