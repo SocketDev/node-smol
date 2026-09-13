@@ -105,6 +105,7 @@ const { buildDir: SHARED_BUILD_DIR, nodeSourceDir: SHARED_SOURCE_DIR } =
 /**
  * Main build orchestrator.
  */
+// oxlint-disable-next-line eslint/complexity -- build phase dispatcher
 async function main() {
   // Start timing total build.
   const totalStart = Date.now()

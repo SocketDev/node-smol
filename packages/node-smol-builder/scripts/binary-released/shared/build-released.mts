@@ -95,6 +95,7 @@ const logger = getDefaultLogger()
  *
  *   Full discussion: docs/agents.md/repo/release-build-pipeline.md.
  */
+// oxlint-disable-next-line eslint/complexity -- release phase dispatcher
 export async function buildRelease(config, buildOptions = {}) {
   const { skipCheckpoint = false } = buildOptions
   const {

@@ -53,6 +53,7 @@ const logger = getDefaultLogger()
  * @param {object} [buildOptions] - Optional build options.
  * @param {boolean} [buildOptions.skipCheckpoint] - Skip checkpoint creation.
  */
+// oxlint-disable-next-line eslint/complexity -- platform build phase dispatcher
 export async function buildStripped(config, buildOptions = {}) {
   const { skipCheckpoint = false } = buildOptions
   const {
