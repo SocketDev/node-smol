@@ -19,7 +19,7 @@
  *     and only the two keyed directories belong to this gate. Second, async
  *     verdicts: nearly every keyed test is `flags: [async]` and reports through
  *     `doneprintHandle.js` on stdout rather than by exiting non-zero, so "did
- *     it throw" is not the question to ask it. Usage: pnpm --filter
+ *     it throw" is not the question to ask it. Usage: `pnpm --filter`
  *     promise-infra run test262:promise-keyed node
  *     test/scripts/test262-promise-keyed-runner.mts --include 'allSettledKeyed'
  *     node test/scripts/test262-promise-keyed-runner.mts --limit 20 --json
@@ -171,20 +171,22 @@ type ParsedArgs = {
   allowlist?: string | undefined
 }
 
+const VALUE_OPTION_KEYS = new Map([
+  ['--allowlist', 'allowlist'],
+  ['--binary', 'binary'],
+  ['--include', 'include'],
+  ['--json', 'json'],
+] as const)
+
 export function parseArgs(argv: readonly string[]): ParsedArgs {
   const opts: ParsedArgs = { verbose: false }
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
-    if (arg === '--include' && i + 1 < argv.length) {
-      opts.include = argv[++i]
+    const valueKey = VALUE_OPTION_KEYS.get(arg)
+    if (valueKey && i + 1 < argv.length) {
+      opts[valueKey] = argv[++i]
     } else if (arg === '--limit' && i + 1 < argv.length) {
       opts.limit = Number.parseInt(argv[++i]!, 10)
-    } else if (arg === '--json' && i + 1 < argv.length) {
-      opts.json = argv[++i]
-    } else if (arg === '--binary' && i + 1 < argv.length) {
-      opts.binary = argv[++i]
-    } else if (arg === '--allowlist' && i + 1 < argv.length) {
-      opts.allowlist = argv[++i]
     } else if (arg === '--verbose' || arg === '-v') {
       opts.verbose = true
     } else if (arg === '--help' || arg === '-h') {
@@ -217,27 +219,17 @@ Options:
 
 // ── Main ───────────────────────────────────────────────────────────
 
-function main(): void {
-  const args = parseArgs(process.argv.slice(2))
-  let binary: string
+function resolveRunnerBinary(override?: string | undefined): string {
   try {
-    binary = resolveBinary(args.binary)
+    return resolveBinary(override)
   } catch (e) {
     logger.error(errorMessage(e))
     process.exit(1)
   }
+}
 
-  const allowlist = loadAllowlist(args.allowlist ?? TEST262_ALLOWLIST_PATH)
-
-  logger.log('Test262 Keyed Promise Combinator Subset Runner')
-  logger.log(`Binary:    ${binary}`)
-  logger.log(`Corpus:    ${TEST262_ROOT}`)
-  logger.log(`Allowlist: ${allowlist.length} entries`)
-  logger.log('')
-
+function collectCandidates(args: ParsedArgs): string[] {
   const includeRe = args.include ? new RegExp(args.include, 'i') : undefined
-  const startTime = Date.now()
-
   const candidates: string[] = []
   // walkTests is a generator, so there is no length to cache.
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- generator
@@ -254,24 +246,24 @@ function main(): void {
       break
     }
   }
-  logger.log(`Tests to run: ${candidates.length}`)
+  return candidates
+}
 
-  // A corpus that is not checked out is a skip, not a failure: the sparse
-  // pattern lives in .gitmodules and a fresh clone has not materialized it
-  // yet. `verify = pnpm --filter promise-infra test262:promise-keyed` on the
-  // submodule entry is what makes the checked-out case get exercised.
-  if (candidates.length === 0) {
-    logger.warn(
-      `No keyed-combinator tests found under ${TEST262_PROMISE_BUILTINS_DIR}.`,
-    )
-    logger.warn(
-      'The test262 submodule is pinned + sparse-checked-out in .gitmodules; ' +
-        'run `node scripts/fleet/git-partial-submodule.mts` (or the repo ' +
-        'bootstrap) to materialize it, then re-run.',
-    )
-    process.exit(0)
-  }
+function getScenarios(
+  attrs: TestCase['attrs'],
+): Array<'strict' | 'sloppy' | 'raw'> {
+  if (attrs.raw) {return ['raw']}
+  if (attrs.onlyStrict) {return ['strict']}
+  if (attrs.noStrict) {return ['sloppy']}
+  return ['strict', 'sloppy']
+}
 
+function runCandidates(
+  candidates: readonly string[],
+  binary: string,
+  args: ParsedArgs,
+  startTime: number,
+): Test262Result[] {
   const results: Test262Result[] = []
   for (let i = 0, { length } = candidates; i < length; i += 1) {
     const filePath = candidates[i]!
@@ -286,16 +278,7 @@ function main(): void {
       continue
     }
 
-    const scenarios: Array<'strict' | 'sloppy' | 'raw'> = []
-    if (attrs.raw) {
-      scenarios.push('raw')
-    } else if (attrs.onlyStrict) {
-      scenarios.push('strict')
-    } else if (attrs.noStrict) {
-      scenarios.push('sloppy')
-    } else {
-      scenarios.push('strict', 'sloppy')
-    }
+    const scenarios = getScenarios(attrs)
 
     for (let j = 0, { length: jlen } = scenarios; j < jlen; j += 1) {
       const scenario = scenarios[j]!
@@ -311,7 +294,36 @@ function main(): void {
       logger.info(`Progress: ${i}/${length} (${elapsed}s)`)
     }
   }
+  return results
+}
 
+function main(): void {
+  const args = parseArgs(process.argv.slice(2))
+  const binary = resolveRunnerBinary(args.binary)
+  const allowlist = loadAllowlist(args.allowlist ?? TEST262_ALLOWLIST_PATH)
+
+  logger.log('Test262 Keyed Promise Combinator Subset Runner')
+  logger.log(`Binary:    ${binary}`)
+  logger.log(`Corpus:    ${TEST262_ROOT}`)
+  logger.log(`Allowlist: ${allowlist.length} entries`)
+  logger.log('')
+
+  const startTime = Date.now()
+  const candidates = collectCandidates(args)
+  logger.log(`Tests to run: ${candidates.length}`)
+  if (candidates.length === 0) {
+    logger.warn(
+      `No keyed-combinator tests found under ${TEST262_PROMISE_BUILTINS_DIR}.`,
+    )
+    logger.warn(
+      'The test262 submodule is pinned + sparse-checked-out in .gitmodules; ' +
+        'run `node scripts/fleet/git-partial-submodule.mts` (or the repo ' +
+        'bootstrap) to materialize it, then re-run.',
+    )
+    process.exit(0)
+  }
+
+  const results = runCandidates(candidates, binary, args, startTime)
   const summary = interpret(results, allowlist, Date.now() - startTime)
   report(summary)
 

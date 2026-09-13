@@ -15,6 +15,7 @@
 
 import { describe, expect, it } from 'vitest'
 
+import { parseArgs } from '../scripts/test262-temporal-runner.mts'
 import { interpret } from '../scripts/test262/classifier.mts'
 import type { Test } from '../scripts/test262/types.mts'
 
@@ -94,5 +95,34 @@ describe('interpret', () => {
     )
     expect(s.skipped.length).toBe(1)
     expect(s.passed).toBe(true)
+  })
+})
+
+describe('parseArgs', () => {
+  it('parses value and boolean options', () => {
+    expect(
+      parseArgs([
+        '--allowlist',
+        'example.allowlist',
+        '--binary',
+        'example-node',
+        '--include',
+        'Temporal',
+        '--json',
+        'results.json',
+        '--limit',
+        '12',
+        '--no-intl',
+        '--verbose',
+      ]),
+    ).toEqual({
+      allowlist: 'example.allowlist',
+      binary: 'example-node',
+      include: 'Temporal',
+      json: 'results.json',
+      limit: 12,
+      noIntl: true,
+      verbose: true,
+    })
   })
 })

@@ -24,6 +24,7 @@ import {
   asyncRunFailed,
   isKeyedSubsetPath,
   loadAllowlist,
+  parseArgs,
   shouldSkipKeyed,
 } from '../scripts/test262-promise-keyed-runner.mts'
 import type { TestCase } from 'local-temporal-infra/test/scripts/test262/types'
@@ -149,5 +150,32 @@ describe('loadAllowlist', () => {
     expect(loadAllowlist(path.join(fixtureRoot, 'absent.allowlist'))).toEqual(
       [],
     )
+  })
+})
+
+describe('parseArgs', () => {
+  it('parses value and boolean options', () => {
+    expect(
+      parseArgs([
+        '--allowlist',
+        'example.allowlist',
+        '--binary',
+        'example-node',
+        '--include',
+        'Temporal',
+        '--json',
+        'results.json',
+        '--limit',
+        '12',
+        '--verbose',
+      ]),
+    ).toEqual({
+      allowlist: 'example.allowlist',
+      binary: 'example-node',
+      include: 'Temporal',
+      json: 'results.json',
+      limit: 12,
+      verbose: true,
+    })
   })
 })
