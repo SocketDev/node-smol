@@ -8,7 +8,7 @@
  * args set.
  *
  * Use:
- * pnpm --filter build-infra run docker:builder-glibc.
+ * `pnpm --filter` build-infra run docker:builder-glibc.
  *
  * The published image is `ghcr.io/socketdev/btm-builder-glibc:<tag>` — tag
  * format `YYYY-MM-DD-<sha8>`. Local builds tag as `btm-builder-glibc:local`.
@@ -78,6 +78,7 @@ export function readPnpmTriple(platformSpec) {
     'base64',
   ).toString('hex')
   return {
+    __proto__: null,
     pnpmVersion: parsed.pnpm.version,
     pnpmAsset: entry.asset,
     pnpmSha256,

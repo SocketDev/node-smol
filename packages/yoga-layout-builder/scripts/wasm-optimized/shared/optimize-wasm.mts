@@ -14,6 +14,7 @@ import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
@@ -84,9 +85,9 @@ export async function optimizeWasm(config) {
 
   // Find wasm-opt in Emscripten SDK or system PATH.
   let wasmOptCmd = 'wasm-opt'
-  if (process.env['EMSDK']) {
+  if (getEnvValue('EMSDK')) {
     const emsdkWasmOpt = path.join(
-      process.env['EMSDK'],
+      getEnvValue('EMSDK'),
       'upstream',
       'bin',
       'wasm-opt',
@@ -115,6 +116,7 @@ export async function optimizeWasm(config) {
 
   const wasmSize = await getFileSize(optimizedWasmFile)
   return {
+    __proto__: null,
     artifactPath: optimizedDir,
     binaryPath: path.relative(buildDir, optimizedDir),
     binarySize: wasmSize,
