@@ -289,18 +289,10 @@ async function openHttpsSource(request, redirects = 0) {
         )
         return
       }
-      const contentRange = response.headers['content-range']
-      const rangeTotal =
-        typeof contentRange === 'string'
-          ? /\/(?<total>\d+)$/.exec(contentRange)?.groups?.total
-          : undefined
-      const contentLength = Number(response.headers['content-length'] ?? 0)
       resolve({
         chunks: response,
         startOffset: opts.offset,
-        totalBytes: rangeTotal
-          ? Number(rangeTotal)
-          : opts.offset + contentLength,
+        totalBytes: responseTotalBytes(response, opts.offset),
       })
     })
     const onAbort = () => clientRequest.destroy(abortError())
@@ -310,6 +302,18 @@ async function openHttpsSource(request, redirects = 0) {
       opts.signal?.removeEventListener('abort', onAbort)
     })
   })
+}
+
+function responseTotalBytes(response, offset) {
+  const contentRange = response.headers['content-range']
+  const rangeTotal =
+    typeof contentRange === 'string'
+      ? /\/(?<total>\d+)$/.exec(contentRange)?.groups?.total
+      : undefined
+  if (rangeTotal) {
+    return Number(rangeTotal)
+  }
+  return offset + Number(response.headers['content-length'] ?? 0)
 }
 
 async function waitForRetry(delayMs, signal) {
