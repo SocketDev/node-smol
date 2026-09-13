@@ -429,13 +429,10 @@ export async function createCheckpoint(
       }
 
       // Validate tarball integrity by listing contents (catches truncated/corrupted archives)
-      const listResult = await spawn(
-        tarBin,
-        ['-tzf', WIN32 ? toUnixPath(tempTarballPath) : tempTarballPath],
-        {
-          stdio: 'pipe',
-        },
-      )
+      const listResult = await spawn(tarBin, ['-tzf', tarOutputPath], {
+        cwd: tarDir,
+        stdio: 'pipe',
+      })
       if (listResult.code !== 0) {
         throw new Error(
           'Tarball validation failed - archive appears corrupted or truncated',
