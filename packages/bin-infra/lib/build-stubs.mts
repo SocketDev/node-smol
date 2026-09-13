@@ -158,11 +158,11 @@ export async function downloadPrebuiltStub(
 
     // Verify SHA256 checksum to detect corrupt/truncated downloads.
     logger.info('Verifying archive checksum…')
-    const checksumResult = await verifyReleaseChecksum({
+    const checksumResult = await verifyReleaseChecksum(
+      tarballPath,
       assetName,
-      filePath: tarballPath,
-      tool: 'stubs',
-    })
+      'stubs',
+    )
     if (!checksumResult.valid) {
       await safeDelete(tarballPath)
       throw new Error(

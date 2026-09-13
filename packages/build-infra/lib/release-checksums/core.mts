@@ -45,7 +45,11 @@ export interface ToolConfig {
   checksums: Record<string, string>
 }
 
-export type EmbeddedChecksums = Record<string, ToolConfig>
+declare const embeddedToolNameBrand: unique symbol
+export type EmbeddedToolName = string & {
+  readonly [embeddedToolNameBrand]: true
+}
+export type EmbeddedChecksums = Record<EmbeddedToolName, ToolConfig>
 
 export interface VerifyResult {
   actual?: string | undefined
@@ -94,7 +98,7 @@ export function getEmbeddedChecksum(
   if (!embedded) {
     return undefined
   }
-  const toolConfig = embedded[tool]
+  const toolConfig = embedded[tool as EmbeddedToolName]
   if (!toolConfig?.checksums) {
     return undefined
   }
@@ -115,7 +119,7 @@ export function getEmbeddedChecksums(): EmbeddedChecksums | undefined {
         path.dirname(findUpPackageJson(import.meta)),
         'release-assets.json',
       )
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; this manifest is written by producer.mts in this same package, and a malformed file throws in the surrounding catch rather than flowing on.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns `any`; producer.mts writes this manifest, and malformed data reaches the surrounding catch.
       embeddedChecksums = JSON.parse(
         readFileSync(checksumPath, 'utf8'),
       ) as EmbeddedChecksums
@@ -138,7 +142,7 @@ export function getEmbeddedChecksums(): EmbeddedChecksums | undefined {
 export function parseChecksums(content: string): Record<string, string> {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- null-proto idiom: `__proto__: null` keeps the map prototype-free but changes its inferred type, so the double cast is required.
   const checksums = { __proto__: null } as unknown as Record<string, string>
-  const lines = content.split('\n')
+  const lines = content.split(/\r?\n/)
   for (let i = 0, { length } = lines; i < length; i += 1) {
     const trimmed = lines[i]!.trim()
     if (!trimmed) {
@@ -155,9 +159,6 @@ export function parseChecksums(content: string): Record<string, string> {
 }
 
 export interface VerifyOptions {
-  filePath: string
-  assetName: string
-  tool: string
   quiet?: boolean | undefined
   // When a tool has no checksums in release-assets.json at all, verification
   // fails closed (`valid: false`) by default — an unverified download must
@@ -192,14 +193,12 @@ export interface VerifyOptions {
  *    deliberately-untracked tool back into `{ valid: true, skipped: true }`.
  */
 export async function verifyReleaseChecksum(
-  config: VerifyOptions,
+  filePath: string,
+  assetName: string,
+  tool: string,
+  options: VerifyOptions = {},
 ): Promise<VerifyResult> {
-  const {
-    assetName,
-    filePath,
-    quiet = false,
-    tool,
-  } = { __proto__: null, ...config } as typeof config
+  const { quiet = false } = options
 
   const embedded = getEmbeddedChecksum(tool, assetName)
   if (embedded) {
@@ -231,7 +230,7 @@ export async function verifyReleaseChecksum(
   }
 
   const embeddedData = getEmbeddedChecksums()
-  const toolBlock = embeddedData?.[tool]
+  const toolBlock = embeddedData?.[tool as EmbeddedToolName]
   if (toolBlock?.checksums && Object.keys(toolBlock.checksums).length > 0) {
     if (!quiet) {
       logger.fail(
@@ -242,7 +241,7 @@ export async function verifyReleaseChecksum(
     return { source: 'embedded', valid: false }
   }
 
-  if (config.allowUnlisted) {
+  if (options.allowUnlisted) {
     if (!quiet) {
       logger.warn(
         `No checksums found for ${tool}; allowUnlisted set, skipping verification`,

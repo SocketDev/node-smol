@@ -26,6 +26,7 @@ import { errorMessage } from 'local-build-infra/lib/error-utils'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { downloadSocketBtmRelease } from '@socketsecurity/lib-stable/releases/socket-btm'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 export const logger = getDefaultLogger()
 
@@ -35,8 +36,8 @@ const __dirname = path.dirname(__filename)
 export const packageRoot = path.join(__dirname, '..')
 export const postgresUpstream = path.join(packageRoot, 'upstream', 'postgres')
 
-export const CROSS_COMPILE = process.env['CROSS_COMPILE'] === '1'
-export const TARGET_ARCH = process.env['TARGET_ARCH'] || process.arch
+export const CROSS_COMPILE = getEnvValue('CROSS_COMPILE') === '1'
+export const TARGET_ARCH = getEnvValue('TARGET_ARCH') || process.arch
 
 // GNU make's built-in implicit C compile rule references $(TARGET_ARCH)
 // as a standard recipe variable (historically used for `-m64`-style
@@ -73,7 +74,7 @@ export function getCheckpointChain() {
 export function getBuildDirs(platformArch) {
   const buildDir = getPlatformBuildDir(packageRoot, platformArch)
   const libpqBuildDir = path.join(buildDir, 'out', BUILD_STAGES.FINAL, 'libpq')
-  return { buildDir, libpqBuildDir }
+  return { __proto__: null, buildDir, libpqBuildDir }
 }
 
 /**
@@ -107,12 +108,85 @@ export function libpqExistsAt(dir) {
  * }>}
  */
 export async function verifyArchiveChecksum(archivePath, assetName) {
-  return verifyReleaseChecksum({
-    assetName,
-    filePath: archivePath,
-    tempDir: path.join(packageRoot, 'build', 'temp'),
-    tool: 'libpq',
-  })
+  return verifyReleaseChecksum(archivePath, assetName, 'libpq')
+}
+
+async function deleteArchiveState(downloadedArchive, versionFile) {
+  await safeDelete(downloadedArchive)
+  if (existsSync(versionFile)) {
+    await safeDelete(versionFile)
+  }
+}
+
+async function validateGzipArchive(downloadedArchive, versionFile) {
+  const magic = Buffer.alloc(2)
+  const file = await fs.open(downloadedArchive, 'r')
+  try {
+    await file.read(magic, 0, 2, 0)
+  } finally {
+    await file.close()
+  }
+  if (magic[0] === 0x1f && magic[1] === 0x8b) {
+    return
+  }
+  await deleteArchiveState(downloadedArchive, versionFile)
+  throw new Error(
+    'Downloaded archive is not a valid gzip file (missing magic bytes). ' +
+      `File may be corrupted or truncated. Deleted ${downloadedArchive} to force re-download.`,
+  )
+}
+
+async function validateDownloadedChecksum(
+  downloadedArchive,
+  assetName,
+  versionFile,
+) {
+  logger.info('Verifying archive checksum…')
+  const result = await verifyArchiveChecksum(downloadedArchive, assetName)
+  if (!result.valid) {
+    await deleteArchiveState(downloadedArchive, versionFile)
+    throw new Error(
+      'Archive checksum mismatch - file is corrupted.\n' +
+        `  Expected: ${result.expected}\n` +
+        `  Actual:   ${result.actual}\n` +
+        `Deleted ${downloadedArchive} to force re-download.`,
+    )
+  }
+  if (result.actual) {
+    logger.info(
+      `Checksum verified: ${result.actual.slice(0, 16)}...${result.actual.slice(-8)}`,
+    )
+  }
+}
+
+async function extractDownloadedArchive(
+  downloadedArchive,
+  extractDir,
+  versionFile,
+) {
+  try {
+    await extractTarball(downloadedArchive, extractDir, {
+      createDir: false,
+      stdio: 'inherit',
+      validate: true,
+    })
+  } catch (error) {
+    await deleteArchiveState(downloadedArchive, versionFile)
+    throw new Error(
+      `Failed to extract libpq archive from ${downloadedArchive}: ${errorMessage(error)}. ` +
+        'Deleted corrupted archive to allow re-download on next run.',
+      { cause: error },
+    )
+  }
+}
+
+function validateExtractedFiles(extractDir) {
+  for (let i = 0, { length } = LIBPQ_REQUIRED_FILES; i < length; i += 1) {
+    const file = LIBPQ_REQUIRED_FILES[i]
+    if (!existsSync(path.join(extractDir, file))) {
+      throw new Error(`Expected file not found after extraction: ${file}`)
+    }
+  }
 }
 
 /**
@@ -187,50 +261,8 @@ export async function downloadLibpq(options = {}) {
     `Archive size: ${(archiveStats.size / 1024 / 1024).toFixed(2)} MB`,
   )
 
-  // Check gzip magic bytes (0x1f 0x8b) to verify it's a valid gzip file.
-  const gzipMagic = Buffer.alloc(2)
-  const fd = await fs.open(downloadedArchive, 'r')
-  try {
-    await fd.read(gzipMagic, 0, 2, 0)
-  } finally {
-    await fd.close()
-  }
-
-  if (gzipMagic[0] !== 0x1f || gzipMagic[1] !== 0x8b) {
-    await safeDelete(downloadedArchive)
-    if (existsSync(versionFile)) {
-      await safeDelete(versionFile)
-    }
-    throw new Error(
-      'Downloaded archive is not a valid gzip file (missing magic bytes). ' +
-        `File may be corrupted or truncated. Deleted ${downloadedArchive} to force re-download.`,
-    )
-  }
-
-  // Verify SHA256 checksum to detect corrupt/truncated downloads.
-  logger.info('Verifying archive checksum…')
-  const checksumResult = await verifyArchiveChecksum(
-    downloadedArchive,
-    assetName,
-  )
-  if (!checksumResult.valid) {
-    await safeDelete(downloadedArchive)
-    if (existsSync(versionFile)) {
-      await safeDelete(versionFile)
-    }
-    throw new Error(
-      'Archive checksum mismatch - file is corrupted.\n' +
-        `  Expected: ${checksumResult.expected}\n` +
-        `  Actual:   ${checksumResult.actual}\n` +
-        `Deleted ${downloadedArchive} to force re-download.`,
-    )
-  }
-  // Only log checksum if it was actually verified (not skipped due to missing expected checksum).
-  if (checksumResult.actual) {
-    logger.info(
-      `Checksum verified: ${checksumResult.actual.slice(0, 16)}...${checksumResult.actual.slice(-8)}`,
-    )
-  }
+  await validateGzipArchive(downloadedArchive, versionFile)
+  await validateDownloadedChecksum(downloadedArchive, assetName, versionFile)
 
   // Clean extraction directory.
   const libpqIncludeDir = path.join(extractDir, 'include')
@@ -238,32 +270,8 @@ export async function downloadLibpq(options = {}) {
     await safeDelete(libpqIncludeDir)
   }
 
-  // Extract using cross-platform tarball utility.
-  try {
-    await extractTarball(downloadedArchive, extractDir, {
-      createDir: false,
-      stdio: 'inherit',
-      validate: true,
-    })
-  } catch (e) {
-    await safeDelete(downloadedArchive)
-    if (existsSync(versionFile)) {
-      await safeDelete(versionFile)
-    }
-    throw new Error(
-      `Failed to extract libpq archive from ${downloadedArchive}: ${errorMessage(e)}. ` +
-        'Deleted corrupted archive to allow re-download on next run.',
-      { cause: e },
-    )
-  }
-
-  // Verify expected files exist after extraction.
-  for (let i = 0, { length } = LIBPQ_REQUIRED_FILES; i < length; i += 1) {
-    const file = LIBPQ_REQUIRED_FILES[i]
-    if (!existsSync(path.join(extractDir, file))) {
-      throw new Error(`Expected file not found after extraction: ${file}`)
-    }
-  }
+  await extractDownloadedArchive(downloadedArchive, extractDir, versionFile)
+  validateExtractedFiles(extractDir)
 
   // Write version file after cleanup.
   await fs.writeFile(versionFile, POSTGRES_VERSION, 'utf8')
