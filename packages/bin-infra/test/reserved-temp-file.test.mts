@@ -30,6 +30,11 @@ static bool swap_on_close = false;
 static std::string swap_held_path;
 static void swap_reserved_path(const char* path);
 #define BINJECT_TEST_AFTER_WINDOWS_RESERVATION_CLOSE(path) swap_reserved_path(path)
+#else
+static bool replace_directory_on_rename = false;
+static std::string replaced_directory_path;
+static void replace_reserved_directory(const char* path);
+#define BINJECT_TEST_BEFORE_POSIX_RENAMEAT(path) replace_reserved_directory(path)
 #endif
 #include "socketsecurity/bin-infra/binject_file_utils.hpp"
 #include "socketsecurity/bin-infra/elf_note_utils_raw_write.hpp"
@@ -42,6 +47,17 @@ static void swap_reserved_path(const char* path) {
         path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
         CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (replacement != INVALID_HANDLE_VALUE) CloseHandle(replacement);
+}
+#else
+static void replace_reserved_directory(const char* path) {
+    if (!replace_directory_on_rename) return;
+    if (rename(path, replaced_directory_path.c_str()) != 0 ||
+        mkdir(path, 0700) != 0) return;
+    std::string replacement = std::string(path) + "/output";
+    FILE* writer = fopen(replacement.c_str(), "wb");
+    if (!writer) return;
+    fwrite("evil", 1, 4, writer);
+    fclose(writer);
 }
 #endif
 
@@ -64,7 +80,7 @@ int main(int argc, char** argv) {
     if (binject::verify_file_written(&first) != BINJECT_OK) return 5;
     if (binject::atomic_rename(&first, output.c_str()) != BINJECT_OK) return 6;
     FILE* reader = fopen(output.c_str(), "rb");
-    char bytes[5] = {};
+    char bytes[6] = {};
     if (!reader || fread(bytes, 1, 4, reader) != 4 || fclose(reader) != 0 ||
         strcmp(bytes, "safe") != 0) return 7;
 
@@ -94,6 +110,30 @@ int main(int argc, char** argv) {
 #else
     unlink(held.c_str());
     rmdir(swapped.directory);
+
+    binject::reserved_temp_file ancestor_swapped;
+    if (binject::create_temp_file((root + "/ancestor").c_str(),
+                                  &ancestor_swapped) != 0) return 16;
+    if (binject::write_temp_file(
+            &ancestor_swapped,
+            reinterpret_cast<const uint8_t*>("bound"), 5) != BINJECT_OK) return 17;
+    replaced_directory_path = std::string(ancestor_swapped.directory) + ".held";
+    replace_directory_on_rename = true;
+    std::string ancestor_output = root + "/ancestor-output";
+    if (binject::atomic_rename(&ancestor_swapped,
+                               ancestor_output.c_str()) != BINJECT_OK) return 18;
+    reader = fopen(ancestor_output.c_str(), "rb");
+    memset(bytes, 0, sizeof(bytes));
+    if (!reader || fread(bytes, 1, 5, reader) != 5 || fclose(reader) != 0 ||
+        strcmp(bytes, "bound") != 0) return 19;
+    std::string replacement = std::string(ancestor_swapped.directory) + "/output";
+    reader = fopen(replacement.c_str(), "rb");
+    memset(bytes, 0, sizeof(bytes));
+    if (!reader || fread(bytes, 1, 4, reader) != 4 || fclose(reader) != 0 ||
+        strcmp(bytes, "evil") != 0) return 20;
+    unlink(replacement.c_str());
+    rmdir(ancestor_swapped.directory);
+    rmdir(replaced_directory_path.c_str());
 #endif
 
     std::string malformed = root + "/malformed-elf";
