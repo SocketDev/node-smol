@@ -363,7 +363,9 @@ export async function installGccApt(version) {
  * @returns {{ major: number; minor: number; patch: number } | undefined}
  */
 export function parseVersion(versionString) {
-  const match = versionString.match(/(\d+)\.(\d+)\.(\d+)/)
+  const match = versionString.match(
+    /(?:^|\D)(\d{1,10})\.(\d{1,10})\.(\d{1,10})(?!\d)/,
+  )
   if (!match) {
     return undefined
   }
