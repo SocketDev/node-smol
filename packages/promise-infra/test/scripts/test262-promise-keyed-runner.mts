@@ -37,6 +37,7 @@ import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 import { interpret } from 'local-temporal-infra/test/scripts/test262/classifier'
 import {
   composeScript,
+  matchesTest262Include,
   walkTests,
 } from 'local-temporal-infra/test/scripts/test262/harness'
 import { parseFrontmatter } from 'local-temporal-infra/test/scripts/test262/parser'
@@ -206,7 +207,7 @@ Usage:
   node test/scripts/test262-promise-keyed-runner.mts [options]
 
 Options:
-  --include <regex>     Only run tests whose path matches this regex
+  --include <text>      Only run tests whose path contains this text
   --limit <n>           Run at most N tests (after filtering)
   --json <path>         Write a JSON report to <path>
   --binary <path>       Path to the Node.js binary (default: built node-smol)
@@ -229,7 +230,6 @@ function resolveRunnerBinary(override?: string | undefined): string {
 }
 
 function collectCandidates(args: ParsedArgs): string[] {
-  const includeRe = args.include ? new RegExp(args.include, 'i') : undefined
   const candidates: string[] = []
   // walkTests is a generator, so there is no length to cache.
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- generator
@@ -238,7 +238,7 @@ function collectCandidates(args: ParsedArgs): string[] {
     if (!isKeyedSubsetPath(file)) {
       continue
     }
-    if (includeRe && !includeRe.test(file)) {
+    if (!matchesTest262Include(file, args.include)) {
       continue
     }
     candidates.push(filePath)

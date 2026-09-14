@@ -45,7 +45,7 @@ import {
   runOneTest,
   shouldSkip,
 } from './test262/executor.mts'
-import { walkTests } from './test262/harness.mts'
+import { matchesTest262Include, walkTests } from './test262/harness.mts'
 import { parseFrontmatter } from './test262/parser.mts'
 import { report } from './test262/report.mts'
 import type { Result, TestCase } from './test262/types.mts'
@@ -108,7 +108,7 @@ Usage:
   node scripts/test262.mts [options]
 
 Options:
-  --include <regex>     Only run tests whose path matches this regex
+  --include <text>      Only run tests whose path contains this text
   --no-intl             Skip the intl402/Temporal/ subset
   --limit <n>           Run at most N tests (after filtering)
   --json <path>         Write a JSON report to <path>
@@ -132,7 +132,6 @@ function resolveRunnerBinary(override?: string | undefined): string {
 }
 
 function collectCandidates(args: ParsedArgs): string[] {
-  const includeRe = args.include ? new RegExp(args.include, 'i') : undefined
   const dirs = [TEST262_TEMPORAL_BUILTINS_DIR]
   if (!args.noIntl) {
     dirs.push(TEST262_TEMPORAL_INTL402_DIR)
@@ -143,7 +142,7 @@ function collectCandidates(args: ParsedArgs): string[] {
     // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
     for (const filePath of walkTests(dir)) {
       const file = path.relative(TEST262_ROOT, filePath)
-      if (includeRe && !includeRe.test(file)) {
+      if (!matchesTest262Include(file, args.include)) {
         continue
       }
       candidates.push(filePath)

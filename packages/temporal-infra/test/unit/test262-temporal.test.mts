@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest'
 
 import { parseArgs } from '../scripts/test262-temporal-runner.mts'
 import { interpret } from '../scripts/test262/classifier.mts'
+import { matchesTest262Include } from '../scripts/test262/harness.mts'
 import type { Test } from '../scripts/test262/types.mts'
 
 export function key(t: Test): string {
@@ -36,6 +37,14 @@ export function makeTest(overrides: Partial<Test>): Test {
     ...overrides,
   }
 }
+
+describe('matchesTest262Include', () => {
+  it('treats metacharacters as literal text', () => {
+    expect(matchesTest262Include('Temporal/example[1].js', '[1]')).toBe(true)
+    expect(matchesTest262Include('Temporal/example1.js', '[1]')).toBe(false)
+    expect(matchesTest262Include('Temporal/example.js', '(a+)+$')).toBe(false)
+  })
+})
 
 describe('interpret', () => {
   it('success → allowed.success when not in allowlist', () => {
