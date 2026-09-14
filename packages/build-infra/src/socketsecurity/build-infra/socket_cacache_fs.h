@@ -31,10 +31,12 @@
     #include <fcntl.h>
     #include <unistd.h>
 #else
+    #include <direct.h>
     #include <fcntl.h>
     #include <io.h>
     #include <share.h>
     #include <sys/types.h>
+    #include <windows.h>
 #endif
 
 #include "socketsecurity/build-infra/socket_cacache_crypto.h"
@@ -45,6 +47,51 @@ extern "C" {
 #endif
 
 /* Self-contained file I/O helpers (no external deps). */
+
+#if defined(_WIN32)
+SCACHE_UNUSED
+static int scache_rename_open_file(int fd, const char *path) {
+    HANDLE handle = (HANDLE)_get_osfhandle(fd);
+    if (handle == INVALID_HANDLE_VALUE) return -1;
+    int relative_size = MultiByteToWideChar(CP_ACP, 0, path, -1, NULL, 0);
+    if (relative_size == 0) return -1;
+    wchar_t *relative = (wchar_t *)malloc(
+        (size_t)relative_size * sizeof(wchar_t));
+    if (!relative) return -1;
+    if (MultiByteToWideChar(CP_ACP, 0, path, -1, relative,
+                            relative_size) == 0) {
+        free(relative);
+        return -1;
+    }
+    DWORD absolute_size = GetFullPathNameW(relative, 0, NULL, NULL);
+    wchar_t *absolute = absolute_size == 0
+        ? NULL
+        : (wchar_t *)malloc((size_t)absolute_size * sizeof(wchar_t));
+    if (!absolute ||
+        GetFullPathNameW(relative, absolute_size, absolute, NULL) == 0) {
+        free(relative);
+        free(absolute);
+        return -1;
+    }
+    free(relative);
+    size_t name_bytes = wcslen(absolute) * sizeof(wchar_t);
+    size_t info_size = sizeof(FILE_RENAME_INFO) + name_bytes;
+    FILE_RENAME_INFO *info = (FILE_RENAME_INFO *)malloc(info_size);
+    if (!info) {
+        free(absolute);
+        return -1;
+    }
+    memset(info, 0, info_size);
+    info->ReplaceIfExists = TRUE;
+    info->FileNameLength = (DWORD)name_bytes;
+    memcpy(info->FileName, absolute, name_bytes);
+    BOOL renamed = SetFileInformationByHandle(
+        handle, FileRenameInfo, info, (DWORD)info_size);
+    free(info);
+    free(absolute);
+    return renamed ? 0 : -1;
+}
+#endif
 
 SCACHE_UNUSED
 static int file_io_read(const char *path, uint8_t **out_data, size_t *out_len) {
@@ -69,7 +116,11 @@ static int create_parent_directories(const char *filepath) {
     for (char *p = tmp + 1; *p; p++) {
         if (*p == '/') {
             *p = '\0';
+#if defined(_WIN32)
+            _mkdir(tmp);
+#else
             mkdir(tmp, 0755);
+#endif
             *p = '/';
         }
     }
@@ -123,7 +174,15 @@ static int write_file_atomically(const char *path, const uint8_t *data, size_t l
 #if !defined(_WIN32)
     if (scache_staging_dir(staging, sizeof(staging)) == 0) {
         create_parent_directories(staging);
-        mkdir(staging, 0755);
+        mkdir(staging, 0700);
+        int staging_fd = open(staging,
+                              O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+        if (staging_fd < 0) return -1;
+        if (fchmod(staging_fd, 0700) != 0) {
+            close(staging_fd);
+            return -1;
+        }
+        close(staging_fd);
         snprintf(tmp_path, sizeof(tmp_path), "%s/tmp-XXXXXX", staging);
     } else {
         snprintf(tmp_path, sizeof(tmp_path), "%s.tmp.XXXXXX", path);
@@ -133,9 +192,10 @@ static int write_file_atomically(const char *path, const uint8_t *data, size_t l
     f = fdopen(fd, "wb");
     if (!f) { close(fd); unlink(tmp_path); return -1; }
 #else
+    (void)mode;
     if (scache_staging_dir(staging, sizeof(staging)) == 0) {
         create_parent_directories(staging);
-        mkdir(staging, 0755);
+        _mkdir(staging);
         snprintf(tmp_path, sizeof(tmp_path), "%s/tmp-XXXXXX", staging);
     } else {
         snprintf(tmp_path, sizeof(tmp_path), "%s.tmp.XXXXXX", path);
@@ -154,35 +214,92 @@ static int write_file_atomically(const char *path, const uint8_t *data, size_t l
         if (_mktemp_s(retry_path, sizeof(retry_path)) != 0) {
             return -1;
         }
-        fd = _open(retry_path,
-                   _O_CREAT | _O_EXCL | _O_WRONLY | _O_BINARY,
-                   _S_IREAD | _S_IWRITE);
-        if (fd >= 0) {
-            memcpy(tmp_path, retry_path, sizeof(tmp_path));
-            break;
-        }
-        if (errno != EEXIST) {
+        HANDLE handle = CreateFileA(
+            retry_path, GENERIC_WRITE | DELETE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+            CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (handle == INVALID_HANDLE_VALUE) {
+            DWORD error = GetLastError();
+            if (error == ERROR_FILE_EXISTS || error == ERROR_ALREADY_EXISTS) {
+                continue;
+            }
             return -1;
         }
+        fd = _open_osfhandle((intptr_t)handle,
+                             _O_WRONLY | _O_BINARY | _O_NOINHERIT);
+        if (fd < 0) {
+            CloseHandle(handle);
+            return -1;
+        }
+        memcpy(tmp_path, retry_path, sizeof(tmp_path));
+        break;
     }
     if (fd < 0) return -1;
     f = _fdopen(fd, "wb");
     if (!f) { _close(fd); _unlink(tmp_path); return -1; }
 #endif
     size_t written = fwrite(data, 1, len, f);
-    fclose(f);
-    if (written != len) { unlink(tmp_path); return -1; }
-    chmod(tmp_path, (mode_t)mode);
-    if (rename(tmp_path, path) != 0) {
-        /* Rename failed (EXDEV?) — fall back to direct write */
-        unlink(tmp_path);
-        f = fopen(path, "wb");
-        if (!f) return -1;
-        written = fwrite(data, 1, len, f);
+    if (written != len) {
         fclose(f);
-        if (written != len) return -1;
-        chmod(path, (mode_t)mode);
+        unlink(tmp_path);
+        return -1;
     }
+#if !defined(_WIN32)
+    struct stat staged_identity;
+    if (fflush(f) != 0 || fchmod(fd, (mode_t)mode) != 0 ||
+        fsync(fd) != 0 || fstat(fd, &staged_identity) != 0) {
+        fclose(f);
+        unlink(tmp_path);
+        return -1;
+    }
+#if defined(SCACHE_TEST_BEFORE_RENAME)
+    SCACHE_TEST_BEFORE_RENAME(tmp_path);
+#endif
+    if (rename(tmp_path, path) == 0) {
+        struct stat destination_identity;
+        int matches = lstat(path, &destination_identity) == 0 &&
+            staged_identity.st_dev == destination_identity.st_dev &&
+            staged_identity.st_ino == destination_identity.st_ino;
+        int close_result = fclose(f);
+        if (!matches) unlink(path);
+        return matches && close_result == 0 ? 0 : -1;
+    }
+    fclose(f);
+    unlink(tmp_path);
+#else
+    if (fflush(f) != 0 || _commit(fd) != 0 ||
+        scache_rename_open_file(fd, path) != 0) {
+        fclose(f);
+        unlink(tmp_path);
+        return -1;
+    }
+    return fclose(f) == 0 ? 0 : -1;
+#endif
+#if !defined(_WIN32)
+    {
+        /* Rename failed (EXDEV?) — fall back to direct write */
+        int fallback_fd = open(path,
+                               O_CREAT | O_TRUNC | O_WRONLY | O_CLOEXEC |
+                                   O_NOFOLLOW,
+                               (mode_t)mode);
+        if (fallback_fd < 0) return -1;
+        f = fdopen(fallback_fd, "wb");
+        if (!f) {
+            close(fallback_fd);
+            return -1;
+        }
+        written = fwrite(data, 1, len, f);
+        if (written != len) {
+            fclose(f);
+            return -1;
+        }
+        if (fchmod(fallback_fd, (mode_t)mode) != 0) {
+            fclose(f);
+            return -1;
+        }
+        if (fclose(f) != 0) return -1;
+    }
+#endif
     return 0;
 }
 

@@ -321,38 +321,28 @@ extern "C" int binject_pe_lief(const char* executable,
     }
 
     // Step 5: Write modified binary (atomic rename workflow).
-    char tmpfile[PATH_MAX];
-    if (binject::create_temp_path(executable, tmpfile, sizeof(tmpfile)) != 0) {
+    binject::reserved_temp_file temp;
+    if (binject::create_temp_file(executable, &temp) != 0) {
       fprintf(stderr, "Error: Executable path too long for temporary file\n");
       return BINJECT_ERROR_WRITE_FAILED;
     }
 
-    // Create parent directories if needed.
-    if (create_parent_directories(tmpfile) != 0) {
-      fprintf(stderr, "Error: Failed to create parent directories for output path: %s\n", tmpfile);
-      return BINJECT_ERROR;
-    }
-
     // Write output to temp file using cross-platform helper with detailed error logging
     printf("Writing modified binary to temp file...\n");
-    if (write_file_atomically(tmpfile, output.data(), output.size(), 0755) == -1) {
+    if (binject::write_temp_file(&temp, output.data(), output.size()) != BINJECT_OK) {
+      binject::cleanup_temp_file(&temp);
       return BINJECT_ERROR_WRITE_FAILED;
     }
 
     // Verify file was written.
-    result = binject::verify_file_written(tmpfile);
+    result = binject::verify_file_written(&temp);
     if (result != BINJECT_OK) {
-        return result;
-    }
-
-    // Set executable permissions (Unix only).
-    result = set_executable_permissions(tmpfile);
-    if (result != BINJECT_OK) {
+        binject::cleanup_temp_file(&temp);
         return result;
     }
 
     // Atomic rename (handles platform differences internally).
-    result = binject::atomic_rename(tmpfile, executable);
+    result = binject::atomic_rename(&temp, executable);
     if (result != BINJECT_OK) {
         return result;
     }
@@ -481,32 +471,28 @@ extern "C" int binject_pe_lief_batch(
     }
 
     // Write to temp file first, then atomic rename
-    char tmpfile[PATH_MAX];
-    if (binject::create_temp_path(output, tmpfile, sizeof(tmpfile)) != 0) {
+    binject::reserved_temp_file temp;
+    if (binject::create_temp_file(output, &temp) != 0) {
       fprintf(stderr, "Error: Output path too long for temporary file\n");
       return BINJECT_ERROR_WRITE_FAILED;
     }
 
     // Write output to temp file using cross-platform helper with detailed error logging
     printf("Writing modified PE binary to temp file...\n");
-    if (write_file_atomically(tmpfile, rebuilt.data(), rebuilt.size(), 0755) == -1) {
+    if (binject::write_temp_file(&temp, rebuilt.data(), rebuilt.size()) != BINJECT_OK) {
+      binject::cleanup_temp_file(&temp);
       return BINJECT_ERROR_WRITE_FAILED;
     }
 
     // Verify file was actually written
-    int result = binject::verify_file_written(tmpfile);
+    int result = binject::verify_file_written(&temp);
     if (result != BINJECT_OK) {
-      return result;
-    }
-
-    // Set executable permissions (Unix only)
-    result = set_executable_permissions(tmpfile);
-    if (result != BINJECT_OK) {
+      binject::cleanup_temp_file(&temp);
       return result;
     }
 
     // Atomic rename to final destination
-    result = binject::atomic_rename(tmpfile, output);
+    result = binject::atomic_rename(&temp, output);
     if (result != BINJECT_OK) {
       return result;
     }

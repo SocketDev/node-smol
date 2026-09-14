@@ -18,9 +18,11 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <io.h>
+#include <fcntl.h>
 #define PATH_SEP '\\'
 #include "socketsecurity/build-infra/posix_compat.h"
 #else
+#include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
 #define PATH_SEP '/'
@@ -251,8 +253,9 @@ static void normalize_path(char *path) {
 }
 
 /* Add a file to the TAR buffer */
-static int tar_add_file(tar_buffer_t *buf, const char *base_path,
-                        const char *rel_path) {
+static int tar_add_file(tar_buffer_t *buf, int directory_fd,
+                        const char *base_path, const char *rel_path,
+                        const char *entry_name) {
     /* Build full path with length validation */
     size_t base_len = strlen(base_path);
     size_t rel_len = strlen(rel_path);
@@ -265,11 +268,53 @@ static int tar_add_file(tar_buffer_t *buf, const char *base_path,
     char full_path[MAX_PATH_LEN];
     snprintf(full_path, sizeof(full_path), "%s%c%s", base_path, PATH_SEP, rel_path);
 
-    /* Get file info */
-    struct stat st;
-    if (stat(full_path, &st) != 0) {
-        fprintf(stderr, "Error: Cannot stat file: %s (errno: %d - %s)\n",
+#ifdef _WIN32
+    int source_fd = _open(full_path, _O_RDONLY | _O_BINARY | _O_NOINHERIT);
+#else
+    int source_fd = openat(directory_fd, entry_name,
+                          O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+#endif
+    if (source_fd < 0) {
+        fprintf(stderr, "Error: Cannot open file: %s (errno: %d - %s)\n",
                 full_path, errno, strerror(errno));
+        return TAR_ERROR_READ_FAILED;
+    }
+
+#ifdef _WIN32
+    struct _stat64 st;
+    if (_fstat64(source_fd, &st) != 0) {
+        _close(source_fd);
+#else
+    struct stat st;
+    if (fstat(source_fd, &st) != 0) {
+        close(source_fd);
+#endif
+        fprintf(stderr, "Error: Cannot inspect file: %s (errno: %d - %s)\n",
+                full_path, errno, strerror(errno));
+        return TAR_ERROR_READ_FAILED;
+    }
+
+    if (!S_ISREG(st.st_mode)) {
+#ifdef _WIN32
+        _close(source_fd);
+#else
+        close(source_fd);
+#endif
+        fprintf(stderr, "Error: Refusing non-regular TAR input: %s\n", full_path);
+        return TAR_ERROR_READ_FAILED;
+    }
+
+#ifdef _WIN32
+    FILE *fp = _fdopen(source_fd, "rb");
+#else
+    FILE *fp = fdopen(source_fd, "rb");
+#endif
+    if (!fp) {
+#ifdef _WIN32
+        _close(source_fd);
+#else
+        close(source_fd);
+#endif
         return TAR_ERROR_READ_FAILED;
     }
 
@@ -281,12 +326,14 @@ static int tar_add_file(tar_buffer_t *buf, const char *base_path,
     /* Validate file size before casting to size_t */
     if (st.st_size < 0) {
         fprintf(stderr, "Error: Invalid file size (negative): %s\n", full_path);
+        fclose(fp);
         return TAR_ERROR_READ_FAILED;
     }
     if ((uint64_t)st.st_size > SIZE_MAX) {
         fprintf(stderr, "Error: File too large for TAR archive: %s (%lld bytes)\n",
                 full_path, (long long)st.st_size);
         fprintf(stderr, "  SIZE_MAX on this platform: %zu\n", SIZE_MAX);
+        fclose(fp);
         return TAR_ERROR_READ_FAILED;
     }
 
@@ -295,18 +342,16 @@ static int tar_add_file(tar_buffer_t *buf, const char *base_path,
     /* Create header */
     uint8_t header[TAR_BLOCK_SIZE];
     int rc = tar_create_header(header, tar_path, 0, file_size, st.st_mtime, st.st_mode);
-    if (rc != TAR_OK) return rc;
+    if (rc != TAR_OK) {
+        fclose(fp);
+        return rc;
+    }
 
     /* Append header */
     rc = tar_buffer_append(buf, header, TAR_BLOCK_SIZE);
-    if (rc != TAR_OK) return rc;
-
-    /* Read and append file content */
-    FILE *fp = fopen(full_path, "rb");
-    if (!fp) {
-        fprintf(stderr, "Error: Cannot open file: %s (errno: %d - %s)\n",
-                full_path, errno, strerror(errno));
-        return TAR_ERROR_READ_FAILED;
+    if (rc != TAR_OK) {
+        fclose(fp);
+        return rc;
     }
 
     rc = tar_buffer_grow(buf, file_size);
@@ -317,12 +362,15 @@ static int tar_add_file(tar_buffer_t *buf, const char *base_path,
 
     size_t bytes_read = fread(buf->data + buf->size, 1, file_size, fp);
     int fread_errno = ferror(fp) ? errno : 0;
-    fclose(fp);
 
     if (bytes_read != file_size) {
-        // Re-stat to detect if file changed (TOCTOU race detection)
+#ifdef _WIN32
+        struct _stat64 st_after;
+        if (_fstat64(source_fd, &st_after) == 0 && st_after.st_size != st.st_size) {
+#else
         struct stat st_after;
-        if (stat(full_path, &st_after) == 0 && st_after.st_size != st.st_size) {
+        if (fstat(source_fd, &st_after) == 0 && st_after.st_size != st.st_size) {
+#endif
             fprintf(stderr, "Error: File size changed during archiving: %s (was %lld bytes, now %lld bytes)\n",
                     full_path, (long long)st.st_size, (long long)st_after.st_size);
             fprintf(stderr, "  This indicates the file was modified while creating the TAR archive.\n");
@@ -333,9 +381,11 @@ static int tar_add_file(tar_buffer_t *buf, const char *base_path,
             fprintf(stderr, "Error: Failed to read file: %s (read %zu of %zu bytes)\n",
                     full_path, bytes_read, file_size);
         }
+        fclose(fp);
         return TAR_ERROR_READ_FAILED;
     }
 
+    fclose(fp);
     buf->size += bytes_read;
 
     /* Pad to block boundary */
@@ -366,7 +416,8 @@ static int tar_add_directory_entry(tar_buffer_t *buf, const char *rel_path, time
 
 #ifndef _WIN32
 /* Recursively add directory contents to TAR buffer */
-static int tar_add_directory_recursive(tar_buffer_t *buf, const char *base_path,
+static int tar_add_directory_recursive(tar_buffer_t *buf, int directory_fd,
+                                       const char *base_path,
                                        const char *rel_path) {
     /* Validate path lengths before construction */
     size_t base_len = strlen(base_path);
@@ -374,6 +425,7 @@ static int tar_add_directory_recursive(tar_buffer_t *buf, const char *base_path,
     if (base_len + rel_len + 2 > MAX_PATH_LEN) {
         fprintf(stderr, "Error: Directory path too long: %zu bytes (max %d): %s/%s\n",
                 base_len + rel_len + 2, MAX_PATH_LEN, base_path, rel_path ? rel_path : "");
+        close(directory_fd);
         return TAR_ERROR_PATH_TOO_LONG;
     }
 
@@ -384,8 +436,9 @@ static int tar_add_directory_recursive(tar_buffer_t *buf, const char *base_path,
         snprintf(full_path, sizeof(full_path), "%s", base_path);
     }
 
-    DIR *dir = opendir(full_path);
+    DIR *dir = fdopendir(directory_fd);
     if (!dir) {
+        close(directory_fd);
         fprintf(stderr, "Error: Cannot open directory: %s (errno: %d - %s)\n",
                 full_path, errno, strerror(errno));
         return TAR_ERROR_NOT_DIRECTORY;
@@ -436,26 +489,46 @@ static int tar_add_directory_recursive(tar_buffer_t *buf, const char *base_path,
 
         /* Get entry info */
         struct stat st;
-        if (stat(entry_full_path, &st) != 0) {
+        if (fstatat(directory_fd, entry->d_name, &st,
+                    AT_SYMLINK_NOFOLLOW) != 0) {
             fprintf(stderr, "Warning: Cannot stat: %s (errno: %d - %s, skipping)\n",
                     entry_full_path, errno, strerror(errno));
             continue;
         }
 
-        if (S_ISDIR(st.st_mode)) {
-            /* Add directory entry */
+        if (S_ISLNK(st.st_mode)) {
+            fprintf(stderr, "Error: Refusing symbolic link in TAR input: %s\n",
+                    entry_full_path);
+            rc = TAR_ERROR_READ_FAILED;
+            break;
+        } else if (S_ISDIR(st.st_mode)) {
+            int child_fd = openat(directory_fd, entry->d_name,
+                                  O_RDONLY | O_DIRECTORY | O_CLOEXEC |
+                                      O_NOFOLLOW);
+            struct stat child_stat;
+            if (child_fd < 0 || fstat(child_fd, &child_stat) != 0 ||
+                child_stat.st_dev != st.st_dev ||
+                child_stat.st_ino != st.st_ino) {
+                if (child_fd >= 0) close(child_fd);
+                fprintf(stderr, "Error: Directory changed while archiving: %s\n",
+                        entry_full_path);
+                rc = TAR_ERROR_READ_FAILED;
+                break;
+            }
             rc = tar_add_directory_entry(buf, entry_rel_path, st.st_mtime, st.st_mode);
-            if (rc != TAR_OK) break;
+            if (rc != TAR_OK) {
+                close(child_fd);
+                break;
+            }
 
-            /* Recurse into directory */
-            rc = tar_add_directory_recursive(buf, base_path, entry_rel_path);
+            rc = tar_add_directory_recursive(buf, child_fd, base_path,
+                                             entry_rel_path);
             if (rc != TAR_OK) break;
-        } else if (S_ISREG(st.st_mode)) {
-            /* Add file */
-            rc = tar_add_file(buf, base_path, entry_rel_path);
+        } else {
+            rc = tar_add_file(buf, directory_fd, base_path, entry_rel_path,
+                              entry->d_name);
             if (rc != TAR_OK) break;
         }
-        /* Skip other types (symlinks, devices, etc.) */
     }
 
     closedir(dir);
@@ -502,27 +575,40 @@ int tar_create_from_directory(const char *dir_path,
         return TAR_ERROR_ALLOC;
     }
 
-    /* Verify it's a directory */
-    struct stat st;
-    if (stat(dir_path, &st) != 0) {
-        fprintf(stderr, "Error: Cannot stat directory: %s (errno: %d - %s)\n",
+#ifndef _WIN32
+    int root_fd = open(dir_path,
+                       O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+    if (root_fd < 0) {
+        fprintf(stderr, "Error: Cannot open directory: %s (errno: %d - %s)\n",
                 dir_path, errno, strerror(errno));
         return TAR_ERROR_NOT_DIRECTORY;
     }
-    if (!S_ISDIR(st.st_mode)) {
+#else
+    struct stat st;
+    if (stat(dir_path, &st) != 0 || !S_ISDIR(st.st_mode)) {
         fprintf(stderr, "Error: Not a directory: %s\n", dir_path);
         return TAR_ERROR_NOT_DIRECTORY;
     }
+#endif
 
     /* Initialize buffer (start with 1MB) */
     tar_buffer_t buf;
     int rc = tar_buffer_init(&buf, TAR_INITIAL_BUFFER_SIZE);
-    if (rc != TAR_OK) return rc;
+    if (rc != TAR_OK) {
+#ifndef _WIN32
+        close(root_fd);
+#endif
+        return rc;
+    }
 
     printf("Creating TAR archive from: %s\n", dir_path);
 
     /* Recursively add directory contents */
+#ifndef _WIN32
+    rc = tar_add_directory_recursive(&buf, root_fd, dir_path, "");
+#else
     rc = tar_add_directory_recursive(&buf, dir_path, "");
+#endif
     if (rc != TAR_OK) {
         tar_buffer_free(&buf);
         return rc;

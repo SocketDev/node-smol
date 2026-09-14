@@ -34,8 +34,8 @@ CODESIGN_INFRA_LDFLAGS = $(BORINGSSL_CRYPTO_LIB)
 endif
 
 # Test files.
-TEST_SRCS = $(TEST_DIR)/binject_test.c $(SRC_DIR)/binject.c $(BIN_INFRA_SRC)/binary_format.c $(BIN_INFRA_SRC)/compression_common.c $(BUILD_INFRA_SRC)/file_utils.c $(BUILD_INFRA_SRC)/path_utils.c
-TEST_OBJS = $(BUILD_DIR)/binject_test.o $(BUILD_DIR)/binject.o $(BUILD_DIR)/binary_format.o $(BUILD_DIR)/compression_common.o $(BUILD_DIR)/file_utils.o $(BUILD_DIR)/path_utils.o
+TEST_SRCS = $(TEST_DIR)/binject_test.c $(SRC_DIR)/binject.c $(BUILD_INFRA_SRC)/tar_create.c $(BUILD_INFRA_SRC)/gzip_compress.c $(BIN_INFRA_SRC)/binary_format.c $(BIN_INFRA_SRC)/compression_common.c $(BUILD_INFRA_SRC)/file_utils.c $(BUILD_INFRA_SRC)/path_utils.c
+TEST_OBJS = $(BUILD_DIR)/binject_test.o $(BUILD_DIR)/binject.o $(BUILD_DIR)/tar_create.o $(BUILD_DIR)/gzip_compress.o $(BUILD_DIR)/binary_format.o $(BUILD_DIR)/compression_common.o $(BUILD_DIR)/file_utils.o $(BUILD_DIR)/path_utils.o
 TEST_TARGET = $(BUILD_DIR)/binject_test
 
 # := + $(FLAG) suffix so env-supplied flags append rather than

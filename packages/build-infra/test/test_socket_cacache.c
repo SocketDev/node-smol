@@ -1,3 +1,6 @@
+#define _XOPEN_SOURCE 700
+#define _DARWIN_C_SOURCE
+
 /**
  * test_socket_cache.c - Comprehensive tests for socket_cacache.h
  *
@@ -16,6 +19,18 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <ftw.h>
+
+static const char *g_swap_victim;
+static char g_swapped_file[1024];
+
+static void swap_staged_file(const char *path) {
+    if (!g_swap_victim) return;
+    snprintf(g_swapped_file, sizeof(g_swapped_file), "%s.held", path);
+    if (rename(path, g_swapped_file) == 0) symlink(g_swap_victim, path);
+}
+
+#define SCACHE_TEST_BEFORE_RENAME(path) swap_staged_file(path)
 
 /* Set SOCKET_CACACHE_DIR before including the header so it picks up our test dir */
 #include "socketsecurity/build-infra/socket_cacache.h"
@@ -33,25 +48,17 @@ static int g_failed = 0;
     } \
 } while (0)
 
-/* Recursive directory removal (rm -rf) */
+static int remove_tree_entry(const char *path, const struct stat *st,
+                             int type, struct FTW *state) {
+    (void)st;
+    (void)type;
+    (void)state;
+    return remove(path);
+}
+
 static int rmrf(const char *path) {
-    struct stat st;
-    if (lstat(path, &st) != 0) return 0;
-    if (S_ISDIR(st.st_mode)) {
-        DIR *d = opendir(path);
-        if (!d) return -1;
-        struct dirent *ent;
-        while ((ent = readdir(d)) != NULL) {
-            if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
-            char child[1024];
-            snprintf(child, sizeof(child), "%s/%s", path, ent->d_name);
-            rmrf(child);
-        }
-        closedir(d);
-        return rmdir(path);
-    }
-    if (S_ISLNK(st.st_mode)) return unlink(path);
-    return unlink(path);
+    int result = nftw(path, remove_tree_entry, 64, FTW_DEPTH | FTW_PHYS);
+    return result != 0 && errno == ENOENT ? 0 : result;
 }
 
 static char *make_tmpdir(const char *suffix) {
@@ -59,6 +66,55 @@ static char *make_tmpdir(const char *suffix) {
     snprintf(buf, sizeof(buf), "/tmp/cacache-c-%s-XXXXXX", suffix);
     char *result = mkdtemp(buf);
     return result;
+}
+
+static int test_rmrf_does_not_follow_symlinks(void) {
+    char tree[] = "/tmp/cacache-rmrf-tree-XXXXXX";
+    char target[] = "/tmp/cacache-rmrf-target-XXXXXX";
+    if (!mkdtemp(tree) || !mkdtemp(target)) return -1;
+
+    char target_file[512], link_path[512];
+    snprintf(target_file, sizeof(target_file), "%s/example.txt", target);
+    snprintf(link_path, sizeof(link_path), "%s/external", tree);
+    FILE *file = fopen(target_file, "wb");
+    if (!file) return -1;
+    fputs("keep", file);
+    fclose(file);
+    if (symlink(target, link_path) != 0 || rmrf(tree) != 0) return -1;
+
+    struct stat st;
+    int result = stat(target_file, &st) == 0 && S_ISREG(st.st_mode) ? 0 : -1;
+    rmrf(target);
+    return result;
+}
+
+static int test_atomic_write_rejects_swapped_staging_file(void) {
+    char root[] = "/tmp/cacache-write-swap-XXXXXX";
+    if (!mkdtemp(root)) return -1;
+    char cache_dir[512], victim[512], output[512];
+    snprintf(cache_dir, sizeof(cache_dir), "%s/_cacache", root);
+    if (mkdir(cache_dir, 0700) != 0) return -1;
+    setenv("SOCKET_CACACHE_DIR", cache_dir, 1);
+    snprintf(victim, sizeof(victim), "%s/victim", root);
+    snprintf(output, sizeof(output), "%s/output", cache_dir);
+    FILE *file = fopen(victim, "wb");
+    if (!file) return -1;
+    fputs("keep", file);
+    fclose(file);
+    g_swap_victim = victim;
+    int write_result = write_file_atomically(
+        output, (const uint8_t *)"safe", 4, 0644);
+    g_swap_victim = NULL;
+    file = fopen(victim, "rb");
+    char content[5] = {0};
+    int intact = file && fread(content, 1, 4, file) == 4 &&
+        strcmp(content, "keep") == 0;
+    if (file) fclose(file);
+    struct stat st;
+    int output_missing = lstat(output, &st) != 0 && errno == ENOENT;
+    unlink(g_swapped_file);
+    rmrf(root);
+    return write_result != 0 && intact && output_missing ? 0 : -1;
 }
 
 static int dir_exists(const char *path) {
@@ -782,6 +838,8 @@ static int test_tmp_cleanup(void) {
 int main(void) {
     printf("=== socket_cacache.h comprehensive tests ===\n\n");
 
+    RUN_TEST("rmrf-does-not-follow-symlinks",    test_rmrf_does_not_follow_symlinks);
+    RUN_TEST("atomic-write-rejects-swapped-staging-file", test_atomic_write_rejects_swapped_staging_file);
     RUN_TEST("normal-roundtrip",                test_normal_roundtrip);
     RUN_TEST("error-nonexistent-key",           test_error_nonexistent_key);
     RUN_TEST("di01-integrity-verification",     test_di01_integrity_verification);
