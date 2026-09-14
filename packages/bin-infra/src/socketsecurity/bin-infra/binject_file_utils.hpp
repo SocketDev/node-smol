@@ -96,26 +96,51 @@ inline int rename_open_file(HANDLE handle, const char* output) {
 
 struct reserved_temp_file {
     int fd;
+#ifndef _WIN32
+    int directory_fd;
+    struct stat directory_identity;
+#endif
     char directory[PATH_MAX];
     char path[PATH_MAX];
     char write_path[PATH_MAX];
 };
+
+inline void remove_temp_directory(reserved_temp_file* temp) {
+#ifdef _WIN32
+    _rmdir(temp->directory);
+#else
+    struct stat path_identity;
+    if (fstatat(AT_FDCWD, temp->directory, &path_identity,
+                AT_SYMLINK_NOFOLLOW) == 0 &&
+        path_identity.st_dev == temp->directory_identity.st_dev &&
+        path_identity.st_ino == temp->directory_identity.st_ino) {
+        rmdir(temp->directory);
+    }
+#endif
+}
 
 inline void cleanup_temp_file(reserved_temp_file* temp) {
     if (temp->fd >= 0) {
         POSIX_CLOSE(temp->fd);
         temp->fd = -1;
     }
-    POSIX_UNLINK(temp->path);
 #ifdef _WIN32
-    _rmdir(temp->directory);
+    POSIX_UNLINK(temp->path);
 #else
-    rmdir(temp->directory);
+    if (temp->directory_fd >= 0) {
+        unlinkat(temp->directory_fd, "output", 0);
+        close(temp->directory_fd);
+        temp->directory_fd = -1;
+    }
 #endif
+    remove_temp_directory(temp);
 }
 
 inline int create_temp_file(const char* base_path, reserved_temp_file* temp) {
     temp->fd = -1;
+#ifndef _WIN32
+    temp->directory_fd = -1;
+#endif
     if (create_parent_directories(base_path) != 0) return -1;
     int written = snprintf(temp->directory, sizeof(temp->directory),
                            "%s.tmp.XXXXXX", base_path);
@@ -128,6 +153,15 @@ inline int create_temp_file(const char* base_path, reserved_temp_file* temp) {
         _mkdir(temp->directory) != 0) return -1;
 #else
     if (!mkdtemp(temp->directory)) return -1;
+    temp->directory_fd = open(
+        temp->directory, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+    if (temp->directory_fd < 0 ||
+        fstat(temp->directory_fd, &temp->directory_identity) != 0) {
+        if (temp->directory_fd >= 0) close(temp->directory_fd);
+        temp->directory_fd = -1;
+        rmdir(temp->directory);
+        return -1;
+    }
 #endif
     written = snprintf(temp->path, sizeof(temp->path), "%s%coutput",
                        temp->directory,
@@ -153,7 +187,9 @@ inline int create_temp_file(const char* base_path, reserved_temp_file* temp) {
     }
     written = snprintf(temp->write_path, sizeof(temp->write_path), "%s", temp->path);
 #else
-    temp->fd = open(temp->path, O_CREAT | O_EXCL | O_RDWR | O_CLOEXEC, 0600);
+    temp->fd = openat(temp->directory_fd, "output",
+                      O_CREAT | O_EXCL | O_RDWR | O_CLOEXEC | O_NOFOLLOW,
+                      0600);
     written = snprintf(temp->write_path, sizeof(temp->write_path),
                        "/dev/fd/%d", temp->fd);
 #endif
@@ -291,33 +327,29 @@ inline int atomic_rename(reserved_temp_file* temp, const char* output) {
     struct stat descriptor_stat;
     struct stat path_stat;
     if (fstat(temp->fd, &descriptor_stat) != 0 ||
-        lstat(temp->path, &path_stat) != 0 ||
+        fstatat(temp->directory_fd, "output", &path_stat,
+                AT_SYMLINK_NOFOLLOW) != 0 ||
         descriptor_stat.st_dev != path_stat.st_dev ||
         descriptor_stat.st_ino != path_stat.st_ino) {
         cleanup_temp_file(temp);
         return BINJECT_ERROR_WRITE_FAILED;
     }
-    if (rename(temp->path, output) != 0) {
+#ifdef BINJECT_TEST_BEFORE_POSIX_RENAMEAT
+    BINJECT_TEST_BEFORE_POSIX_RENAMEAT(temp->directory);
+#endif
+    if (renameat(temp->directory_fd, "output", AT_FDCWD, output) != 0) {
         fprintf(stderr, "Error: Failed to move temporary file to output: %s\n", output);
         fprintf(stderr, "  errno: %d (%s)\n", errno, strerror(errno));
         cleanup_temp_file(temp);
         return BINJECT_ERROR_WRITE_FAILED;
     }
-    if (lstat(output, &path_stat) != 0 ||
-        descriptor_stat.st_dev != path_stat.st_dev ||
-        descriptor_stat.st_ino != path_stat.st_ino) {
-        cleanup_temp_file(temp);
-        return BINJECT_ERROR_WRITE_FAILED;
-    }
     POSIX_CLOSE(temp->fd);
     temp->fd = -1;
+    close(temp->directory_fd);
+    temp->directory_fd = -1;
 #endif
 
-#ifdef _WIN32
-    _rmdir(temp->directory);
-#else
-    rmdir(temp->directory);
-#endif
+    remove_temp_directory(temp);
 
     return BINJECT_OK;
 }
