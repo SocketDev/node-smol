@@ -75,3 +75,13 @@ export function* walkTests(rootDir: string): Generator<string> {
     }
   }
 }
+
+export function matchesTest262Include(
+  filePath: string,
+  include: string | undefined,
+): boolean {
+  return (
+    include === undefined ||
+    filePath.toLowerCase().includes(include.toLowerCase())
+  )
+}
