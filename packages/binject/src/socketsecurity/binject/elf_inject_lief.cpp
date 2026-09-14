@@ -130,16 +130,10 @@ extern "C" int binject_elf_lief(const char* executable,
     }
 
     // Write to temp file first, then atomic rename
-    char tmpfile[PATH_MAX];
-    if (binject::create_temp_path(executable, tmpfile, sizeof(tmpfile)) != 0) {
+    binject::reserved_temp_file temp;
+    if (binject::create_temp_file(executable, &temp) != 0) {
       fprintf(stderr, "Error: Executable path too long for temporary file\n");
       return BINJECT_ERROR_WRITE_FAILED;
-    }
-
-    // Create parent directories if needed.
-    if (create_parent_directories(tmpfile) != 0) {
-      fprintf(stderr, "Error: Failed to create parent directories for output path: %s\n", tmpfile);
-      return BINJECT_ERROR;
     }
 
     printf("Writing modified binary...\n");
@@ -147,22 +141,17 @@ extern "C" int binject_elf_lief(const char* executable,
     // Use LIEF approach with proper fixes for SEA/VFS injection
     // This includes: PT_NOTE p_vaddr fixes, ALLOC flag removal,
     // matching PT_LOAD segments, and triple-write pattern
-    elf_note_utils::write_with_notes(binary.get(), tmpfile);
+    elf_note_utils::write_with_notes(binary.get(), temp.write_path);
 
     // Verify file was actually written
-    result = binject::verify_file_written(tmpfile);
+    result = binject::verify_file_written(&temp);
     if (result != BINJECT_OK) {
-        return result;
-    }
-
-    // Set executable permissions (Unix only).
-    result = set_executable_permissions(tmpfile);
-    if (result != BINJECT_OK) {
+        binject::cleanup_temp_file(&temp);
         return result;
     }
 
     // Atomic rename (handles platform differences internally).
-    result = binject::atomic_rename(tmpfile, executable);
+    result = binject::atomic_rename(&temp, executable);
     if (result != BINJECT_OK) {
         return result;
     }

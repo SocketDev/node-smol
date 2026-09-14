@@ -9,6 +9,11 @@
 #include <string.h>
 #include "socketsecurity/binject/binject.h"
 #include "socketsecurity/bin-infra/test.h"
+#include "socketsecurity/build-infra/tar_create.h"
+#ifdef _WIN32
+#include <windows.h>
+#include "socketsecurity/binject/node_resolve.h"
+#endif
 #include "test_helpers.h"
 
 
@@ -251,6 +256,101 @@ TEST(test_checksum_empty) {
     return TEST_PASS;
 }
 
+#ifndef _WIN32
+TEST(test_tar_rejects_symlink_directory) {
+    char directory[] = "/tmp/binject-tar-directory-XXXXXX";
+    char target_directory[] = "/tmp/binject-tar-target-XXXXXX";
+    ASSERT(mkdtemp(directory) != NULL, "temporary directory must be created");
+    ASSERT(mkdtemp(target_directory) != NULL, "target directory must be created");
+
+    char target_file[512];
+    snprintf(target_file, sizeof(target_file), "%s/example.js", target_directory);
+    FILE *file = fopen(target_file, "wb");
+    ASSERT(file != NULL, "target file must be created");
+    ASSERT_EQ(fwrite("outside", 1, 7, file), 7);
+    fclose(file);
+
+    char link_path[512];
+    snprintf(link_path, sizeof(link_path), "%s/external", directory);
+    ASSERT_EQ(symlink(target_directory, link_path), 0);
+
+    uint8_t *tar_data = NULL;
+    size_t tar_size = 0;
+    int result = tar_create_from_directory(directory, &tar_data, &tar_size);
+    free(tar_data);
+    unlink(link_path);
+    unlink(target_file);
+    rmdir(target_directory);
+    rmdir(directory);
+
+    ASSERT_NE(result, TAR_OK);
+    return TEST_PASS;
+}
+
+TEST(test_tar_rejects_fifo) {
+    char directory[] = "/tmp/binject-tar-fifo-XXXXXX";
+    ASSERT(mkdtemp(directory) != NULL, "temporary directory must be created");
+
+    char fifo_path[512];
+    snprintf(fifo_path, sizeof(fifo_path), "%s/input", directory);
+    ASSERT_EQ(mkfifo(fifo_path, 0600), 0);
+
+    uint8_t *tar_data = NULL;
+    size_t tar_size = 0;
+    int result = tar_create_from_directory(directory, &tar_data, &tar_size);
+    free(tar_data);
+    unlink(fifo_path);
+    rmdir(directory);
+
+    ASSERT_NE(result, TAR_OK);
+    return TEST_PASS;
+}
+#else
+TEST(test_node_binary_denies_replacement_until_release) {
+    char executable_path[MAX_PATH];
+    ASSERT(GetModuleFileNameA(NULL, executable_path, MAX_PATH) > 0,
+           "test executable path must be available");
+    char temporary_root[MAX_PATH];
+    char binary_directory[MAX_PATH];
+    char moved_directory[MAX_PATH];
+    char copied_binary[MAX_PATH];
+    char moved_binary[MAX_PATH];
+    ASSERT(GetTempPathA(MAX_PATH, temporary_root) > 0,
+           "temporary path must be available");
+    ASSERT(GetTempFileNameA(temporary_root, "bnt", 0, binary_directory) != 0,
+           "temporary name must be available");
+    ASSERT(DeleteFileA(binary_directory), "temporary file must be removed");
+    ASSERT(CreateDirectoryA(binary_directory, NULL),
+           "temporary directory must be created");
+    snprintf(moved_directory, sizeof(moved_directory), "%s-moved",
+             binary_directory);
+    snprintf(copied_binary, sizeof(copied_binary), "%s\\node.exe",
+             binary_directory);
+    snprintf(moved_binary, sizeof(moved_binary), "%s\\node.exe",
+             moved_directory);
+    ASSERT(CopyFileA(executable_path, copied_binary, FALSE),
+           "test executable must be copied");
+
+    char *held_path = binject_retain_node_binary(copied_binary);
+    ASSERT(held_path != NULL, "test executable must be retained");
+
+    HANDLE writer = CreateFileA(
+        copied_binary, GENERIC_WRITE | DELETE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    ASSERT(writer == INVALID_HANDLE_VALUE,
+           "retained executable must deny write and delete access");
+    ASSERT(!MoveFileExA(binary_directory, moved_directory, 0),
+           "retained executable ancestors must deny replacement");
+    binject_release_node_binary(held_path);
+    ASSERT(MoveFileExA(binary_directory, moved_directory, 0),
+           "release must unlock executable ancestors");
+    DeleteFileA(moved_binary);
+    RemoveDirectoryA(moved_directory);
+    return TEST_PASS;
+}
+#endif
+
 /* Main test runner */
 int main(void) {
     TEST_SUITE("binject Core Tests");
@@ -279,6 +379,12 @@ int main(void) {
     RUN_TEST(test_checksum_deterministic);
     RUN_TEST(test_checksum_different_data);
     RUN_TEST(test_checksum_empty);
+#ifndef _WIN32
+    RUN_TEST(test_tar_rejects_symlink_directory);
+    RUN_TEST(test_tar_rejects_fifo);
+#else
+    RUN_TEST(test_node_binary_denies_replacement_until_release);
+#endif
 
     return TEST_REPORT();
 }

@@ -201,7 +201,7 @@ char* binject_generate_sea_blob_from_config(const char *config_path, const char 
     // Helper macro for cleanup on error
     #define CLEANUP_AND_RETURN_NULL() do { \
         if (node_binary) { \
-            free(node_binary); \
+            binject_release_node_binary(node_binary); \
         } \
         return NULL; \
     } while(0)
@@ -492,7 +492,7 @@ char* binject_generate_sea_blob_from_config(const char *config_path, const char 
 #endif
 
     // Free node_binary
-    free(node_binary);
+    binject_release_node_binary(node_binary);
     node_binary = NULL;
 
     // Parse sea-config.json using cJSON

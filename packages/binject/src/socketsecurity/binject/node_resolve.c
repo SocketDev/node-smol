@@ -23,12 +23,16 @@
 #define _DARWIN_C_SOURCE         // For F_GETPATH on macOS
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 #include <sys/stat.h>
 #ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#include <windows.h>
 #include "socketsecurity/build-infra/posix_compat.h"
 #else
 #include <fcntl.h>
@@ -44,85 +48,270 @@
 /**
  * Validate that a path is a legitimate Node.js binary
  * Basic validation: must be an existing executable file
- * Silent validation - returns 0/1 without printing errors (used for candidate search)
+ * Silent validation returns a descriptor-backed path for candidate search.
  */
-static int validate_node_binary(const char *path) {
+typedef struct {
+    int fd;
+#ifdef _WIN32
+    HANDLE *directory_handles;
+    size_t directory_handle_count;
+#endif
+    char path[];
+} node_binary_path_t;
+
+static void close_node_binary_fd(int fd) {
+#ifdef _WIN32
+    _close(fd);
+#else
+    close(fd);
+#endif
+}
+
+#ifdef _WIN32
+static void close_node_binary_directories(HANDLE *handles, size_t count);
+#endif
+
+static char *retain_node_binary_path(int fd, const char *path
+#ifdef _WIN32
+                                     , HANDLE *directory_handles,
+                                     size_t directory_handle_count
+#endif
+) {
+    size_t path_size = strlen(path) + 1;
+    node_binary_path_t *handle = malloc(sizeof(*handle) + path_size);
+    if (!handle) {
+#ifdef _WIN32
+        close_node_binary_directories(directory_handles,
+                                      directory_handle_count);
+#endif
+        close_node_binary_fd(fd);
+        return NULL;
+    }
+    handle->fd = fd;
+#ifdef _WIN32
+    handle->directory_handles = directory_handles;
+    handle->directory_handle_count = directory_handle_count;
+#endif
+    memcpy(handle->path, path, path_size);
+    return handle->path;
+}
+
+#ifdef _WIN32
+static void close_node_binary_directories(HANDLE *handles, size_t count) {
+    for (size_t index = 0; index < count; index++) {
+        CloseHandle(handles[index]);
+    }
+    free(handles);
+}
+
+static int lock_node_binary_directories(const char *path,
+                                        HANDLE **handles_out,
+                                        size_t *count_out) {
+    size_t path_size = strlen(path) + 1;
+    char *component = malloc(path_size);
+    HANDLE *handles = calloc(path_size, sizeof(*handles));
+    if (!component || !handles) {
+        free(component);
+        free(handles);
+        return -1;
+    }
+    memcpy(component, path, path_size);
+
+    size_t root_end = 0;
+    if (strncmp(component, "\\\\?\\UNC\\", 8) == 0) {
+        char *server_end = strchr(component + 8, '\\');
+        char *share_end = server_end ? strchr(server_end + 1, '\\') : NULL;
+        if (!share_end) {
+            free(component);
+            free(handles);
+            return -1;
+        }
+        root_end = (size_t)(share_end - component) + 1;
+    } else if (strncmp(component, "\\\\?\\", 4) == 0 &&
+               component[5] == ':' && component[6] == '\\') {
+        root_end = 7;
+    } else {
+        free(component);
+        free(handles);
+        return -1;
+    }
+
+    size_t count = 0;
+    for (char *separator = strchr(component + root_end, '\\'); separator;
+         separator = strchr(separator + 1, '\\')) {
+        *separator = '\0';
+        HANDLE directory = CreateFileA(
+            component, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL, OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+        *separator = '\\';
+        if (directory == INVALID_HANDLE_VALUE) {
+            close_node_binary_directories(handles, count);
+            free(component);
+            return -1;
+        }
+        handles[count++] = directory;
+    }
+
+    free(component);
+    *handles_out = handles;
+    *count_out = count;
+    return 0;
+}
+#endif
+
+char *binject_retain_node_binary(const char *path) {
     if (!path || *path == '\0') {
-        return 0;
+        return NULL;
     }
 
     // Check path length before canonicalization to avoid buffer issues
     size_t path_len = strlen(path);
     if (path_len >= PATH_MAX - 1) {
-        return 0;  // Path too long
+        return NULL;
     }
 
-    // Resolve to canonical absolute path to prevent path traversal
-    char resolved_path[PATH_MAX];
 #ifdef _WIN32
-    if (_fullpath(resolved_path, path, PATH_MAX) == NULL) {
-        return 0;  // Path doesn't exist or can't be resolved
+    HANDLE binary_handle = CreateFileA(
+        path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+    if (binary_handle == INVALID_HANDLE_VALUE) {
+        return NULL;
     }
-#elif defined(__APPLE__)
-    // realpath() on a relative path calls getcwd(), whose libc fallback
-    // readdir-scans every ancestor directory when the kernel name cache is
-    // cold — observed at ~40s per call with the cwd inside a /var/folders
-    // temp dir holding 700k+ entries. F_GETPATH asks the kernel for the
-    // canonical path of the opened file directly, with no directory walking.
-    int fd = open(path, O_RDONLY);
+    FILE_ATTRIBUTE_TAG_INFO tag_info;
+    if (!GetFileInformationByHandleEx(binary_handle, FileAttributeTagInfo,
+                                      &tag_info, sizeof(tag_info)) ||
+        (tag_info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) {
+        CloseHandle(binary_handle);
+        return NULL;
+    }
+    int fd = _open_osfhandle((intptr_t)binary_handle,
+                             _O_RDONLY | _O_BINARY | _O_NOINHERIT);
     if (fd < 0) {
-        return 0;  // Path doesn't exist or can't be opened
+        CloseHandle(binary_handle);
+        return NULL;
     }
-    if (fcntl(fd, F_GETPATH, resolved_path) == -1) {
-        close(fd);
-        return 0;  // Can't resolve canonical path
-    }
-    close(fd);
 #else
-    if (realpath(path, resolved_path) == NULL) {
-        return 0;  // Path doesn't exist or can't be resolved
-    }
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
 #endif
+    if (fd < 0) {
+        return NULL;
+    }
 
-    // Check if file exists and is executable
+#ifdef _WIN32
+    struct _stat64 st;
+    if (_fstat64(fd, &st) != 0) {
+        _close(fd);
+#else
     struct stat st;
-    if (stat(resolved_path, &st) != 0) {
-        return 0;  // File doesn't exist
+    if (fstat(fd, &st) != 0) {
+        close(fd);
+#endif
+        return NULL;
     }
 
     if (!S_ISREG(st.st_mode)) {
-        return 0;  // Not a regular file
+#ifdef _WIN32
+        _close(fd);
+#else
+        close(fd);
+#endif
+        return NULL;
     }
 
 #ifndef _WIN32
-    // On Unix, check if file is executable
     if (!(st.st_mode & S_IXUSR) && !(st.st_mode & S_IXGRP) && !(st.st_mode & S_IXOTH)) {
-        return 0;  // Not executable
+        close(fd);
+        return NULL;
     }
 #endif
 
-    // Verify it's actually a valid binary format (prevent arbitrary command execution)
-    FILE *fp = fopen(resolved_path, "rb");
-    if (!fp) {
-        return 0;  // Can't open file
-    }
-
     uint8_t magic[4];
-    size_t bytes_read = fread(magic, 1, 4, fp);
-    fclose(fp);
+#ifdef _WIN32
+    int bytes_read = _read(fd, magic, sizeof(magic));
+#else
+    ssize_t bytes_read = read(fd, magic, sizeof(magic));
+#endif
 
-    if (bytes_read != 4) {
-        return 0;  // File too small
+    if (bytes_read != (int)sizeof(magic)) {
+#ifdef _WIN32
+        _close(fd);
+#else
+        close(fd);
+#endif
+        return NULL;
     }
 
     // Check for valid executable format using shared detection
     binary_format_t format = detect_binary_format(magic);
 
     if (format == BINARY_FORMAT_UNKNOWN) {
-        return 0;  // Unknown binary format
+#ifdef _WIN32
+        _close(fd);
+#else
+        close(fd);
+#endif
+        return NULL;
     }
 
-    return 1;
+#ifdef _WIN32
+    char retained_path[PATH_MAX];
+    DWORD retained_size = GetFinalPathNameByHandleA(
+        binary_handle, retained_path, sizeof(retained_path),
+        FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+    if (retained_size == 0 || retained_size >= sizeof(retained_path)) {
+        _close(fd);
+        return NULL;
+    }
+    HANDLE *directory_handles = NULL;
+    size_t directory_handle_count = 0;
+    if (lock_node_binary_directories(retained_path, &directory_handles,
+                                     &directory_handle_count) != 0) {
+        _close(fd);
+        return NULL;
+    }
+    HANDLE identity_handle = CreateFileA(
+        retained_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+    BY_HANDLE_FILE_INFORMATION retained_info;
+    BY_HANDLE_FILE_INFORMATION identity_info;
+    if (identity_handle == INVALID_HANDLE_VALUE ||
+        !GetFileInformationByHandle(binary_handle, &retained_info) ||
+        !GetFileInformationByHandle(identity_handle, &identity_info) ||
+        retained_info.dwVolumeSerialNumber != identity_info.dwVolumeSerialNumber ||
+        retained_info.nFileIndexHigh != identity_info.nFileIndexHigh ||
+        retained_info.nFileIndexLow != identity_info.nFileIndexLow) {
+        if (identity_handle != INVALID_HANDLE_VALUE) CloseHandle(identity_handle);
+        close_node_binary_directories(directory_handles,
+                                      directory_handle_count);
+        _close(fd);
+        return NULL;
+    }
+    CloseHandle(identity_handle);
+    return retain_node_binary_path(fd, retained_path, directory_handles,
+                                   directory_handle_count);
+#else
+    char descriptor_path[64];
+    int written = snprintf(descriptor_path, sizeof(descriptor_path),
+                           "/dev/fd/%d", fd);
+    if (written < 0 || (size_t)written >= sizeof(descriptor_path)) {
+        close(fd);
+        return NULL;
+    }
+    return retain_node_binary_path(fd, descriptor_path);
+#endif
+}
+
+void binject_release_node_binary(char *node_binary) {
+    if (!node_binary) return;
+    node_binary_path_t *handle =
+        (node_binary_path_t *)(node_binary - offsetof(node_binary_path_t, path));
+#ifdef _WIN32
+    close_node_binary_directories(handle->directory_handles,
+                                  handle->directory_handle_count);
+#endif
+    close_node_binary_fd(handle->fd);
+    free(handle);
 }
 
 /**
@@ -242,8 +431,10 @@ static char* resolve_node_in_path(void) {
 
         snprintf(full_path, dir_len + node_len + 1, "%s%s", dir, node_suffix);
 
-        if (validate_node_binary(full_path)) {
-            result = full_path;
+        char *validated_path = binject_retain_node_binary(full_path);
+        if (validated_path) {
+            free(full_path);
+            result = validated_path;
             break;
         }
 
@@ -690,19 +881,21 @@ char* binject_find_matching_node_binary(const char *expected_version,
     // If version doesn't match, we still use it but caller handles code cache/bytecode fallback.
     const char *explicit_node = getenv("BINJECT_NODE_PATH");
     if (explicit_node && *explicit_node != '\0') {
-        if (validate_node_binary(explicit_node)) {
+        char *validated_path = binject_retain_node_binary(explicit_node);
+        if (validated_path) {
 #ifndef _WIN32
             // Warn if binary is in a world-writable directory (security risk)
             warn_if_world_writable_dir(explicit_node);
 #endif
-            char *version = get_node_version(explicit_node);
+            char *version = get_node_version(validated_path);
             if (version) {
                 int matches = !expected_version || strcmp(version, expected_version) == 0;
                 if (found_version_out) *found_version_out = version;
                 else free(version);
                 if (is_match_out) *is_match_out = matches ? 1 : 0;
-                return strdup(explicit_node);
+                return validated_path;
             }
+            binject_release_node_binary(validated_path);
         }
         // BINJECT_NODE_PATH set but invalid - don't search, fail explicitly
         // Sanitize output: truncate long paths, warn about potential issues
@@ -738,15 +931,16 @@ char* binject_find_matching_node_binary(const char *expected_version,
                 free(version);
             }
         }
-        if (path_node) free(path_node);
+        if (path_node) binject_release_node_binary(path_node);
     }
 
     // Step 3: Check version manager paths (nvm, fnm, volta, scoop, chocolatey)
     char **vm_paths = get_version_manager_node_paths(expected_version);
     if (vm_paths) {
         for (int i = 0; vm_paths[i] != NULL; i++) {
-            if (validate_node_binary(vm_paths[i])) {
-                char *version = get_node_version(vm_paths[i]);
+            char *validated_path = binject_retain_node_binary(vm_paths[i]);
+            if (validated_path) {
+                char *version = get_node_version(validated_path);
                 if (version) {
                     // Check if version matches
                     if (expected_version && strcmp(version, expected_version) == 0) {
@@ -754,21 +948,23 @@ char* binject_find_matching_node_binary(const char *expected_version,
                         if (found_version_out) *found_version_out = version;
                         else free(version);
                         if (is_match_out) *is_match_out = 1;
-                        char *result = strdup(vm_paths[i]);
+                        char *result = validated_path;
                         free_version_manager_paths(vm_paths);
-                        if (first_found_path) free(first_found_path);
+                        if (first_found_path) binject_release_node_binary(first_found_path);
                         if (first_found_version) free(first_found_version);
                         return result;
                     }
                     // Save as fallback if we don't have one yet
                     if (!first_found_path) {
-                        first_found_path = strdup(vm_paths[i]);
+                        first_found_path = validated_path;
                         first_found_version = version;
+                        validated_path = NULL;
                         version = NULL;
                     } else {
                         free(version);
                     }
                 }
+                if (validated_path) binject_release_node_binary(validated_path);
             }
         }
         free_version_manager_paths(vm_paths);
@@ -782,13 +978,7 @@ char* binject_find_matching_node_binary(const char *expected_version,
         return first_found_path;
     }
 
-    // Step 5: Last resort - return "node" and let execvp find it
-    // This handles edge cases where PATH resolution failed but node exists
-    char *result = strdup("node");
-    if (result && found_version_out) {
-        *found_version_out = get_node_version("node");
-    }
-    return result;
+    return NULL;
 }
 
 /* "Any working node will do" — see node_resolve.h. */

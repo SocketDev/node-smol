@@ -17,6 +17,7 @@ import process from 'node:process'
 import { makeExecutable } from 'local-build-infra/lib/build-steps'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
+import { normalizePath } from '@socketsecurity/lib-stable/paths/normalize'
 
 import { execCommand } from './helpers/exec-command-with-output.mts'
 import { getBinjectPath } from './helpers/paths.mts'
@@ -100,6 +101,11 @@ describe('bINJECT_NODE_PATH environment variable', () => {
       // Should show it is generating a blob using the specified node.
       expect(result.output).toMatch(/Generating SEA blob/)
       expect(result.output).toMatch(/Generated SEA blob/)
+      if (process.platform !== 'win32') {
+        expect(normalizePath(result.output)).toMatch(
+          /Generating SEA blob using: \/dev\/fd\/\d+/,
+        )
+      }
 
       // Should have created output binary
       expect(existsSync(outputBinary)).toBeTruthy()

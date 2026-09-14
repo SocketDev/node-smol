@@ -175,14 +175,20 @@ inline int smol_reuse_multi_ptnote(
     printf("  PHT: offset=%lu, entries=%u, entry_size=%u (keeping at original location)\n",
            (unsigned long)phoff, phnum, phentsize);
 
-    // Validate PHT bounds before iterating
-    // Check for overflow: phnum * phentsize could overflow
-    if (phentsize > 0 && phnum > SIZE_MAX / phentsize) {
+    if (phoff > SIZE_MAX || phentsize < 56) {
+        fprintf(stderr, "Error: Invalid PHT offset or entry size\n");
+        return -1;
+    }
+    const size_t pht_offset = static_cast<size_t>(phoff);
+    const size_t pht_entry_size = static_cast<size_t>(phentsize);
+    const size_t pht_entry_count = static_cast<size_t>(phnum);
+    if (pht_entry_count > SIZE_MAX / pht_entry_size) {
         fprintf(stderr, "Error: PHT size calculation would overflow\n");
         return -1;
     }
-    size_t pht_size = (size_t)phnum * phentsize;
-    if (phoff > binary_data.size() || pht_size > binary_data.size() - phoff) {
+    const size_t pht_size = pht_entry_count * pht_entry_size;
+    if (pht_offset > binary_data.size() ||
+        pht_size > binary_data.size() - pht_offset) {
         fprintf(stderr, "Error: PHT extends beyond binary bounds (phoff=%lu, pht_size=%zu, binary_size=%zu)\n",
                 (unsigned long)phoff, pht_size, binary_data.size());
         return -1;
@@ -200,7 +206,8 @@ inline int smol_reuse_multi_ptnote(
     uint64_t max_load_end = 0;
 
     for (uint16_t i = 0; i < phnum; i++) {
-        uint8_t* phdr = &binary_data[phoff + i * phentsize];
+        uint8_t* phdr =
+            &binary_data[pht_offset + static_cast<size_t>(i) * pht_entry_size];
         // Use memcpy for safe unaligned access
         uint32_t p_type;
         memcpy(&p_type, phdr, sizeof(p_type));
@@ -272,7 +279,8 @@ inline int smol_reuse_multi_ptnote(
     // 5. Node.js SEA needs proper p_vaddr for postject_find_resource() to work
     int last_note_idx = -1;
     for (uint16_t i = 0; i < phnum; i++) {
-        uint8_t* phdr = &binary_data[phoff + i * phentsize];
+        uint8_t* phdr =
+            &binary_data[pht_offset + static_cast<size_t>(i) * pht_entry_size];
         // Use memcpy for safe unaligned access
         uint32_t p_type;
         memcpy(&p_type, phdr, sizeof(p_type));
@@ -289,7 +297,9 @@ inline int smol_reuse_multi_ptnote(
     printf("  Using PT_NOTE entry at index %d\n", last_note_idx);
 
     // Get the existing PT_NOTE segment info
-    uint8_t* target_phdr = &binary_data[phoff + last_note_idx * phentsize];
+    uint8_t* target_phdr =
+        &binary_data[pht_offset +
+                     static_cast<size_t>(last_note_idx) * pht_entry_size];
     // Use memcpy for safe unaligned access
     uint64_t orig_offset, orig_vaddr, orig_filesz;
     memcpy(&orig_offset, target_phdr + 8, sizeof(orig_offset));
@@ -387,7 +397,9 @@ inline int smol_reuse_multi_ptnote(
     bool is_dynamic = false;
     if (!is_smol_compression) {
         for (uint16_t i = 0; i < phnum; i++) {
-            uint8_t* phdr = &binary_data[phoff + i * phentsize];
+            uint8_t* phdr =
+                &binary_data[pht_offset +
+                             static_cast<size_t>(i) * pht_entry_size];
             // Use memcpy for safe unaligned access
             uint32_t p_type;
             memcpy(&p_type, phdr, sizeof(p_type));
@@ -424,7 +436,9 @@ inline int smol_reuse_multi_ptnote(
 
     // Extend the last PT_LOAD segment to cover the appended notes
     if (last_load_idx >= 0 && is_dynamic) {
-        uint8_t* load_phdr = &binary_data[phoff + last_load_idx * phentsize];
+        uint8_t* load_phdr =
+            &binary_data[pht_offset +
+                         static_cast<size_t>(last_load_idx) * pht_entry_size];
 
         // New sizes: original size + gap + notes
         uint64_t new_load_filesz = last_load_filesz + gap_from_load_end + notes_total_size;

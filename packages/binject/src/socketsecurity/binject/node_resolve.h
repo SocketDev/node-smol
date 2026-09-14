@@ -39,16 +39,18 @@
  * @param expected_version Expected Node.js version (e.g., "25.5.0"), or NULL
  * @param found_version_out If non-NULL, receives the found version (caller must free)
  * @param is_match_out If non-NULL, set to 1 if version matched, 0 otherwise
- * @return Path to node binary (caller must free), or NULL if not found
+ * @return Path to node binary, or NULL if not found
  */
 char* binject_find_matching_node_binary(const char *expected_version,
                                         char **found_version_out,
                                         int *is_match_out);
+char* binject_retain_node_binary(const char *path);
+void binject_release_node_binary(char *node_binary);
 
 /**
  * Find system Node.js binary for running --experimental-sea-config
  * Returns path to node binary, or NULL if not found
- * Caller is responsible for freeing the returned string
+ * Release the returned path with binject_release_node_binary().
  *
  * Note: This is a convenience wrapper around binject_find_matching_node_binary()
  * when no version matching is needed.

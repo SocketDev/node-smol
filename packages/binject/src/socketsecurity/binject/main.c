@@ -446,7 +446,7 @@ int main(int argc, char *argv[]) {
 
         // Generate the blob
         char *blob_path = binject_generate_sea_blob_from_config(config_path, node_binary);
-        free(node_binary);
+        binject_release_node_binary(node_binary);
 
         if (!blob_path) {
             fprintf(stderr, "Error: Failed to generate SEA blob\n");
