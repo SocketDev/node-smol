@@ -16,6 +16,8 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { cleanCheckpoint } from './checkpoint-manager.mts'
 
+const logger = getDefaultLogger()
+
 /**
  * Clean build artifacts for a builder package.
  *
@@ -53,63 +55,63 @@ import { cleanCheckpoint } from './checkpoint-manager.mts'
  * @returns {Promise<void>}
  */
 export async function cleanBuilder(packageName, options = {}) {
-  const logger = options.logger || getDefaultLogger()
-
-  // Resolve package directory (default: caller's parent directory)
-  let { packageDir } = options
-  if (!packageDir) {
-    // Auto-detect from caller's location (typically scripts/clean.mts)
-    const stackLines = new Error().stack?.split(/\r?\n/) || []
-    const callerUrl =
-      stackLines.length > 2
-        ? stackLines[2].match(/\(([^)]+)\)/)?.[1]
-        : undefined
-    if (callerUrl) {
-      const callerPath = fileURLToPath(callerUrl)
-      packageDir = path.resolve(path.dirname(callerPath), '..')
-    } else {
-      throw new Error('packageDir must be provided or auto-detectable')
-    }
-  }
-
   const {
     buildDir = 'build',
     checkpointModes = ['prod', 'dev'],
     cleanDirs = ['build'],
+    logger: output = logger,
   } = options
+  const packageDir = resolvePackageDirectory(options.packageDir)
 
-  logger.info(`🧹 Cleaning ${packageName}…`)
-
-  let cleanedCount = 0
-
-  // Delete each specified directory
-  for (let i = 0, { length } = cleanDirs; i < length; i += 1) {
-    const dir = cleanDirs[i]
-    const dirPath = path.join(packageDir, dir)
-    if (existsSync(dirPath)) {
-      // eslint-disable-next-line no-await-in-loop
-      await safeDelete(dirPath)
-      logger.success(`Removed ${dir}/`)
-      cleanedCount++
-    }
-  }
-
-  // Clean checkpoints for specified modes
-  if (checkpointModes.length > 0) {
-    const buildDirPath = path.join(packageDir, buildDir)
-    for (let i = 0, { length } = checkpointModes; i < length; i += 1) {
-      const mode = checkpointModes[i]
-      const modeDirPath = path.join(buildDirPath, mode)
-      // eslint-disable-next-line no-await-in-loop
-      await cleanCheckpoint(modeDirPath, '')
-    }
-    logger.success('Cleaned checkpoints')
-    cleanedCount++
-  }
+  output.info(`Cleaning ${packageName}…`)
+  const cleanedCount =
+    (await cleanDirectories(packageDir, cleanDirs, output)) +
+    (await cleanCheckpoints(packageDir, buildDir, checkpointModes, output))
 
   if (cleanedCount === 0) {
-    logger.info('Nothing to clean')
+    output.info('Nothing to clean')
   } else {
-    logger.success('Clean complete')
+    output.success('Clean complete')
   }
+}
+
+export async function cleanCheckpoints(packageDir, buildDir, modes, output) {
+  if (modes.length === 0) {
+    return 0
+  }
+  const buildDirPath = path.join(packageDir, buildDir)
+  for (let i = 0, { length } = modes; i < length; i += 1) {
+    const modeDirPath = path.join(buildDirPath, modes[i])
+    await cleanCheckpoint(modeDirPath, '')
+  }
+  output.success('Cleaned checkpoints')
+  return 1
+}
+
+export async function cleanDirectories(packageDir, directories, output) {
+  let cleanedCount = 0
+  for (let i = 0, { length } = directories; i < length; i += 1) {
+    const directory = directories[i]
+    const directoryPath = path.join(packageDir, directory)
+    if (existsSync(directoryPath)) {
+      await safeDelete(directoryPath)
+      output.success(`Removed ${directory}/`)
+      cleanedCount += 1
+    }
+  }
+  return cleanedCount
+}
+
+export function resolvePackageDirectory(packageDir) {
+  if (packageDir) {
+    return packageDir
+  }
+  const stackLines = new Error().stack?.split(/\r?\n/) ?? []
+  const callerUrl =
+    stackLines.length > 2 ? stackLines[2].match(/\(([^)]+)\)/)?.[1] : undefined
+  if (!callerUrl) {
+    throw new Error('packageDir must be provided or auto-detectable')
+  }
+  const callerPath = fileURLToPath(callerUrl)
+  return path.resolve(path.dirname(callerPath), '..')
 }

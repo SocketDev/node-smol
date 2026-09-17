@@ -1,5 +1,5 @@
 /**
- * @file Static feature detector for node-smol SEA bundles. USAGE: pnpm --filter
+ * @file Static feature detector for node-smol SEA bundles. USAGE: `pnpm --filter`
  *   node-smol-builder run detect -- --bundle=path/to/main.js
  *   [--vfs=path/to/vfs.tar] [--overrides=package.json] [--json] What it does:
  *
@@ -339,20 +339,8 @@ export function hashSource(source: string): string {
   return `sha256:${crypto.createHash('sha256').update(source).digest('hex')}`
 }
 
-export async function detectBundleFeatures(config: {
-  bundlePath: string
-  vfsPath?: string | undefined
-  overrides?:
-    | { keep?: string[] | undefined; drop?: string[] | undefined }
-    | undefined
-}): Promise<FeatureManifest> {
-  const { bundlePath, vfsPath, overrides } = {
-    __proto__: null,
-    ...config,
-  } as typeof config
-  const mainSource = await fs.readFile(bundlePath, 'utf8')
-
-  const acc: ScanResult = {
+function createScanResult(): ScanResult {
+  return {
     __proto__: null,
     stringHits: new Map(),
     memberHits: new Map(),
@@ -367,61 +355,105 @@ export async function detectBundleFeatures(config: {
       totalBytes: 0,
     },
   }
+}
+
+function scanSources(sources: readonly string[], result: ScanResult): void {
+  for (let i = 0, { length } = sources; i < length; i += 1) {
+    const source = sources[i]!
+    scanSource(source, result)
+    scanAst(source, result)
+  }
+}
+
+function collectFeatureVerdicts(
+  result: ScanResult,
+  keepSet: ReadonlySet<string>,
+  dropSet: ReadonlySet<string>,
+): {
+  features: { [name: string]: FeatureVerdict }
+  ambiguous: string[]
+} {
+  const features: { [name: string]: FeatureVerdict } = { __proto__: null }
+  const ambiguous: string[] = []
+  for (const feature of SMOL_FEATURES) {
+    const verdict = decideFeature(feature, result, { keepSet, dropSet })
+    features[feature.name] = verdict
+    const isAmbiguous =
+      verdict.use === 'none' &&
+      result.hasComputedRequire &&
+      !dropSet.has(feature.name) &&
+      verdict.drop &&
+      feature.policy !== 'soft'
+    if (isAmbiguous) {
+      ambiguous.push(feature.name)
+    }
+  }
+  return { __proto__: null, ambiguous, features }
+}
+
+function resolveAmbiguousFeatures(
+  ambiguous: readonly string[],
+  features: { [name: string]: FeatureVerdict },
+  dropSet: ReadonlySet<string>,
+): void {
+  for (let i = 0, { length } = ambiguous; i < length; i += 1) {
+    const name = ambiguous[i]!
+    if (dropSet.has(name)) {
+      continue
+    }
+    const verdict = features[name]!
+    verdict.drop = false
+    verdict.note =
+      (verdict.note ? `${verdict.note}; ` : '') +
+      'computed require() present — kept conservatively (override with smol.drop)'
+  }
+}
+
+function collectConfigureFlags(features: {
+  [name: string]: FeatureVerdict
+}): string[] {
+  const flags: string[] = []
+  for (const feature of SMOL_FEATURES) {
+    const verdict = features[feature.name]!
+    if (verdict.drop && feature.configureFlagWhenDropped) {
+      flags.push(feature.configureFlagWhenDropped)
+    }
+  }
+  return flags
+}
+
+export async function detectBundleFeatures(config: {
+  bundlePath: string
+  vfsPath?: string | undefined
+  overrides?:
+    | { keep?: string[] | undefined; drop?: string[] | undefined }
+    | undefined
+}): Promise<FeatureManifest> {
+  const { bundlePath, vfsPath, overrides } = {
+    __proto__: null,
+    ...config,
+  } as typeof config
+  const mainSource = await fs.readFile(bundlePath, 'utf8')
+
+  const acc = createScanResult()
 
   const allSources = [mainSource]
   if (vfsPath) {
     allSources.push(...(await readVfsEntries(vfsPath)))
   }
-  for (let i = 0, { length } = allSources; i < length; i += 1) {
-    const src = allSources[i]!
-    scanSource(src, acc)
-    scanAst(src, acc)
-  }
+  scanSources(allSources, acc)
 
   const keepSet = new Set(overrides?.keep ?? [])
   const dropSet = new Set(overrides?.drop ?? [])
 
-  const features: { [name: string]: FeatureVerdict } = { __proto__: null }
-  const ambiguous: string[] = []
-  const configureFlags: string[] = []
-
-  for (const f of SMOL_FEATURES) {
-    const verdict = decideFeature(f, acc, { keepSet, dropSet })
-    features[f.name] = verdict
-    if (
-      verdict.use === 'none' &&
-      acc.hasComputedRequire &&
-      !dropSet.has(f.name)
-    ) {
-      // A computed require could be pulling this in; we can't prove it's unused.
-      if (verdict.drop && f.policy !== 'soft') {
-        ambiguous.push(f.name)
-      }
-    }
-  }
+  const { ambiguous, features } = collectFeatureVerdicts(acc, keepSet, dropSet)
 
   // Re-resolve drops after ambiguity: anything ambiguous becomes keep unless the
   // operator explicitly listed it in `drop`.
-  for (let i = 0, { length } = ambiguous; i < length; i += 1) {
-    const name = ambiguous[i]!
-    const v = features[name]!
-    if (!dropSet.has(name)) {
-      v.drop = false
-      v.note =
-        (v.note ? `${v.note}; ` : '') +
-        'computed require() present — kept conservatively (override with smol.drop)'
-    }
-  }
+  resolveAmbiguousFeatures(ambiguous, features, dropSet)
 
   // Derive configure flags from final drop decisions.
-  for (const f of SMOL_FEATURES) {
-    const v = features[f.name]!
-    if (v.drop && f.configureFlagWhenDropped) {
-      configureFlags.push(f.configureFlagWhenDropped)
-    }
-    // Opt-in features (postgres/dawn/iouring): dropping means simply not adding
-    // the optInFlag, which is the default — nothing to emit.
-  }
+  const configureFlags = collectConfigureFlags(features)
 
   const v8Lite = v8LiteRecommendation(acc.compute)
   // The heuristic is advisory: surfaced in the manifest, but only added to the

@@ -28,6 +28,7 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { escapeRegExp } from '@socketsecurity/lib-stable/regexps/escape'
 
 import { errorMessage } from '../lib/error-utils.mts'
+import { getGithubToken } from '@socketsecurity/lib-stable/env/github'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const logger = getDefaultLogger()
@@ -127,8 +128,8 @@ export async function fetchJson(url) {
   }
 
   // Use GITHUB_TOKEN if available for higher rate limits
-  if (process.env['GITHUB_TOKEN']) {
-    headers.Authorization = `Bearer ${process.env['GITHUB_TOKEN']}`
+  if (getGithubToken()) {
+    headers.Authorization = `Bearer ${getGithubToken()}`
   }
 
   return httpJson(url, { headers })
@@ -219,7 +220,7 @@ export async function getPythonRelease() {
     })
   }
 
-  return { assets, version }
+  return { __proto__: null, assets, version }
 }
 
 /**
@@ -276,7 +277,7 @@ export async function getLatestRelease(toolName) {
     }
   }
 
-  return { assets, version }
+  return { __proto__: null, assets, version }
 }
 
 /**

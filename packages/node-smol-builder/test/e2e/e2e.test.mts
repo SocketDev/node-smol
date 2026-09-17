@@ -1,5 +1,6 @@
 /**
  * @file End-to-end tests for complete build pipeline.
+ *   runner-collection: opt-in lane
  *   Tests the entire flow:
  *
  *   1. Build node-smol binary (all checkpoints)
@@ -8,7 +9,7 @@
  *   4. Execute and verify functionality
  *   5. Test VFS extraction to ~/.socket/_dlx/
  *   6. Verify compressed binary decompression Note: These are expensive tests that
- *      build the entire binary. Run with: pnpm test:e2e
+ *      build the entire binary. Run with: `pnpm test:e2e`
  */
 
 import { afterAll, beforeAll, describe, expect, it, test } from 'vitest'
@@ -18,7 +19,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'

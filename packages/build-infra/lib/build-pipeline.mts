@@ -26,7 +26,7 @@
  */
 
 import crypto from 'node:crypto'
-import { existsSync, promises as fs, readFileSync } from 'node:fs'
+import { existsSync, promises as fs, readFileSync, writeSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
@@ -44,7 +44,7 @@ import {
   getCurrentPlatformArch,
   parsePlatformArch,
 } from './platform-mappings.mts'
-import { getNodeVersion } from './version-helpers.mts'
+import { getNodeVersion } from './tool-versions.mts'
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 
 import type { ExternalToolsFile } from './external-tools-schema.mts'
@@ -112,6 +112,68 @@ export function buildCacheKey({
   return `v${nodeVersion}-${platformArch}-${buildMode}-${digest}-${packageVersion}`
 }
 
+export async function cleanPipelineState(
+  flags,
+  stages,
+  ctx,
+  paths,
+  sharedPaths,
+  outputFiles,
+) {
+  if (flags.clean) {
+    logger.substep('Clean build requested — removing all checkpoints')
+    await cleanCheckpoint(paths.buildDir, '')
+    if (sharedPaths?.buildDir) {
+      await cleanCheckpoint(sharedPaths.buildDir, '')
+    }
+    return
+  }
+  if (flags.cleanStage) {
+    logger.substep(`Clean requested for stage: ${flags.cleanStage}`)
+    const index = stages.findIndex(stage => stage.name === flags.cleanStage)
+    if (index === -1) {
+      throw new Error(
+        `Unknown --clean-stage=${flags.cleanStage}. Valid: ${stages.map(stage => stage.name).join(', ')}`,
+      )
+    }
+    const remainingStages = stages.slice(index)
+    for (
+      let stageIndex = 0, { length: stageCount } = remainingStages;
+      stageIndex < stageCount;
+      stageIndex += 1
+    ) {
+      const stage = remainingStages[stageIndex]
+      const markerDir = path.join(
+        resolveCheckpointBuildDir(stage, ctx),
+        'checkpoints',
+      )
+      const extensions = ['.json', '.tar.gz', '.tar.gz.lock']
+      for (
+        let extensionIndex = 0, { length: extensionCount } = extensions;
+        extensionIndex < extensionCount;
+        extensionIndex += 1
+      ) {
+        const extension = extensions[extensionIndex]
+        const file = path.join(markerDir, `${stage.name}${extension}`)
+        if (existsSync(file)) {
+          await safeDelete(file)
+        }
+      }
+    }
+    return
+  }
+  if (!outputFiles.length || outputFiles.every(existsSync)) {
+    return
+  }
+  logger.substep(
+    'Output artifacts missing — invalidating all checkpoints to rebuild',
+  )
+  await cleanCheckpoint(paths.buildDir, '')
+  if (sharedPaths?.buildDir) {
+    await cleanCheckpoint(sharedPaths.buildDir, '')
+  }
+}
+
 export function hashFileContents(files: string[]): string {
   const hash = crypto.createHash('sha256')
   // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
@@ -164,6 +226,22 @@ export async function loadPackageJson(
   return pkg
 }
 
+export function logPipelineOutput(outputFiles, packageRoot, paths, totalStart) {
+  const seconds = ((Date.now() - totalStart) / 1000).toFixed(1)
+  logger.step('Build complete')
+  logger.success(`Total time: ${seconds}s`)
+  logger.success(`Output: ${paths.outputFinalDir ?? paths.buildDir}`)
+  if (!outputFiles.length) {
+    return
+  }
+  logger.info('')
+  logger.info('Files:')
+  for (let i = 0, { length } = outputFiles; i < length; i += 1) {
+    logger.info(`  - ${path.relative(packageRoot, outputFiles[i])}`)
+  }
+  logger.info('')
+}
+
 export function parseFlags(argv) {
   const args = new Set(argv)
   const getValue = flag => {
@@ -177,6 +255,7 @@ export function parseFlags(argv) {
     return undefined
   }
   return {
+    __proto__: null,
     force: args.has('--force'),
     clean: args.has('--clean'),
     printCacheKey: args.has('--cache-key'),
@@ -214,15 +293,20 @@ export function resolveCheckpointBuildDir(stage, ctx) {
   return ctx.paths.buildDir
 }
 
-/**
- * Validate + run a pipeline. On --cache-key, prints the key and exits without
- * building. Returns the context so the caller can render a summary.
- *
- * @param {RunPipelineConfig} options
- * @param {object} [cliOverrides] - Pre-parsed flags (for programmatic use).
- *
- * @returns {Promise<PipelineContext>}
- */
+export function resolveStartStage(flags, stages) {
+  if (!flags.fromStage) {
+    return 0
+  }
+  const index = stages.findIndex(stage => stage.name === flags.fromStage)
+  if (index === -1) {
+    throw new Error(
+      `Unknown --from-stage=${flags.fromStage}. Valid: ${stages.map(stage => stage.name).join(', ')}`,
+    )
+  }
+  logger.substep(`Starting from stage: ${flags.fromStage}`)
+  return index
+}
+
 export async function runPipeline(config, cliOverrides) {
   const {
     extraCacheInputs = [],
@@ -240,11 +324,13 @@ export async function runPipeline(config, cliOverrides) {
   const platformArch = await getCurrentPlatformArch()
   const nodeVersion = getNodeVersion().replace(/^v/, '')
 
-  const [pkgJson, { versions: toolVersions, rawHash: toolsHash }] =
-    await Promise.all([
-      loadPackageJson(packageRoot),
-      loadExternalTools(packageRoot),
-    ])
+  const {
+    0: pkgJson,
+    1: { versions: toolVersions, rawHash: toolsHash },
+  } = await Promise.all([
+    loadPackageJson(packageRoot),
+    loadExternalTools(packageRoot),
+  ])
 
   const sources = pkgJson.sources ?? {}
   const packageVersion = pkgJson.version ?? '0.0.0'
@@ -263,7 +349,7 @@ export async function runPipeline(config, cliOverrides) {
   })
 
   if (flags.printCacheKey) {
-    process.stdout.write(`${cacheKey}\n`) // socket-hook: allow logger -- shell capture of cache key
+    writeSync(1, `${cacheKey}\n`)
     return undefined
   }
 
@@ -293,49 +379,13 @@ export async function runPipeline(config, cliOverrides) {
   }
 
   const totalStart = Date.now()
-  logger.step(`🔨 Building ${packageName}`)
+  logger.step(`Building ${packageName}`)
   logger.info(`Mode: ${buildMode}`)
   logger.info(`Platform: ${platformArch}`)
   logger.info(`Cache key: ${cacheKey}`)
   logger.info('')
 
-  // Handle --clean / --clean-stage / missing-output clean-up.
-  if (flags.clean) {
-    logger.substep('Clean build requested — removing all checkpoints')
-    await cleanCheckpoint(paths.buildDir, '')
-    if (sharedPaths?.buildDir) {
-      await cleanCheckpoint(sharedPaths.buildDir, '')
-    }
-  } else if (flags.cleanStage) {
-    logger.substep(`Clean requested for stage: ${flags.cleanStage}`)
-    // Invalidates this stage + anything depending on it.
-    const idx = stages.findIndex(s => s.name === flags.cleanStage)
-    if (idx === -1) {
-      throw new Error(
-        `Unknown --clean-stage=${flags.cleanStage}. Valid: ${stages.map(s => s.name).join(', ')}`,
-      )
-    }
-    // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
-    for (const stage of stages.slice(idx)) {
-      const buildDir = resolveCheckpointBuildDir(stage, ctx)
-      const markerDir = path.join(buildDir, 'checkpoints')
-      // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
-      for (const ext of ['.json', '.tar.gz', '.tar.gz.lock']) {
-        const file = path.join(markerDir, `${stage.name}${ext}`)
-        if (existsSync(file)) {
-          await safeDelete(file)
-        }
-      }
-    }
-  } else if (outputFiles.length && outputFiles.some(p => !existsSync(p))) {
-    logger.substep(
-      'Output artifacts missing — invalidating all checkpoints to rebuild',
-    )
-    await cleanCheckpoint(paths.buildDir, '')
-    if (sharedPaths?.buildDir) {
-      await cleanCheckpoint(sharedPaths.buildDir, '')
-    }
-  }
+  await cleanPipelineState(flags, stages, ctx, paths, sharedPaths, outputFiles)
 
   if (preflight) {
     logger.step('Pre-flight Checks')
@@ -345,16 +395,7 @@ export async function runPipeline(config, cliOverrides) {
 
   // --from-stage: pretend earlier stages succeeded (they should have cached
   // checkpoints already). We just skip running them.
-  let startIdx = 0
-  if (flags.fromStage) {
-    startIdx = stages.findIndex(s => s.name === flags.fromStage)
-    if (startIdx === -1) {
-      throw new Error(
-        `Unknown --from-stage=${flags.fromStage}. Valid: ${stages.map(s => s.name).join(', ')}`,
-      )
-    }
-    logger.substep(`Starting from stage: ${flags.fromStage}`)
-  }
+  const startIdx = resolveStartStage(flags, stages)
 
   // Iterable is not a bare identifier (could be Map/Set/Generator/expression).
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
@@ -362,19 +403,7 @@ export async function runPipeline(config, cliOverrides) {
     await runStage(stage, ctx, {})
   }
 
-  const seconds = ((Date.now() - totalStart) / 1000).toFixed(1)
-  logger.step('🎉 Build Complete!')
-  logger.success(`Total time: ${seconds}s`)
-  logger.success(`Output: ${paths.outputFinalDir ?? paths.buildDir}`)
-  if (outputFiles.length) {
-    logger.info('')
-    logger.info('Files:')
-    for (let i = 0, { length } = outputFiles; i < length; i += 1) {
-      const file = outputFiles[i]
-      logger.info(`  - ${path.relative(packageRoot, file)}`)
-    }
-    logger.info('')
-  }
+  logPipelineOutput(outputFiles, packageRoot, paths, totalStart)
   return ctx
 }
 
@@ -415,10 +444,11 @@ export async function runStage(stage, ctx, stageParams) {
   // cache entries. parsePlatformArch is the inverse of getAssetPlatformArch
   // that produced ctx.platformArch at pipeline startup.
   const platformMeta = stage.shared
-    ? {}
+    ? { __proto__: null }
     : (() => {
         const { platform, arch, libc } = parsePlatformArch(ctx.platformArch)
         return {
+          __proto__: null,
           arch,
           buildMode,
           libc,

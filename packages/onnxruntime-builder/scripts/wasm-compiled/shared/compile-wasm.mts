@@ -9,10 +9,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import {
-  formatDuration,
-  getFileSize,
-} from 'local-build-infra/lib/build-helpers'
+import { formatDuration, getFileSize } from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import { ensureEmscripten } from 'local-build-infra/lib/emscripten-installer'
 import {
@@ -20,7 +17,7 @@ import {
   getCCRemapFlagsString,
 } from 'local-build-infra/lib/path-remap-flags'
 
-import { whichSync } from '@socketsecurity/lib-stable/bin/which'
+import { whichSync } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -61,6 +58,42 @@ export async function compileWasm(config) {
     isCI,
     modeSourceDir,
   } = { __proto__: null, ...config } as typeof config
+
+  async function addRootBuildArgument(buildArgs) {
+    if (!process.getuid || process.getuid() !== 0) {
+      return
+    }
+    const buildPy = path.join(modeSourceDir, 'tools', 'ci_build', 'build.py')
+    const result = await spawn('python3', [buildPy, '--help'], {
+      cwd: modeSourceDir,
+      stdio: 'pipe',
+    }).catch(() => undefined)
+    const helpText = (result?.stdout || '') + (result?.stderr || '')
+    if (helpText.includes('--allow_running_as_root')) {
+      buildArgs.push('--allow_running_as_root')
+    }
+  }
+
+  function configureBuildAccelerators(buildArgs, buildEnv) {
+    if (ninjaAvailable) {
+      logger.substep('Using Ninja build system (faster)')
+      buildArgs.push('--cmake_generator', 'Ninja')
+    } else {
+      logger.warn(
+        'Ninja not found - using Make (slower). Install: brew install ninja',
+      )
+    }
+    if (ccacheAvailable) {
+      logger.substep('Using ccache for faster C++ compilation')
+      buildEnv['CCACHE_MAXSIZE'] = '10G'
+      buildEnv['CCACHE_COMPRESS'] = '1'
+      buildEnv['CCACHE_COMPRESSLEVEL'] = '6'
+    } else {
+      logger.warn(
+        'ccache not found - builds will be slower. Install: brew install ccache',
+      )
+    }
+  }
 
   logger.step('Building ONNX Runtime with Emscripten')
 
@@ -155,18 +188,7 @@ export async function compileWasm(config) {
   // Upstream removed the flag in v1.23 then restored it in v1.24, so we
   // probe build.py (the actual argparse target — build.sh is just a
   // shell wrapper) and only add the flag if argparse knows about it.
-  if (process.getuid && process.getuid() === 0) {
-    const buildPy = path.join(modeSourceDir, 'tools', 'ci_build', 'build.py')
-    const buildPyArgsResult = await spawn('python3', [buildPy, '--help'], {
-      cwd: modeSourceDir,
-      stdio: 'pipe',
-    }).catch(() => undefined)
-    const helpText =
-      (buildPyArgsResult?.stdout || '') + (buildPyArgsResult?.stderr || '')
-    if (helpText.includes('--allow_running_as_root')) {
-      buildArgs.push('--allow_running_as_root')
-    }
-  }
+  await addRootBuildArgument(buildArgs)
 
   // Add optimization flags based on build mode
   if (buildMode === 'prod') {
@@ -182,15 +204,6 @@ export async function compileWasm(config) {
   }
 
   // Use Ninja if available (much faster than Make for large C++ projects)
-  if (ninjaAvailable) {
-    logger.substep('Using Ninja build system (faster)')
-    buildArgs.push('--cmake_generator', 'Ninja')
-  } else {
-    logger.warn(
-      'Ninja not found - using Make (slower). Install: brew install ninja',
-    )
-  }
-
   // Set up ccache for faster C++ compilation if available
   // NOTE: DO NOT set CC/CXX when using Emscripten - the toolchain file manages this
   const buildEnv = { ...process.env }
@@ -205,19 +218,7 @@ export async function compileWasm(config) {
   buildEnv['CFLAGS'] = appendCCRemapFlags(buildEnv['CFLAGS'])
   buildEnv['CXXFLAGS'] = appendCCRemapFlags(buildEnv['CXXFLAGS'])
   logger.substep(`Path-remap flags: ${remapFlags}`)
-  if (ccacheAvailable) {
-    logger.substep('Using ccache for faster C++ compilation')
-    // Increase ccache size for large builds
-    buildEnv['CCACHE_MAXSIZE'] = '10G'
-    buildEnv['CCACHE_COMPRESS'] = '1'
-    buildEnv['CCACHE_COMPRESSLEVEL'] = '6'
-    // Note: We don't override CC/CXX here because Emscripten's CMake toolchain
-    // file handles compiler configuration. Overriding causes CMake include errors.
-  } else {
-    logger.warn(
-      'ccache not found - builds will be slower. Install: brew install ccache',
-    )
-  }
+  configureBuildAccelerators(buildArgs, buildEnv)
 
   // Start spinner with elapsed time updates
   getSpinner().start('Building ONNX Runtime (30-60 min)')
@@ -293,6 +294,7 @@ export async function compileWasm(config) {
 
   const wasmSize = await getFileSize(wasmFile)
   return {
+    __proto__: null,
     artifactPath: path.dirname(wasmFile),
     binaryPath: path.relative(buildDir, wasmFile),
     binarySize: wasmSize,

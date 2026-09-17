@@ -21,7 +21,7 @@ import {
 
 // Binary-stage checkpoints require explicit {platform, arch}; these tests
 // exercise the checkpoint machinery generically, so any concrete target works.
-const TARGET = { platform: 'linux', arch: 'x64' } as const
+const TARGET = { arch: 'x64', platform: 'linux' } as const
 
 describe('checkpoint-manager', () => {
   let testBuildDir: string

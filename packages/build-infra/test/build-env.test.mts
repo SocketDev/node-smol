@@ -88,7 +88,7 @@ describe('build-env', { timeout: tolerantTimeout(60_000) }, () => {
       const result = await checkPython()
 
       if (result.available) {
-        const [major, minor] = result.version.split('.').map(Number)
+        const { 0: major, 1: minor } = result.version.split('.').map(Number)
 
         if (major >= 3 && minor >= 8) {
           expect(result.meetsRequirement).toBeTruthy()

@@ -7,7 +7,7 @@
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { getFileSize } from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
@@ -58,6 +58,7 @@ export async function copyToRelease(config) {
   logger.logNewline()
 
   return {
+    __proto__: null,
     artifactPath: outputReleaseDir,
     binaryPath: path.relative(buildDir, releaseWasmFile),
     binarySize: wasmSize,

@@ -60,10 +60,10 @@ function serve(options) {
   opts.tls = { ...FAST_TLS_DEFAULTS, ...userTls }
 
   // Copy top-level key/cert/ca/passphrase into tls if provided directly
-  if (opts.key) opts.tls.key = opts.key
-  if (opts.cert) opts.tls.cert = opts.cert
-  if (opts.ca) opts.tls.ca = opts.ca
-  if (opts.passphrase) opts.tls.passphrase = opts.passphrase
+  if (opts.key) {opts.tls.key = opts.key}
+  if (opts.cert) {opts.tls.cert = opts.cert}
+  if (opts.ca) {opts.tls.ca = opts.ca}
+  if (opts.passphrase) {opts.tls.passphrase = opts.passphrase}
 
   const server = httpServe(opts)
 

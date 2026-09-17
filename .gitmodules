@@ -1,17 +1,20 @@
-# stuie-main-HEAD
-# no-release-tag: stuie publishes no release tags (git ls-remote --tags is empty)
+# stuie-cabi-snapshot (2026-08-03) sha256:573544022eb6c1c2d924aba6e5d27a360b3d3c39ea3a8fb036f0159821528f23
+# no-release-tag: the pinned C ABI snapshot postdates stuie's only release tag
 [submodule "upstream/stuie"]
+	ref = ae927afb9e8176dc4c7b642a1d8e638285df448a
 	ignore = dirty
 	path = upstream/stuie
 	url = git@github.com:SocketDev/stuie.git
 	branch = main
 	shallow = true
-# node-v26.7.0 (2026-08-05) sha256:55978d14606877dcb1ffd9d2b789fde4fac5355709eec9913e870b65d94f1f33
+	sparse-checkout = .gitmodules crates/stuie-cabi/src/
+	verify = none
+# node-v26.8.1 (2026-08-26) sha256:6820658dd95037a1488a94f06184f67e5c56e0fb572d37016871792b1561dd3b
 [submodule "packages/node-smol-builder/upstream/node"]
-	ref = b4f23d3619c98bed09af93a21192f6080197a8c6
+	ref = 7be6d3af31a65adea57c94c41e50c2b071ed0b3a
 	path = packages/node-smol-builder/upstream/node
 	url = https://github.com/nodejs/node.git
-	branch = v26.7.0
+	branch = v26.8.1
 	ignore = dirty
 	shallow = true
 # yoga-3.2.1

@@ -8,13 +8,13 @@
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { getFileSize } from 'local-build-infra/lib/build-steps'
 import {
   createCheckpoint,
   shouldRun,
 } from 'local-build-infra/lib/checkpoint-manager'
 import { CHECKPOINTS } from 'local-build-infra/lib/constants'
-import { validateOnnxFile } from 'local-build-infra/lib/onnx-helpers'
+import { validateOnnxFile } from 'local-build-infra/lib/onnx-validation'
 import { getPythonCommand } from 'local-build-infra/lib/python-installer'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 import * as ort from 'onnxruntime-node'
@@ -276,6 +276,7 @@ export async function quantizeModels(ctx) {
  * only).
  *
  * Uses onnxruntime.transformers.optimizer to apply graph optimizations like:
+ *
  * - Fusing operations (LayerNorm, Attention)
  * - Constant folding
  * - Removing redundant nodes.

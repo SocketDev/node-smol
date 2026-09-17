@@ -23,7 +23,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import { DARWIN, WIN32 } from '@socketsecurity/lib-stable/constants/platform'
-import { getCI } from '@socketsecurity/lib-stable/env/ci'
+import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { isErrnoException } from '@socketsecurity/lib-stable/errors/predicates'
 import {
   safeDelete,
@@ -113,6 +113,7 @@ export async function cleanCheckpoint(buildDir: string, packageName: string) {
  *
  * Full discussion: docs/agents.md/repo/build-caching.md.
  */
+// oxlint-disable-next-line eslint/complexity -- checkpoint creation dispatcher
 export async function createCheckpoint(
   buildDir: string,
   checkpointName: string,
@@ -298,10 +299,10 @@ export async function createCheckpoint(
     // Include timestamp and crypto-random suffix to prevent PID reuse collisions
     const randomId = crypto.randomBytes(8).toString('hex')
     const tempTarballPath = `${tarballPath}.tmp.${process.pid}.${Date.now()}.${randomId}`
-    const unixTempTarballPath = WIN32
-      ? toUnixPath(tempTarballPath)
-      : tempTarballPath
-    const unixTarDir = WIN32 ? toUnixPath(tarDir) : tarDir
+    const relativeTempTarballPath = path.relative(tarDir, tempTarballPath)
+    const tarOutputPath = WIN32
+      ? toUnixPath(relativeTempTarballPath)
+      : relativeTempTarballPath
 
     // Build tar args: default macOS-resource-fork exclude, plus any
     // caller-supplied excludes (e.g. `out` for source checkpoints to
@@ -311,11 +312,9 @@ export async function createCheckpoint(
     const extraExcludes = Array.isArray(tarExcludes) ? tarExcludes : []
     const tarArgs = [
       '-czf',
-      unixTempTarballPath,
+      tarOutputPath,
       '--exclude=._*',
       ...extraExcludes.map(p => `--exclude=${p}`),
-      '-C',
-      unixTarDir,
       tarBase,
     ]
 
@@ -371,6 +370,7 @@ export async function createCheckpoint(
           // AppleDouble resource fork files (._* files) which cause
           // compilation errors when extracted on Linux.
           env: DARWIN ? { ...process.env, COPYFILE_DISABLE: '1' } : process.env,
+          cwd: tarDir,
           stdio: 'pipe',
         })
       } catch (tarError) {
@@ -430,13 +430,10 @@ export async function createCheckpoint(
       }
 
       // Validate tarball integrity by listing contents (catches truncated/corrupted archives)
-      const listResult = await spawn(
-        tarBin,
-        ['-tzf', WIN32 ? toUnixPath(tempTarballPath) : tempTarballPath],
-        {
-          stdio: 'pipe',
-        },
-      )
+      const listResult = await spawn(tarBin, ['-tzf', tarOutputPath], {
+        cwd: tarDir,
+        stdio: 'pipe',
+      })
       if (listResult.code !== 0) {
         throw new Error(
           'Tarball validation failed - archive appears corrupted or truncated',
@@ -692,11 +689,11 @@ export async function createCheckpoint(
   // may not be available for recovery. If a build needs to restart from an earlier stage
   // (e.g., source-copied), it will need to rebuild from scratch rather than restoring
   // from checkpoint. This is intentional to optimize CI storage usage.
-  // @socketsecurity/lib-stable's getCI() already checks GITHUB_ACTIONS,
+  // @socketsecurity/lib-stable's isCI() already checks GITHUB_ACTIONS,
   // GITLAB_CI, CIRCLECI, TRAVIS, and ~25 other CI env vars — keep
   // the fleet's single source of truth so cleanup semantics stay
   // consistent with the rest of the build pipeline.
-  const isCI = getCI()
+  const isCI = isCIEnvironment()
 
   if (isCI && checkpointChain && data.artifactPath) {
     try {
@@ -971,6 +968,7 @@ export interface RestoreCheckpointOptions {
   platform?: string | undefined
 }
 
+// oxlint-disable-next-line eslint/complexity -- checkpoint restore dispatcher
 export async function restoreCheckpoint(
   buildDir: string,
   packageName: string,
@@ -1343,6 +1341,7 @@ export async function restoreCheckpoint(
  *
  * @returns {Promise<boolean>} True if should run, false if should skip
  */
+// oxlint-disable-next-line eslint/complexity -- checkpoint policy dispatcher
 export async function shouldRun(
   buildDir: string,
   packageName: string,

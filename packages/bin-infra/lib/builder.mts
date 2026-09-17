@@ -10,7 +10,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { getFileSize } from 'local-build-infra/lib/build-steps'
 import {
   createCheckpoint,
   shouldRun,
@@ -124,28 +124,18 @@ export async function buildBinSuitePackage(config: BuildBinSuitePackageConfig) {
       },
     ))
 
-    // Basic checkpoint validation
-    if (checkpointExists && !validateCheckpointWithBinary) {
-      logger.success(`${packageName} already built (checkpoint exists)`)
+    if (
+      shouldReuseBinBuild({
+        binaryPath,
+        checkpointExists,
+        packageName,
+        validateCheckpointWithBinary,
+      })
+    ) {
       return
     }
 
-    // Enhanced checkpoint validation: both checkpoint file AND binary must exist
-    if (validateCheckpointWithBinary) {
-      if (checkpointExists && existsSync(binaryPath)) {
-        logger.success(`${packageName} already built (checkpoint exists)`)
-        return
-      }
-
-      // If checkpoint exists but binary is missing, invalidate checkpoint
-      if (checkpointExists && !existsSync(binaryPath)) {
-        logger.info(
-          'Checkpoint exists but binary missing, rebuilding from scratch',
-        )
-      }
-    }
-
-    logger.info(`🔨 Building ${packageName}...`)
+    logger.info(`Building ${packageName}...`)
     logger.error('')
 
     // Check required build tools
@@ -317,4 +307,26 @@ export function selectMakefile() {
     return 'Makefile.win'
   }
   return 'Makefile.macos'
+}
+
+export function shouldReuseBinBuild({
+  binaryPath,
+  checkpointExists,
+  packageName,
+  validateCheckpointWithBinary,
+}: {
+  binaryPath: string
+  checkpointExists: boolean
+  packageName: string
+  validateCheckpointWithBinary: boolean
+}) {
+  if (!checkpointExists) {
+    return false
+  }
+  if (!validateCheckpointWithBinary || existsSync(binaryPath)) {
+    logger.success(`${packageName} already built (checkpoint exists)`)
+    return true
+  }
+  logger.info('Checkpoint exists but binary missing, rebuilding from scratch')
+  return false
 }

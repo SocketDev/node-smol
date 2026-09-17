@@ -3,6 +3,7 @@
  * MiniLM Model Builder.
  *
  * Converts and optimizes MiniLM models for Socket CLI:
+ *
  * 1. Download models from Hugging Face
  * 2. Convert to ONNX format
  * 3. Apply INT4/INT8 mixed-precision quantization
@@ -25,9 +26,9 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { formatDuration } from 'local-build-infra/lib/build-helpers'
+import { formatDuration } from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
-import { checkModelBuildPrerequisites } from 'local-build-infra/lib/model-build-helpers'
+import { checkModelBuildPrerequisites } from 'local-build-infra/lib/model-build'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -41,6 +42,7 @@ import {
   verifyModels,
 } from './build-phases.mts'
 import { getBuildPaths, getCurrentPlatform } from './paths.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -90,7 +92,7 @@ async function initBuildContext() {
   // non-source checkpoints. Model builds run natively per host (no cross-
   // compile), so passing process.* is safe.
   const targetPlatform = process.platform
-  const targetArch = process.env['TARGET_ARCH'] || process.arch
+  const targetArch = getEnvValue('TARGET_ARCH') || process.arch
   const { buildDir, cacheDir, modelsDir } = getBuildPaths(
     BUILD_MODE,
     platformArch,

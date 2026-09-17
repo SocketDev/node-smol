@@ -86,34 +86,35 @@ function parseConnectionUrl(url) {
  * @returns {string}
  */
 function buildConnectionString(options) {
+  const opts = { __proto__: null, ...options }
   const parts = []
 
-  if (options.hostname) {
-    ArrayPrototypePush(parts, `host=${quoteConnValue(options.hostname)}`)
+  if (opts.hostname) {
+    ArrayPrototypePush(parts, `host=${quoteConnValue(opts.hostname)}`)
   }
-  if (options.port) {
+  if (opts.port) {
     // port is numeric; still safe to quote since libpq accepts quoted
     // integers. Keeps the builder uniform.
-    ArrayPrototypePush(parts, `port=${quoteConnValue(options.port)}`)
+    ArrayPrototypePush(parts, `port=${quoteConnValue(opts.port)}`)
   }
-  if (options.database) {
-    ArrayPrototypePush(parts, `dbname=${quoteConnValue(options.database)}`)
+  if (opts.database) {
+    ArrayPrototypePush(parts, `dbname=${quoteConnValue(opts.database)}`)
   }
-  if (options.username) {
-    ArrayPrototypePush(parts, `user=${quoteConnValue(options.username)}`)
+  if (opts.username) {
+    ArrayPrototypePush(parts, `user=${quoteConnValue(opts.username)}`)
   }
-  if (options.password) {
-    ArrayPrototypePush(parts, `password=${quoteConnValue(options.password)}`)
+  if (opts.password) {
+    ArrayPrototypePush(parts, `password=${quoteConnValue(opts.password)}`)
   }
-  if (options.connectionTimeout) {
+  if (opts.connectionTimeout) {
     ArrayPrototypePush(
       parts,
-      `connect_timeout=${MathCeil(options.connectionTimeout / 1000)}`,
+      `connect_timeout=${MathCeil(opts.connectionTimeout / 1000)}`,
     )
   }
 
   // SSL mode.
-  const ssl = options.ssl ?? options.tls
+  const ssl = opts.ssl ?? opts.tls
   if (ssl === true || ssl === 'require') {
     ArrayPrototypePush(parts, 'sslmode=require')
   } else if (ssl === 'verify-full') {

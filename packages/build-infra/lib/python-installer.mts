@@ -11,7 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { whichSync } from '@socketsecurity/lib-stable/bin/which'
+import { whichSync } from '@socketsecurity/lib-stable/exe/path/which'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -158,7 +158,7 @@ export function getDefaultVenvPath() {
  */
 // File is ordered by pip-install pipeline phase (detect → resolve → install →
 // verify); alphabetizing across phases would scatter the install flow.
-// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
+// oxlint-disable-next-line socket/sort-source-methods, eslint/complexity -- setup flow
 export async function initializeVenv({ quiet = false, venvDir } = {}) {
   // Only initialize once per process
   if (venvInitialized) {
@@ -279,21 +279,15 @@ export async function getPythonCommand() {
   // likely to be PEP 668 locked and missing packages we installed in
   // the venv earlier).
   if (!venvInitialized) {
-    const probeVenvPath = venvPath || getDefaultVenvPath()
-    const probePython = path.join(probeVenvPath, 'bin', 'python3')
-    const probePip = path.join(probeVenvPath, 'bin', 'pip3')
-    if (existsSync(probePython) && existsSync(probePip)) {
-      venvPath = probeVenvPath
-      venvPythonPath = probePython
-      venvPipPath = probePip
-      venvAvailable = true
-      venvInitialized = true
-      return probePython
+    const existingVenvPython = probeExistingVenvPython()
+    if (existingVenvPython) {
+      return existingVenvPython
     }
   }
 
-  if (cachedPythonCommand !== undefined) {
-    return cachedPythonCommand || undefined
+  const cached = readCachedPythonCommand()
+  if (cached.hit) {
+    return cached.value
   }
 
   const pip = getPipCommand()
@@ -358,4 +352,30 @@ export async function getPythonCommand() {
   const pythonPath = whichSync('python', { nothrow: true })
   cachedPythonCommand = pythonPath || ''
   return cachedPythonCommand || undefined
+}
+
+export function probeExistingVenvPython() {
+  const probeVenvPath = venvPath || getDefaultVenvPath()
+  const probePython = path.join(probeVenvPath, 'bin', 'python3')
+  const probePip = path.join(probeVenvPath, 'bin', 'pip3')
+  if (!existsSync(probePython) || !existsSync(probePip)) {
+    return undefined
+  }
+  venvPath = probeVenvPath
+  venvPythonPath = probePython
+  venvPipPath = probePip
+  venvAvailable = true
+  venvInitialized = true
+  return probePython
+}
+
+export function readCachedPythonCommand() {
+  if (cachedPythonCommand === undefined) {
+    return { __proto__: null, hit: false, value: undefined }
+  }
+  return {
+    __proto__: null,
+    hit: true,
+    value: cachedPythonCommand === '' ? undefined : cachedPythonCommand,
+  }
 }

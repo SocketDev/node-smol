@@ -55,7 +55,7 @@ const contentLengthCache = {
 // Pre-cache common registry response sizes.
 const commonSizes = [
   0, 1, 2, 3, 4, 5, 10, 20, 50, 100, 200, 500, 1000, 1024, 2048, 4096, 8192,
-  10240, 16384, 32768, 65536,
+  10_240, 16_384, 32_768, 65_536,
 ]
 
 for (let i = 0; i < commonSizes.length; i++) {

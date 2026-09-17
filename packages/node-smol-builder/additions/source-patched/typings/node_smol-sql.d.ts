@@ -35,33 +35,33 @@
 declare module 'node:smol-sql' {
   /** Base error class for SQL operations */
   export class SQLError extends Error {
-    code?: string
+    code?: string | undefined
     constructor(message: string)
   }
 
   /** PostgreSQL-specific error */
   export class PostgresError extends SQLError {
-    severity?: string
-    detail?: string
-    hint?: string
-    position?: string
-    internalPosition?: string
-    internalQuery?: string
-    where?: string
-    schema?: string
-    table?: string
-    column?: string
-    dataType?: string
-    constraint?: string
-    file?: string
-    line?: string
-    routine?: string
+    severity?: string | undefined
+    detail?: string | undefined
+    hint?: string | undefined
+    position?: string | undefined
+    internalPosition?: string | undefined
+    internalQuery?: string | undefined
+    where?: string | undefined
+    schema?: string | undefined
+    table?: string | undefined
+    column?: string | undefined
+    dataType?: string | undefined
+    constraint?: string | undefined
+    file?: string | undefined
+    line?: string | undefined
+    routine?: string | undefined
   }
 
   /** SQLite-specific error */
   export class SQLiteError extends SQLError {
-    errcode?: number
-    errstr?: string
+    errcode?: number | undefined
+    errstr?: string | undefined
   }
 
   /** Connection closed error */
@@ -221,7 +221,7 @@ declare module 'node:smol-sql' {
       | 'read uncommitted'
       | 'read committed'
       | 'repeatable read'
-      | 'serializable'
+      | 'serializable' | undefined
   }
 
   /** Savepoint for partial transaction rollback */
@@ -257,19 +257,19 @@ declare module 'node:smol-sql' {
   /** SQL connection options */
   export interface SQLOptions {
     /** Connection URL */
-    url?: string
+    url?: string | undefined
     /** Database adapter type */
-    adapter?: 'postgres' | 'sqlite'
+    adapter?: 'postgres' | 'sqlite' | undefined
     /** SQLite filename (alternative to URL) */
-    filename?: string
+    filename?: string | undefined
   }
 
   /** Insert many options */
   export interface InsertManyOptions {
     /** Explicit column list (default: keys from first row) */
-    columns?: string[]
+    columns?: string[] | undefined
     /** Return inserted rows (PostgreSQL only) */
-    returning?: boolean
+    returning?: boolean | undefined
   }
 
   /** Upsert options */
@@ -277,9 +277,9 @@ declare module 'node:smol-sql' {
     /** Columns to detect conflict on (required) */
     conflictColumns: string[]
     /** Columns to update on conflict (default: all except conflict columns) */
-    updateColumns?: string[]
+    updateColumns?: string[] | undefined
     /** Return the row (PostgreSQL only) */
-    returning?: boolean
+    returning?: boolean | undefined
   }
 
   /**
@@ -326,7 +326,7 @@ declare module 'node:smol-sql' {
     /**
      * Close all connections.
      */
-    close(options?: { timeout?: number }): Promise<void>
+    close(options?: { timeout?: number | undefined }): Promise<void>
 
     /**
      * Execute raw SQL without parameterization.
@@ -361,7 +361,7 @@ declare module 'node:smol-sql' {
      */
     insertMany<T = Record<string, unknown>>(
       table: string,
-      rows: Record<string, any>[],
+      rows: Array<Record<string, any>>,
       options?: InsertManyOptions,
     ): Promise<T[]>
 
@@ -386,7 +386,7 @@ declare module 'node:smol-sql' {
      */
     upsertMany<T = Record<string, unknown>>(
       table: string,
-      rows: Record<string, any>[],
+      rows: Array<Record<string, any>>,
       options: UpsertOptions,
     ): Promise<T[]>
 

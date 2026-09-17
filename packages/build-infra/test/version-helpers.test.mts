@@ -1,5 +1,5 @@
 /**
- * @file Tests for version-helpers utilities.
+ * @file Tests for tool-versions utilities.
  *   Validates .gitmodules version and checksum parsing.
  */
 
@@ -16,7 +16,7 @@ import {
   getSubmoduleChecksum,
   getSubmoduleVersion,
   verifyNodeChecksum,
-} from '../lib/version-helpers.mts'
+} from '../lib/tool-versions.mts'
 import { REPO_ROOT as monorepoRoot } from '../../../scripts/fleet/paths.mts'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
@@ -59,7 +59,7 @@ afterEach(() => {
   nock.cleanAll()
 })
 
-describe('version-helpers', () => {
+describe('tool-versions', () => {
   describe(getNodeVersion, () => {
     it('should return a valid semver-like version string', () => {
       const version = getNodeVersion()
@@ -146,12 +146,13 @@ describe('version-helpers', () => {
       expect(checksum!.hash).toMatch(/^[0-9a-f]{64}$/)
     })
 
-    it('should return undefined for submodules without checksum', () => {
-      // `upstream/stuie` tracks a branch and publishes no release tags, so it
-      // carries a version comment with no sha256 — the shape this covers.
+    it('should parse the contained Stuie snapshot checksum', () => {
       const checksum = getSubmoduleChecksum('upstream/stuie', 'stuie')
 
-      expect(checksum).toBeUndefined()
+      expect(checksum).toEqual({
+        algorithm: 'sha256',
+        hash: '573544022eb6c1c2d924aba6e5d27a360b3d3c39ea3a8fb036f0159821528f23',
+      })
     })
 
     it('should throw for empty package name', () => {

@@ -33,7 +33,7 @@ const { allKeyed, allSettledKeyed } = internalBinding('smol_promise')
 
 // Standard attributes for a builtin method: assignable and deletable, but
 // skipped by for-in and Object.keys.
-function installCombinator(name, fn) {
+export function installCombinator(name, fn) {
   if (Promise[name] !== undefined) {
     return
   }

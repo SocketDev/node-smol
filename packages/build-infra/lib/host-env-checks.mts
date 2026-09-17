@@ -10,16 +10,16 @@ import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import binPkg from '@socketsecurity/lib-stable/bin/which'
+import binPkg from '@socketsecurity/lib-stable/exe/path/which'
 import platformPkg from '@socketsecurity/lib-stable/constants/platform'
-import { getCI } from '@socketsecurity/lib-stable/env/ci'
+import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import spawnPkg from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { getCleanupPaths } from './ci-cleanup-paths.mts'
 import { BYTES } from './constants.mts'
 import { errorMessage } from './error-utils.mts'
-import { getMinPythonVersion } from './version-helpers.mts'
+import { getMinPythonVersion } from './tool-versions.mts'
 import { whichRequired } from './which-required.mts'
 
 const { whichSync } = binPkg
@@ -102,7 +102,7 @@ export async function checkNetworkConnectivity(): Promise<{
   try {
     // In CI, assume network connectivity is available.
     // The build will fail later if it's actually not available.
-    if (getCI()) {
+    if (isCIEnvironment()) {
       return { connected: true, statusCode: 'skipped-in-ci' }
     }
 
@@ -197,28 +197,10 @@ export async function checkPythonVersion(
         continue
       }
 
-      const versionParts = version.split('.').map(Number)
-      const minParts = effectiveMinVersion.split('.').map(Number)
-
-      const major = versionParts[0]
-      const minor = versionParts[1]
-      const minMajor = minParts[0]
-      const minMinor = minParts[1]
-
-      // Validate that we have at least major.minor and no NaN values
-      if (
-        major === undefined ||
-        minor === undefined ||
-        minMajor === undefined ||
-        minMinor === undefined ||
-        versionParts.some(n => Number.isNaN(n)) ||
-        minParts.some(n => Number.isNaN(n))
-      ) {
+      const sufficient = parsePythonVersion(version, effectiveMinVersion)
+      if (sufficient === undefined) {
         continue
       }
-
-      const sufficient =
-        major > minMajor || (major === minMajor && minor >= minMinor)
 
       return {
         available: true,
@@ -243,9 +225,10 @@ export async function checkPythonVersion(
  * Windows platforms. Only runs in CI environments to avoid deleting packages on
  * developer machines.
  */
+// oxlint-disable-next-line eslint/complexity -- platform cleanup dispatcher
 export async function freeDiskSpace(): Promise<void> {
   // Only run in CI environments (GitHub Actions, GitLab CI, etc.)
-  if (!getCI()) {
+  if (!isCIEnvironment()) {
     logger.substep('Skipping disk space cleanup (not running in CI)')
     return
   }
@@ -371,4 +354,22 @@ export async function freeDiskSpace(): Promise<void> {
   } catch (e) {
     logger.warn(`Disk space cleanup encountered errors: ${errorMessage(e)}`)
   }
+}
+
+export function parsePythonVersion(version: string, minVersion: string) {
+  const versionParts = version.split('.').map(Number)
+  const minParts = minVersion.split('.').map(Number)
+  const { 0: major, 1: minor } = versionParts
+  const { 0: minMajor, 1: minMinor } = minParts
+  if (
+    major === undefined ||
+    minor === undefined ||
+    minMajor === undefined ||
+    minMinor === undefined ||
+    versionParts.some(Number.isNaN) ||
+    minParts.some(Number.isNaN)
+  ) {
+    return undefined
+  }
+  return major > minMajor || (major === minMajor && minor >= minMinor)
 }

@@ -7,7 +7,7 @@
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { getFileSize } from 'local-build-infra/lib/build-steps'
 import { restoreCheckpoint } from 'local-build-infra/lib/checkpoint-manager'
 import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 
@@ -88,6 +88,7 @@ export async function finalizeWasm(config) {
   logger.logNewline()
 
   return {
+    __proto__: null,
     artifactPath: outputFinalDir,
     binaryPath: path.relative(buildDir, outputFinalDir),
     binarySize: `${wasmSize}, ${syncSize}`,

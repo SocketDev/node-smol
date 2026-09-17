@@ -13,12 +13,14 @@ import process from 'node:process'
 
 import { errorMessage } from './error-utils.mts'
 
-import { getCI } from '@socketsecurity/lib-stable/env/ci'
+import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { getPlatform } from './build-env.mts'
 import { installTools, updatePackageCache } from './install-tools.mts'
+
+const logger = getDefaultLogger()
 
 /**
  * @typedef {Object} ToolchainConfig
@@ -44,8 +46,6 @@ export function createSetupToolchain(config) {
   const platform = getPlatform()
 
   return async function setup(packageRoot) {
-    const logger = getDefaultLogger()
-
     if (platform === 'darwin') {
       return setupDarwin(config, packageRoot, logger)
     }
@@ -62,11 +62,11 @@ export function createSetupToolchain(config) {
 
 /**
  * Check if running in CI environment.
- * Thin re-export of @socketsecurity/lib-stable's getCI() so the 6 packages that
+ * Thin re-export of @socketsecurity/lib-stable's isCI() so the 6 packages that
  * already import isCI from here keep working without churn.
  */
 export function isCI() {
-  return getCI()
+  return isCIEnvironment()
 }
 
 /**
@@ -96,8 +96,6 @@ export async function runSetupToolchain(config) {
     submodules = [],
     tools,
   } = { __proto__: null, ...config } as typeof config
-  const logger = getDefaultLogger()
-
   if (isCI()) {
     // Single-line CI output to reduce log noise.
     logger.success(`${packageName} toolchain: CI mode (skipped)`)
@@ -136,10 +134,10 @@ export async function runSetupToolchain(config) {
 /**
  * MacOS setup.
  */
-export async function setupDarwin(config, packageRoot, logger) {
+export async function setupDarwin(config, packageRoot, targetLogger) {
   const tools = config.darwin || ['clang', 'make']
 
-  logger.log('Installing macOS build dependencies…')
+  targetLogger.log('Installing macOS build dependencies…')
 
   const { failed, installed } = await installTools(tools, {
     packageRoot,
@@ -147,19 +145,19 @@ export async function setupDarwin(config, packageRoot, logger) {
   })
 
   if (failed.length > 0) {
-    logger.warn(`Failed to install: ${failed.join(', ')}`)
-    logger.info('Install manually:')
-    logger.info('  xcode-select --install  # For clang/clang++')
+    targetLogger.warn(`Failed to install: ${failed.join(', ')}`)
+    targetLogger.info('Install manually:')
+    targetLogger.info('  xcode-select --install  # For clang/clang++')
     if (tools.some(t => !['clang', 'clang++'].includes(t))) {
       const brewTools = tools.filter(t => !['clang', 'clang++'].includes(t))
-      logger.info(`  brew install ${brewTools.join(' ')}`)
+      targetLogger.info(`  brew install ${brewTools.join(' ')}`)
     }
     return false
   }
 
-  logger.success(`Installed: ${installed.join(', ')}`)
+  targetLogger.success(`Installed: ${installed.join(', ')}`)
   if (config.darwinNote) {
-    logger.info(config.darwinNote)
+    targetLogger.info(config.darwinNote)
   }
   return true
 }
@@ -167,10 +165,10 @@ export async function setupDarwin(config, packageRoot, logger) {
 /**
  * Linux setup.
  */
-export async function setupLinux(config, packageRoot, logger) {
+export async function setupLinux(config, packageRoot, targetLogger) {
   const tools = config.linux || ['gcc', 'make']
 
-  logger.log('Installing Linux build dependencies…')
+  targetLogger.log('Installing Linux build dependencies…')
   void updatePackageCache()
 
   const { failed, installed } = await installTools(tools, {
@@ -178,16 +176,16 @@ export async function setupLinux(config, packageRoot, logger) {
   })
 
   if (failed.length > 0) {
-    logger.error(`Failed to install: ${failed.join(', ')}`)
-    logger.info(
+    targetLogger.error(`Failed to install: ${failed.join(', ')}`)
+    targetLogger.info(
       'You may need to install these manually. See packages/build-infra/docs/prerequisites.md',
     )
     return false
   }
 
-  logger.success(`Installed: ${installed.join(', ')}`)
+  targetLogger.success(`Installed: ${installed.join(', ')}`)
   if (config.linuxNote) {
-    logger.info(config.linuxNote)
+    targetLogger.info(config.linuxNote)
   }
   return true
 }
@@ -195,27 +193,27 @@ export async function setupLinux(config, packageRoot, logger) {
 /**
  * Windows setup.
  */
-export async function setupWindows(config, packageRoot, logger) {
+export async function setupWindows(config, packageRoot, targetLogger) {
   const tools = config.win32 || ['mingw-w64', 'make']
 
-  logger.log('Installing Windows build dependencies…')
+  targetLogger.log('Installing Windows build dependencies…')
 
   const { failed, installed } = await installTools(tools, {
     packageRoot,
   })
 
   if (failed.length > 0) {
-    logger.error(`Failed to install: ${failed.join(', ')}`)
-    logger.info('Install manually:')
-    logger.info(`  choco install ${tools.join(' ')}`)
-    logger.info('  -or-')
-    logger.info(`  scoop install ${tools.join(' ')}`)
+    targetLogger.error(`Failed to install: ${failed.join(', ')}`)
+    targetLogger.info('Install manually:')
+    targetLogger.info(`  choco install ${tools.join(' ')}`)
+    targetLogger.info('  -or-')
+    targetLogger.info(`  scoop install ${tools.join(' ')}`)
     return false
   }
 
-  logger.success(`Installed: ${installed.join(', ')}`)
+  targetLogger.success(`Installed: ${installed.join(', ')}`)
   if (config.win32Note) {
-    logger.info(config.win32Note)
+    targetLogger.info(config.win32Note)
   }
   return true
 }

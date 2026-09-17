@@ -42,6 +42,19 @@ export interface ExtractTarballOptions {
   validate?: boolean | undefined
 }
 
+export async function appendSupportedTarOptions(
+  tarArgs: string[],
+  options: { overwrite?: boolean | undefined } = {},
+): Promise<void> {
+  const { overwrite = false } = { __proto__: null, ...options }
+  if (await tarSupportsNoAbsoluteNames()) {
+    tarArgs.push('--no-absolute-names')
+  }
+  if (overwrite && (await tarSupportsOverwrite())) {
+    tarArgs.push('--overwrite')
+  }
+}
+
 export async function extractTarball(
   tarballPath: string,
   extractDir: string,
@@ -78,17 +91,7 @@ export async function extractTarball(
     tarArgs.push(`--strip-components=${stripComponents}`)
   }
 
-  // Add --no-absolute-names on platforms that support it (defense in depth).
-  if (await tarSupportsNoAbsoluteNames()) {
-    tarArgs.push('--no-absolute-names')
-  }
-
-  // Add --overwrite to handle extraction over existing directories.
-  // This prevents ENOTEMPTY errors when re-extracting to the same location.
-  // Note: macOS BSD tar doesn't support --overwrite, only GNU tar does.
-  if (overwrite && (await tarSupportsOverwrite())) {
-    tarArgs.push('--overwrite')
-  }
+  await appendSupportedTarOptions(tarArgs, { overwrite })
 
   // Extract.
   const result = await spawn(tarBin, tarArgs, { stdio })

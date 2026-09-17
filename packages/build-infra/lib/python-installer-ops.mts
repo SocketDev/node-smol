@@ -1,8 +1,5 @@
 /**
- * Python package install/verify operations.
- *
- * Houses the install and verify functions for Python packages. Split from
- * python-installer.mts to keep each file under the 500-line soft cap.
+ * @file Python package installation and verification operations.
  */
 
 import path from 'node:path'
@@ -30,16 +27,10 @@ import {
 
 const logger = getDefaultLogger()
 
-// PEP 668 error token: substring pip prints when it rejects a system-wide
-// install on an externally-managed interpreter.
 const PEP_668_ERROR_TOKEN = 'externally-managed-environment'
 
 /**
- * Check if a Python package is installed.
- *
- * @param {string} packageName - Package name to check.
- *
- * @returns {Promise<boolean>} True if package is installed.
+ * Check whether a Python package is installed.
  */
 export async function checkPythonPackage(packageName) {
   try {
@@ -55,13 +46,7 @@ export async function checkPythonPackage(packageName) {
 }
 
 /**
- * Check if a Python package is installed with the correct pinned version.
- *
- * @param {string} packageName - Package name to check.
- * @param {string} expectedVersion - Expected version (e.g., '2.5.1').
- *
- * @returns {Promise<boolean>} True if package is installed with correct
- *   version.
+ * Check whether a Python package matches its pinned version.
  */
 // Ordered by pip-install pipeline phase; alphabetizing would scatter it.
 // oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
@@ -105,7 +90,7 @@ export async function checkPythonPackageVersion(packageName, expectedVersion) {
  * @returns {Promise<boolean>} True if installation succeeded.
  */
 // Ordered by pip-install pipeline phase; alphabetizing would scatter it.
-// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
+// oxlint-disable-next-line socket/sort-source-methods, eslint/complexity -- install flow
 export async function installPythonPackage(
   packageName,
   { consumerPackageJsonPath, quiet = false, upgrade = false, user = true } = {},
@@ -291,8 +276,7 @@ export async function ensurePythonPackage(
 ) {
   const checkName = importName || packageName
 
-  // Check if package exists and get expected version
-  // Use consumer overrides if provided
+  // Resolve the expected version from the consumer when present.
   let expectedVersion
   if (consumerPackageJsonPath) {
     // Convert package.json path to packageRoot for loadPythonVersions
@@ -313,45 +297,25 @@ export async function ensurePythonPackage(
       expectedVersion,
     )
     if (!hasCorrectVersion) {
-      const pythonCmd = await getPythonCommand()
-      try {
-        const result = await spawn(
-          pythonCmd,
-          ['-c', `import ${checkName}; print(${checkName}.__version__)`],
-          { stdio: 'pipe' },
-        )
-        const installedVersion = (result.stdout || '').trim()
-        if (!quiet) {
-          logger.warn(
-            `Python package '${packageName}' version mismatch: installed ${installedVersion}, expected ${expectedVersion}`,
-          )
-        }
-        // Version mismatch - need to reinstall
-        if (autoInstall) {
-          if (!quiet) {
-            logger.substep(`Reinstalling ${packageName} with pinned version…`)
-          }
-          const installed = await installPythonPackage(packageName, {
-            consumerPackageJsonPath,
-            quiet,
-            upgrade: true,
-          })
-          return { available: installed, installed }
-        }
-        return { available: false, installed: false }
-      } catch {
-        // Could not check version, proceed with reinstall if autoInstall
+      const mismatchResult = await resolvePythonVersionMismatch(
+        packageName,
+        checkName,
+        expectedVersion,
+        { autoInstall, consumerPackageJsonPath, quiet },
+      )
+      if (mismatchResult) {
+        return mismatchResult
       }
     } else if (hasCorrectVersion) {
-      return { available: true, installed: false }
+      return { __proto__: null, available: true, installed: false }
     }
   } else if (isInstalled) {
     // No version pinning for this package, accept whatever is installed
-    return { available: true, installed: false }
+    return { __proto__: null, available: true, installed: false }
   }
 
   if (!autoInstall) {
-    return { available: false, installed: false }
+    return { __proto__: null, available: false, installed: false }
   }
 
   // Attempt to install.
@@ -367,6 +331,7 @@ export async function ensurePythonPackage(
   })
 
   return {
+    __proto__: null,
     available: installed,
     installed,
   }
@@ -436,20 +401,15 @@ export async function ensureAllPythonPackages(
     }
   }
 
-  // Summary
-  if (!quiet && packages.length > 1) {
-    if (missing.length === 0) {
-      logger.success(
-        `All Python packages available (${packages.length}/${packages.length}${installed.length > 0 ? `, ${installed.length} newly installed` : ''})`,
-      )
-    } else {
-      logger.warn(
-        `${packages.length - missing.length}/${packages.length} Python packages available (${missing.length} missing: ${missing.join(', ')})`,
-      )
-    }
-  }
+  reportPythonPackageSummary({
+    installed,
+    missing,
+    packageCount: packages.length,
+    quiet,
+  })
 
   return {
+    __proto__: null,
     allAvailable: missing.length === 0,
     installed,
     missing,
@@ -457,11 +417,7 @@ export async function ensureAllPythonPackages(
 }
 
 /**
- * Get installation instructions for Python packages.
- *
- * @param {string[]} packages - Package names.
- *
- * @returns {string[]} Array of installation instruction strings.
+ * Return installation instructions for Python packages.
  */
 // Ordered by pip-install pipeline phase; alphabetizing would scatter it.
 // oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
@@ -470,4 +426,74 @@ export function getPythonPackageInstructions(packages) {
   const instructions = ['Install required Python packages:']
   instructions.push(`  pip3 install --user ${pinnedPackages.join(' ')}`)
   return instructions
+}
+
+export function reportPythonPackageSummary(config) {
+  const {
+    installed,
+    missing,
+    packageCount,
+    quiet = false,
+  } = {
+    __proto__: null,
+    ...config,
+  }
+  if (quiet || packageCount <= 1) {
+    return
+  }
+  if (missing.length === 0) {
+    const installedSummary =
+      installed.length > 0 ? `, ${installed.length} newly installed` : ''
+    logger.success(
+      `All Python packages available (${packageCount}/${packageCount}${installedSummary})`,
+    )
+    return
+  }
+  logger.warn(
+    `${packageCount - missing.length}/${packageCount} Python packages available (${missing.length} missing: ${missing.join(', ')})`,
+  )
+}
+
+export async function resolvePythonVersionMismatch(
+  packageName,
+  checkName,
+  expectedVersion,
+  options = {},
+) {
+  const {
+    autoInstall = true,
+    consumerPackageJsonPath,
+    quiet = false,
+  } = {
+    __proto__: null,
+    ...options,
+  }
+  const pythonCmd = await getPythonCommand()
+  try {
+    const result = await spawn(
+      pythonCmd,
+      ['-c', `import ${checkName}; print(${checkName}.__version__)`],
+      { stdio: 'pipe' },
+    )
+    const installedVersion = (result.stdout || '').trim()
+    if (!quiet) {
+      logger.warn(
+        `Python package '${packageName}' version mismatch: installed ${installedVersion}, expected ${expectedVersion}`,
+      )
+    }
+    if (!autoInstall) {
+      return { __proto__: null, available: false, installed: false }
+    }
+    if (!quiet) {
+      logger.substep(`Reinstalling ${packageName} with pinned version…`)
+    }
+    const installed = await installPythonPackage(packageName, {
+      consumerPackageJsonPath,
+      quiet,
+      upgrade: true,
+    })
+    return { __proto__: null, available: installed, installed }
+  } catch {
+    return undefined
+  }
 }

@@ -7,7 +7,7 @@
 import { existsSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
-import { createCheckpoint } from 'local-build-infra/lib/build-helpers'
+import { createCheckpoint } from 'local-build-infra/lib/build-steps'
 import { shouldRun } from 'local-build-infra/lib/checkpoint-manager'
 import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 import {

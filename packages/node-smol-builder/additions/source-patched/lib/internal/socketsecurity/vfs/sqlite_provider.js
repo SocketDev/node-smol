@@ -39,6 +39,90 @@ const kStmts = SymbolCtor('kStmts')
 // Native SQLite binding - loaded lazily.
 let DatabaseSync
 
+/**
+ * Create an EEXIST error.
+ *
+ * @param {string} syscall - System call name
+ * @param {string} path - Path that already exists
+ * @returns {Error}
+ */
+function eexist(syscall, path) {
+  const err = new ErrorCtor(`EEXIST: file already exists, ${syscall} '${path}'`)
+  err.code = 'EEXIST'
+  err.errno = -17
+  err.syscall = syscall
+  err.path = path
+  return err
+}
+
+/**
+ * Create an EINVAL error.
+ *
+ * @param {string} syscall - System call name
+ * @param {string} path - Path
+ * @returns {Error}
+ */
+function einval(syscall, path) {
+  const err = new ErrorCtor(`EINVAL: invalid argument, ${syscall} '${path}'`)
+  err.code = 'EINVAL'
+  err.errno = -22
+  err.syscall = syscall
+  err.path = path
+  return err
+}
+
+/**
+ * Create an EISDIR error.
+ *
+ * @param {string} syscall - System call name
+ * @param {string} path - Path that is a directory
+ * @returns {Error}
+ */
+function eisdir(syscall, path) {
+  const err = new ErrorCtor(
+    `EISDIR: illegal operation on a directory, ${syscall} '${path}'`,
+  )
+  err.code = 'EISDIR'
+  err.errno = -21
+  err.syscall = syscall
+  err.path = path
+  return err
+}
+
+/**
+ * Create an ENOENT error.
+ *
+ * @param {string} syscall - System call name
+ * @param {string} path - Path that was not found
+ * @returns {Error}
+ */
+function enoent(syscall, path) {
+  const err = new ErrorCtor(
+    `ENOENT: no such file or directory, ${syscall} '${path}'`,
+  )
+  err.code = 'ENOENT'
+  err.errno = -2
+  err.syscall = syscall
+  err.path = path
+  return err
+}
+
+/**
+ * Create an ENOTDIR error.
+ *
+ * @param {string} syscall - System call name
+ * @param {string} path - Path that is not a directory
+ * @returns {Error}
+ */
+function enotdir(syscall, path) {
+  const err = new ErrorCtor(`ENOTDIR: not a directory, ${syscall} '${path}'`)
+  err.code = 'ENOTDIR'
+  err.errno = -20
+  err.syscall = syscall
+  err.path = path
+  return err
+}
+
 function getDatabase() {
   if (!DatabaseSync) {
     const sqlite = require('sqlite')
@@ -81,6 +165,32 @@ function parentPath(p) {
   }
   const dir = PathDirname(p)
   return dir === '.' ? '/' : dir
+}
+
+/**
+ * Create a dirent-like object from a database row.
+ *
+ * @param {object} row - Database row
+ * @returns {object} Dirent-like object
+ */
+function rowToDirent(row) {
+  const isDir = row.type === TYPE_DIRECTORY
+  const isLink = row.type === TYPE_SYMLINK
+
+  const statFalse = () => false
+  const statTrue = () => true
+
+  return {
+    __proto__: null,
+    name: row.name,
+    isFile: isDir || isLink ? statFalse : statTrue,
+    isDirectory: isDir ? statTrue : statFalse,
+    isBlockDevice: statFalse,
+    isCharacterDevice: statFalse,
+    isFIFO: statFalse,
+    isSocket: statFalse,
+    isSymbolicLink: isLink ? statTrue : statFalse,
+  }
 }
 
 /**
@@ -132,116 +242,6 @@ function rowToStat(row) {
     isSocket: statFalse,
     isSymbolicLink: isLink ? statTrue : statFalse,
   }
-}
-
-/**
- * Create a dirent-like object from a database row.
- *
- * @param {object} row - Database row
- * @returns {object} Dirent-like object
- */
-function rowToDirent(row) {
-  const isDir = row.type === TYPE_DIRECTORY
-  const isLink = row.type === TYPE_SYMLINK
-
-  const statFalse = () => false
-  const statTrue = () => true
-
-  return {
-    __proto__: null,
-    name: row.name,
-    isFile: isDir || isLink ? statFalse : statTrue,
-    isDirectory: isDir ? statTrue : statFalse,
-    isBlockDevice: statFalse,
-    isCharacterDevice: statFalse,
-    isFIFO: statFalse,
-    isSocket: statFalse,
-    isSymbolicLink: isLink ? statTrue : statFalse,
-  }
-}
-
-/**
- * Create an ENOENT error.
- *
- * @param {string} syscall - System call name
- * @param {string} path - Path that was not found
- * @returns {Error}
- */
-function enoent(syscall, path) {
-  const err = new ErrorCtor(
-    `ENOENT: no such file or directory, ${syscall} '${path}'`,
-  )
-  err.code = 'ENOENT'
-  err.errno = -2
-  err.syscall = syscall
-  err.path = path
-  return err
-}
-
-/**
- * Create an EEXIST error.
- *
- * @param {string} syscall - System call name
- * @param {string} path - Path that already exists
- * @returns {Error}
- */
-function eexist(syscall, path) {
-  const err = new ErrorCtor(`EEXIST: file already exists, ${syscall} '${path}'`)
-  err.code = 'EEXIST'
-  err.errno = -17
-  err.syscall = syscall
-  err.path = path
-  return err
-}
-
-/**
- * Create an ENOTDIR error.
- *
- * @param {string} syscall - System call name
- * @param {string} path - Path that is not a directory
- * @returns {Error}
- */
-function enotdir(syscall, path) {
-  const err = new ErrorCtor(`ENOTDIR: not a directory, ${syscall} '${path}'`)
-  err.code = 'ENOTDIR'
-  err.errno = -20
-  err.syscall = syscall
-  err.path = path
-  return err
-}
-
-/**
- * Create an EISDIR error.
- *
- * @param {string} syscall - System call name
- * @param {string} path - Path that is a directory
- * @returns {Error}
- */
-function eisdir(syscall, path) {
-  const err = new ErrorCtor(
-    `EISDIR: illegal operation on a directory, ${syscall} '${path}'`,
-  )
-  err.code = 'EISDIR'
-  err.errno = -21
-  err.syscall = syscall
-  err.path = path
-  return err
-}
-
-/**
- * Create an EINVAL error.
- *
- * @param {string} syscall - System call name
- * @param {string} path - Path
- * @returns {Error}
- */
-function einval(syscall, path) {
-  const err = new ErrorCtor(`EINVAL: invalid argument, ${syscall} '${path}'`)
-  err.code = 'EINVAL'
-  err.errno = -22
-  err.syscall = syscall
-  err.path = path
-  return err
 }
 
 /**
@@ -506,7 +506,8 @@ class SmolSqliteProvider {
    * @throws {Error} ENOENT if not found, ENOTDIR if not a directory
    */
   readdirSync(path, options) {
-    this.#ensureOpen()
+    const opts = { __proto__: null, ...options }
+  this.#ensureOpen()
     const p = normalizePath(path)
     const row = this.#resolve(p)
     if (!row) {
@@ -517,7 +518,7 @@ class SmolSqliteProvider {
     }
 
     const children = this[kStmts].listChildren.all(row.path)
-    const withFileTypes = options?.withFileTypes ?? false
+    const withFileTypes = opts?.withFileTypes ?? false
 
     if (withFileTypes) {
       const result = []
@@ -543,9 +544,10 @@ class SmolSqliteProvider {
    * @throws {Error} ENOENT if parent missing (non-recursive), EEXIST if exists
    */
   mkdirSync(path, options) {
-    this.#ensureOpen()
+    const opts = { __proto__: null, ...options }
+  this.#ensureOpen()
     const p = normalizePath(path)
-    const recursive = options?.recursive ?? false
+    const recursive = opts?.recursive ?? false
     const now = DateCtor.now()
 
     if (recursive) {
@@ -683,7 +685,7 @@ class SmolSqliteProvider {
       TYPE_SYMLINK,
       undefined,
       target,
-      0o120777,
+      0o12_0777,
       now,
       now,
       now,

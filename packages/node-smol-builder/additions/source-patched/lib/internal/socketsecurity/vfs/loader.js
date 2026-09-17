@@ -151,7 +151,7 @@ function findVFSKey(vfsPath, debug) {
   // Try with trailing slash for directories
   const withSlash = endsWithSlash ? vfsKey : `${vfsKey}/`
   if (attemptedKeys && withSlash !== vfsKey)
-    ArrayPrototypePush(attemptedKeys, withSlash)
+    {ArrayPrototypePush(attemptedKeys, withSlash)}
   if (MapPrototypeHas(vfs, withSlash)) {
     return withSlash
   }
@@ -161,7 +161,7 @@ function findVFSKey(vfsPath, debug) {
     ? StringPrototypeSlice(vfsKey, 0, -1)
     : vfsKey
   if (attemptedKeys && withoutSlash !== vfsKey)
-    ArrayPrototypePush(attemptedKeys, withoutSlash)
+    {ArrayPrototypePush(attemptedKeys, withoutSlash)}
   if (withoutSlash !== vfsKey && MapPrototypeHas(vfs, withoutSlash)) {
     return withoutSlash
   }
@@ -215,7 +215,7 @@ function findVFSEntry(vfsPath, debug) {
   // Try with trailing slash for directories
   const withSlash = endsWithSlash ? vfsKey : `${vfsKey}/`
   if (attemptedKeys && withSlash !== vfsKey)
-    ArrayPrototypePush(attemptedKeys, withSlash)
+    {ArrayPrototypePush(attemptedKeys, withSlash)}
   entry = MapPrototypeGet(vfs, withSlash)
   if (entry !== undefined) {
     return { __proto__: null, vfsKey: withSlash, entry }
@@ -226,7 +226,7 @@ function findVFSEntry(vfsPath, debug) {
     ? StringPrototypeSlice(vfsKey, 0, -1)
     : vfsKey
   if (attemptedKeys && withoutSlash !== vfsKey)
-    ArrayPrototypePush(attemptedKeys, withoutSlash)
+    {ArrayPrototypePush(attemptedKeys, withoutSlash)}
   if (withoutSlash !== vfsKey) {
     entry = MapPrototypeGet(vfs, withoutSlash)
     if (entry !== undefined) {
@@ -459,6 +459,7 @@ function isVFSPath(filepath) {
  * Read directory from VFS
  */
 function readdirFromVFS(filepath, options) {
+  const opts = { __proto__: null, ...options }
   const vfs = initVFS()
   if (!vfs) {
     return
@@ -482,8 +483,8 @@ function readdirFromVFS(filepath, options) {
     throw error
   }
 
-  const recursive = options?.recursive ?? false
-  const withFileTypes = options?.withFileTypes ?? false
+  const recursive = opts?.recursive ?? false
+  const withFileTypes = opts?.withFileTypes ?? false
 
   if (recursive) {
     // Recursive mode: collect all entries from subdirectories
@@ -547,6 +548,7 @@ function readdirFromVFS(filepath, options) {
  * Read file from VFS
  */
 function readFileFromVFS(filepath, options) {
+  const opts = { __proto__: null, ...options }
   const vfs = initVFS()
   if (!vfs) {
     return
@@ -590,8 +592,8 @@ function readFileFromVFS(filepath, options) {
   }
 
   // Handle encoding
-  if (options?.encoding && options.encoding !== 'buffer') {
-    return BufferPrototypeToString(content, options.encoding)
+  if (opts?.encoding && opts.encoding !== 'buffer') {
+    return BufferPrototypeToString(content, opts.encoding)
   }
 
   return content

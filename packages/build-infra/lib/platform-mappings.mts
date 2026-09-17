@@ -246,7 +246,7 @@ export function parsePlatformArch(platformArch: string): {
   platform: string
 } {
   const parts = platformArch.split('-')
-  const [assetPlatform, assetArch, libc] = parts
+  const { 0: assetPlatform, 1: assetArch, 2: libc } = parts
   if (
     parts.length < 2 ||
     parts.length > 3 ||

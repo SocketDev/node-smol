@@ -36,11 +36,11 @@
  */
 
 declare module 'node:smol-https' {
-  import type { TlsOptions } from 'tls'
+  import type { TlsOptions } from 'node:tls'
   import type {
-    ServeRequest,
-    Server,
     Routes,
+    Server,
+    ServeRequest,
     WebSocketHandlers,
   } from 'node:smol-http'
 

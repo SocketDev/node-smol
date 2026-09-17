@@ -5,12 +5,12 @@
     "onnxruntime": {
       "description": "ONNX Runtime inference engine",
       "version": "1.24.4",
-      "packageManager": "pip"
+      "origin": "pypi"
     },
     "onnxscript": {
       "description": "ONNX Script for ONNX model authoring",
       "version": "0.6.2",
-      "packageManager": "pip"
+      "origin": "pypi"
     }
   }
 }

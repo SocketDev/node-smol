@@ -18,7 +18,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 

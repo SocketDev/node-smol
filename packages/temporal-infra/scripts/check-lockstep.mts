@@ -19,7 +19,7 @@
  *      informational only — the shim is deliberately narrower than upstream's
  *      public API. Exit codes: 0 — checks 1+2 pass (check 3 is informational) 1
  *      — at least one of checks 1+2 failed 2 — script crashed (path missing,
- *      etc.) Run via: pnpm --filter temporal-infra run check:lockstep Or from
+ *      etc.) Run via: `pnpm --filter` temporal-infra run check:lockstep Or from
  *      this package's directory: node scripts/check-lockstep.mts
  */
 
@@ -224,7 +224,7 @@ export function extractV8Calls(): Array<{
   const out: Array<{ class: string; methods: string[] }> = []
   const accumEntries = Array.from(accum.entries())
   for (let i = 0, { length } = accumEntries; i < length; i += 1) {
-    const [cls, methods] = accumEntries[i]!
+    const { 0: cls, 1: methods } = accumEntries[i]!
     out.push({ class: cls, methods: Array.from(methods) })
   }
   return out

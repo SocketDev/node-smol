@@ -6,13 +6,15 @@
  * for embedded use in Node.js native bindings.
  *
  * Key design decisions:
+ *
  * - Uses OpenSSL for TLS (same as Node.js, allows sharing)
  * - Builds only the client library (libpq), not the full PostgreSQL server
  * - Produces static library for embedding.
  *
  * Utilities are split into:
- * - build-download.mts: download, verify, and resolve functions
- * - build-compile.mts: configure, compile, and package functions.
+ *
+ * - Build-download.mts: download, verify, and resolve functions
+ * - Build-compile.mts: configure, compile, and package functions.
  */
 
 import { existsSync, promises as fs } from 'node:fs'
@@ -72,6 +74,37 @@ export {
 }
 
 async function main() {
+  async function ensurePostgresSource(postgresConfigure: string) {
+    if (existsSync(postgresConfigure)) {
+      return
+    }
+    logger.info('PostgreSQL submodule not initialized, initializing…')
+    const initResult = await spawn(
+      'git',
+      [
+        'submodule',
+        'update',
+        '--init',
+        '--depth',
+        '1',
+        'packages/libpq-builder/upstream/postgres',
+      ],
+      { cwd: path.resolve(packageRoot, '../..'), stdio: 'inherit' },
+    )
+    if (
+      initResult.signal ||
+      initResult.error ||
+      (initResult.code ?? 1) !== 0 ||
+      !existsSync(postgresConfigure)
+    ) {
+      throw new Error(
+        'Failed to initialize PostgreSQL submodule. Run manually:\n' +
+          '  node scripts/fleet/git-partial-submodule.mts clone packages/libpq-builder/upstream/postgres',
+      )
+    }
+    logger.success('PostgreSQL submodule initialized')
+  }
+
   try {
     // Use platform-specific build directory for complete isolation.
     const platformArch = await getCurrentPlatformArch()
@@ -121,36 +154,7 @@ async function main() {
 
     // Ensure PostgreSQL submodule is initialized.
     const postgresConfigure = path.join(postgresUpstream, 'configure')
-    if (!existsSync(postgresConfigure)) {
-      logger.info('PostgreSQL submodule not initialized, initializing…')
-      const initResult = await spawn(
-        'git',
-        [
-          'submodule',
-          'update',
-          '--init',
-          '--depth',
-          '1',
-          'packages/libpq-builder/upstream/postgres',
-        ],
-        { cwd: path.resolve(packageRoot, '../..'), stdio: 'inherit' },
-      )
-      // Check signal + error before fallback-to-0 — a SIGTERM/SIGKILL kills
-      // the child with code === null, and `?? 0` would otherwise pass the
-      // check while leaving the submodule half-initialized.
-      if (
-        initResult.signal ||
-        initResult.error ||
-        (initResult.code ?? 1) !== 0 ||
-        !existsSync(postgresConfigure)
-      ) {
-        throw new Error(
-          'Failed to initialize PostgreSQL submodule. Run manually:\n' +
-            '  node scripts/fleet/git-partial-submodule.mts clone packages/libpq-builder/upstream/postgres',
-        )
-      }
-      logger.success('PostgreSQL submodule initialized')
-    }
+    await ensurePostgresSource(postgresConfigure)
 
     const isPostgresBuild = existsSync(postgresConfigure)
 

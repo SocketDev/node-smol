@@ -14,22 +14,21 @@ import {
   runCommand as runCommandRaw,
   selectMakefile,
 } from 'local-bin-infra/lib/builder'
-
-const runCommand = runCommandRaw as (
-  command: string,
-  args: string[],
-  cwd?: string | undefined,
-) => Promise<void>
 import { getBuildMode } from 'local-build-infra/lib/constants'
 import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 import { ensureLief } from 'local-lief-builder/lib/ensure-lief'
 
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
-import { getCI } from '@socketsecurity/lib-stable/env/ci'
+import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 const logger = getDefaultLogger()
+const runCommand = runCommandRaw as (
+  command: string,
+  args: string[],
+  cwd?: string | undefined,
+) => Promise<void>
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -48,7 +47,7 @@ async function main() {
       )
     } catch (checkError) {
       // If tool check fails in CI, skip tests gracefully
-      if (getCI()) {
+      if (isCIEnvironment()) {
         logger.warn(
           'Tool check failed in CI environment (likely missing system dependencies)',
         )
@@ -100,7 +99,7 @@ async function main() {
         await runCommand('make', ['-f', makefile, 'all'], packageRoot)
       } catch (buildError) {
         // If build fails in CI due to missing system dependencies, skip tests gracefully
-        if (getCI()) {
+        if (isCIEnvironment()) {
           logger.warn(
             'Build failed in CI environment (likely missing system dependencies)',
           )

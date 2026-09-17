@@ -6,7 +6,7 @@
 
 import process from 'node:process'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import platformPkg from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import {
   spawn,
@@ -14,15 +14,78 @@ import {
 } from '@socketsecurity/lib-stable/process/spawn/child'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
-import { isOnAcPower } from '../../../scripts/fleet/power-state.mts'
+import { getPowerState } from '../../../scripts/fleet/power-state.mts'
+import { isMainModule } from '../../../scripts/fleet/process/is-main-module.mts'
+import {
+  isJsonRequested,
+  runMain,
+} from '../../../scripts/fleet/process/run-main.mts'
+import type { ScriptMeta } from '../../../scripts/fleet/process/run-main.mts'
+import type { ScriptResult } from '../../../scripts/fleet/process/script-result.mts'
 
 const logger = getDefaultLogger()
+const { WIN32 } = platformPkg
 
 const MAX_MEMORY_MB = 2048 // 2GB limit
 const CHECK_INTERVAL_MS = 1000 // Check every 1 second
 
+const SCRIPT_META: ScriptMeta = {
+  describe: 'Run Vitest with repository memory and power-aware time limits.',
+  help: 'Usage: pnpm run test:e2e [vitest args] [--json]',
+  json: 'result',
+}
+
+function testErrorResult(error: unknown): ScriptResult {
+  const exitCode =
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'number'
+      ? error.code
+      : 1
+  return { exitCode, error: errorMessage(error) }
+}
+
+function testSpawnResult(
+  result: {
+    code: number | null
+    signal: string | null
+    stderr?: unknown | undefined
+    stdout?: unknown | undefined
+  },
+  config: { json: boolean },
+): ScriptResult {
+  const { json } = { __proto__: null, ...config }
+  return {
+    exitCode: result.code ?? (result.signal ? 128 : 1),
+    data: json
+      ? {
+          stderr: result.stderr ?? '',
+          stdout: result.stdout ?? '',
+        }
+      : undefined,
+  }
+}
+
 // Get memory usage cross-platform
 export function getMemoryUsageMB(pid) {
+  // Handle Ctrl+C
+  process.on('SIGINT', () => {
+    logger.log('')
+    logger.log('Interrupted by user - cleaning up…')
+    killed = true
+    killProcessTree(vitestProcess.pid)
+    clearInterval(monitorInterval)
+    process.exitCode = 130
+  })
+
+  process.on('SIGTERM', () => {
+    killed = true
+    killProcessTree(vitestProcess.pid)
+    clearInterval(monitorInterval)
+    process.exitCode = 143
+  })
+
   try {
     if (WIN32) {
       // Windows: Use PowerShell (wmic is deprecated/removed on Windows 11+)
@@ -75,8 +138,9 @@ export function killProcessTree(pid) {
   }
 }
 
-async function main() {
-  const ON_AC = await isOnAcPower()
+export async function main(): Promise<ScriptResult> {
+  const ON_AC = (await getPowerState()) === 'ac'
+  const json = isJsonRequested(process.argv.slice(2))
 
   // Test suite builds full SEA binaries (~5s each, ~30 of them) plus
   // VFS extraction tests. On battery, macOS especially throttles CPU
@@ -86,14 +150,16 @@ async function main() {
   // kill an otherwise-healthy run.
   const TIMEOUT_MS = ON_AC ? 480_000 : 900_000 // 8 min (AC) | 15 min (battery)
 
-  const vitestArgs = process.argv.slice(2)
+  const vitestArgs = process.argv.slice(2).filter(arg => arg !== '--json')
 
-  logger.log(
-    `Memory limit: ${MAX_MEMORY_MB}MB | Timeout: ${TIMEOUT_MS / 1000}s ` +
-      `(${ON_AC ? 'AC power' : 'battery — extended'})`,
-  )
-  logger.log(`Running: vitest ${vitestArgs.join(' ')}`)
-  logger.log('')
+  if (!json) {
+    logger.log(
+      `Memory limit: ${MAX_MEMORY_MB}MB | Timeout: ${TIMEOUT_MS / 1000}s ` +
+        `(${ON_AC ? 'AC power' : 'battery — extended'})`,
+    )
+    logger.log(`Running: vitest ${vitestArgs.join(' ')}`)
+    logger.log('')
+  }
 
   // Spawn vitest process using @socketsecurity/lib-stable spawn
   const vitestPromise = spawn(
@@ -101,7 +167,7 @@ async function main() {
     ['exec', 'vitest', 'run', ...vitestArgs],
     {
       shell: WIN32,
-      stdio: 'inherit',
+      stdio: json ? 'pipe' : 'inherit',
       env: {
         ...process.env,
         NODE_OPTIONS: `--max-old-space-size=${MAX_MEMORY_MB}`,
@@ -149,60 +215,41 @@ async function main() {
       return
     }
 
-    // Show progress (only if memory is being used). Direct stdout
-    // write is intentional here: this is a TTY progress bar that
-    // overwrites itself with `\r`; piping through a logger would
-    // newline-terminate each frame and flood the output.
     if (memoryMB > 0) {
       const memPercent = Math.floor((memoryMB / MAX_MEMORY_MB) * 100)
       const bar = '\u2588'.repeat(Math.floor(memPercent / 5))
       const empty = '\u2591'.repeat(20 - Math.floor(memPercent / 5))
-      const status = `\r Memory: ${memoryMB}MB / ${MAX_MEMORY_MB}MB [${bar}${empty}] ${memPercent}% | ${elapsed}s`
-      process.stdout.write(status) // socket-hook: allow console -- TTY progress bar with \r overwrite
+      const status = `Memory: ${memoryMB}MB / ${MAX_MEMORY_MB}MB [${bar}${empty}] ${memPercent}% | ${elapsed}s`
+      logger.info(status)
     }
   }, CHECK_INTERVAL_MS)
 
   // Handle vitest exit and errors
-  vitestPromise
-    .then(result => {
-      clearInterval(monitorInterval)
-      if (!killed) {
+  try {
+    const result = await vitestPromise
+    clearInterval(monitorInterval)
+    if (!killed) {
+      if (!json) {
         logger.log('')
         logger.log('')
         logger.log(`Test completed with exit code: ${result.code}`)
-        // result.code === null when the child was signal-terminated;
-        // `|| 0` would otherwise mask an OOM/kill as success.
-        process.exitCode = result.code ?? (result.signal ? 128 : 1)
       }
-    })
-    .catch(error => {
-      clearInterval(monitorInterval)
-      if (!killed) {
+      return testSpawnResult(result, { json })
+    }
+  } catch (error) {
+    clearInterval(monitorInterval)
+    if (!killed) {
+      if (!json) {
         logger.error('')
         logger.error(`Test failed: ${errorMessage(error)}`)
-        process.exitCode = error.code || 1
       }
-    })
+      return testErrorResult(error)
+    }
+  }
 
-  // Handle Ctrl+C
-  process.on('SIGINT', () => {
-    logger.log('')
-    logger.log('Interrupted by user - cleaning up…')
-    killed = true
-    killProcessTree(vitestProcess.pid)
-    clearInterval(monitorInterval)
-    process.exitCode = 130
-  })
-
-  process.on('SIGTERM', () => {
-    killed = true
-    killProcessTree(vitestProcess.pid)
-    clearInterval(monitorInterval)
-    process.exitCode = 143
-  })
+  return { exitCode: Number(process.exitCode ?? 1) }
 }
 
-main().catch(e => {
-  logger.error(errorMessage(e))
-  process.exitCode = 1
-})
+if (isMainModule(import.meta.url)) {
+  runMain(main, SCRIPT_META)
+}

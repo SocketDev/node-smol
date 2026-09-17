@@ -11,7 +11,7 @@ import path from 'node:path'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { hasKeys } from '@socketsecurity/lib-stable/objects/predicates'
-import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { getFileSize } from 'local-build-infra/lib/build-steps'
 import { generateWasmSyncWrapper } from 'local-build-infra/wasm-synced/wasm-sync-wrapper'
 
 const logger = getDefaultLogger()
@@ -122,6 +122,7 @@ export async function generateSync(config) {
   logger.logNewline()
 
   return {
+    __proto__: null,
     artifactPath: outputSyncDir,
     binaryPath: path.relative(buildDir, outputSyncDir),
     binarySize: syncSize,

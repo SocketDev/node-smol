@@ -62,7 +62,9 @@ const BufferByteLength = BufferCtor.byteLength
 const BufferConcat = BufferCtor.concat
 const BufferFrom = BufferCtor.from
 // Safe Buffer.isBuffer using captured constructor (same as Buffer.isBuffer implementation)
-const BufferIsBuffer = obj => obj instanceof BufferCtor
+function BufferIsBuffer(obj) {
+  return obj instanceof BufferCtor
+}
 
 // Path module methods
 const PathJoin = pathModule.join
@@ -226,10 +228,18 @@ function normalizePath(filepath) {
 const ZERO_DATE = new DateConstructor(0)
 
 // Stat method implementations (shared across all stat objects)
-const statIsFile = isDir => () => !isDir
-const statIsDirectory = isDir => () => isDir
-const statFalse = () => false
-const statTrue = () => true
+function statIsFile(isDir) {
+  return () => !isDir
+}
+function statIsDirectory(isDir) {
+  return () => isDir
+}
+function statFalse() {
+  return false
+}
+function statTrue() {
+  return true
+}
 
 /**
  * Create a stat-like object for VFS entries.
@@ -286,7 +296,7 @@ function createStatObject(isDir, size, mode) {
  * @param {number} mode - File permissions (default 0o777 for symlinks)
  * @returns {object} Stat-like object for symlinks
  */
-function createSymlinkStatObject(size, mode = 0o120777) {
+function createSymlinkStatObject(size, mode = 0o12_0777) {
   return {
     __proto__: null,
     atime: ZERO_DATE,

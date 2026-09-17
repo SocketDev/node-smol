@@ -20,7 +20,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 import { getBuildMode } from 'local-build-infra/lib/constants'
 import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
@@ -33,14 +33,13 @@ import type { SpawnOptions } from '@socketsecurity/lib-stable/process/spawn/type
 import { getLatestFinalBinary } from '../paths.mts'
 import { REPO_ROOT } from '../../scripts/paths.mts'
 import { tolerantTimeout } from '../../../../test/fleet/_shared/lib/timing.mts'
+import { execCommand, getBinaryPath } from './helpers/cross-tool-fixtures.mts'
 
 const TIMEOUT_180S = tolerantTimeout(180_000)
 const TIMEOUT_300S = tolerantTimeout(300_000)
 const TIMEOUT_420S = tolerantTimeout(420_000)
 
 const logger = getDefaultLogger()
-
-import { execCommand, getBinaryPath } from './helpers/cross-tool-fixtures.mts'
 
 const NODE_BINARY = getLatestFinalBinary() ?? ''
 

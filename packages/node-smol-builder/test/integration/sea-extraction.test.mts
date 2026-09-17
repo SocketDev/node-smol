@@ -21,10 +21,6 @@
  * 3. A clean bundle yields NO secret hits in the extracted region — even though
  *    the whole binary does contain Node's own crypto strings (proving the
  *    extraction, not the binary, is what we scan).
- *
- * The snapshot case (a V8 startup snapshot stores compiled heap, not source, so
- * the payload must NOT be recoverable as plaintext) lands with the build-sea
- * snapshot wrapper — marked it.todo below.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -37,7 +33,7 @@ import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 
 import { runBinject } from '../helpers/binject.mts'
 import { getLatestFinalBinary } from '../paths.mts'
@@ -69,11 +65,11 @@ function secretPatterns() {
     // Socket API token.
     new RegExp(`${joinFragments(['skt', 'sec_'])}[A-Za-z0-9_-]{24,}`),
     // AWS access key id.
-    new RegExp(`AKIA[A-Z0-9]{16}`),
+    /AKIA[A-Z0-9]{16}/,
     // GitHub personal access token.
-    new RegExp(`ghp_[A-Za-z0-9]{36}`),
+    /ghp_[A-Za-z0-9]{36}/,
     // JWT (three base64url segments).
-    new RegExp(`eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}`),
+    /eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/,
   ]
 }
 
@@ -209,9 +205,4 @@ describe.skipIf(skipTests)('SEA extraction / leak guard', () => {
       .map(m => m[0])
     expect(hits).toStrictEqual([])
   })
-
-  // Added when build-sea snapshot mode lands: a V8 startup snapshot serializes
-  // compiled heap, not source text, so extractBundle() must return undefined
-  // The fenced source is not present as plaintext.
-  it.todo('a snapshot SEA does not leak its source as plaintext')
 })

@@ -6,7 +6,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { execBuildStep } from 'local-build-infra/lib/build-helpers'
+import { execBuildStep } from 'local-build-infra/lib/build-steps'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -17,6 +17,7 @@ import {
   languageModelInfraRoot,
   packageRoot,
 } from './paths.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
@@ -76,12 +77,12 @@ function resolveExistingPath(
 }
 
 async function main(): Promise<void> {
-  const mode = process.env['BUILD_MODE'] ?? (process.env['CI'] ? 'prod' : 'dev')
+  const mode = getEnvValue('BUILD_MODE') ?? (getEnvValue('CI') ? 'prod' : 'dev')
   const target = `${process.platform}-${process.arch}`
   const buildDir = getBuildDir(mode, target)
   const development = nodeDevelopmentCandidates(process.execPath)
   const includeDir = resolveExistingPath(
-    process.env['SMOL_AI_NODE_INCLUDE_DIR'],
+    getEnvValue('SMOL_AI_NODE_INCLUDE_DIR'),
     development.includeDirs,
     'node_api.h',
   )
@@ -93,7 +94,7 @@ async function main(): Promise<void> {
   await mkdir(buildDir, { recursive: true })
   const nodeImportLibrary =
     process.platform === 'win32'
-      ? (process.env['SMOL_AI_NODE_IMPORT_LIBRARY'] ??
+      ? (getEnvValue('SMOL_AI_NODE_IMPORT_LIBRARY') ??
         development.importLibraries.find(candidate => existsSync(candidate)))
       : undefined
   if (process.platform === 'win32' && !nodeImportLibrary) {

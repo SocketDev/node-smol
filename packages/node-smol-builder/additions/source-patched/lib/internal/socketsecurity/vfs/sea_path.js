@@ -39,48 +39,91 @@ let seaAvailable
 let seaKeySet
 
 /**
- * Check if SEA module is available and we're running as a SEA
- * @returns {boolean}
+ * Create EISDIR error for SEA path
+ * @param {string} filepath - Original path
+ * @returns {Error}
  */
-function isSeaAvailable() {
-  if (seaAvailable !== undefined) {
-    return seaAvailable
-  }
-
-  try {
-    // Lazy-load node:sea module (experimental but required for SEA asset access)
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins
-    seaModule = require('node:sea')
-    seaAvailable = seaModule.isSea()
-    if (seaAvailable) {
-      debug('SEA mode detected, /sea path enabled')
-    }
-  } catch {
-    // node:sea not available or not running as SEA
-    seaAvailable = false
-  }
-
-  return seaAvailable
+function createSeaEISDIR(filepath) {
+  const error = new ErrorConstructor(
+    `EISDIR: illegal operation on a directory, read '${filepath}'`,
+  )
+  error.code = 'EISDIR'
+  error.errno = -21
+  error.syscall = 'read'
+  error.path = filepath
+  return error
 }
 
 /**
- * Check if a path is a SEA asset path (/sea/...)
- * @param {string} filepath - Path to check
- * @returns {boolean}
+ * Create ENOENT error for SEA path
+ * @param {string} filepath - Original path
+ * @param {string} syscall - System call name
+ * @returns {Error}
  */
-function isSeaPath(filepath) {
-  if (!filepath || typeof filepath !== 'string') {
+function createSeaENOENT(filepath, syscall = 'open') {
+  const error = new ErrorConstructor(
+    `ENOENT: no such file or directory, ${syscall} '${filepath}'`,
+  )
+  error.code = 'ENOENT'
+  error.errno = -2
+  error.syscall = syscall
+  error.path = filepath
+  return error
+}
+
+/**
+ * Create ENOTDIR error for SEA path
+ * @param {string} filepath - Original path
+ * @returns {Error}
+ */
+function createSeaENOTDIR(filepath) {
+  const error = new ErrorConstructor(
+    `ENOTDIR: not a directory, scandir '${filepath}'\n` +
+      'Hint: SEA assets are flat - use fs.readdirSync("/sea") to list all assets',
+  )
+  error.code = 'ENOTDIR'
+  error.errno = -20
+  error.syscall = 'scandir'
+  error.path = filepath
+  return error
+}
+
+/**
+ * Check if asset exists in SEA
+ * @param {string} filepath - SEA path
+ * @returns {boolean|undefined} True/false if SEA path, undefined otherwise
+ */
+function existsInSea(filepath) {
+  if (!isSeaPath(filepath) || !isSeaAvailable()) {
+    return
+  }
+
+  const key = getSeaAssetKey(filepath)
+  if (key === undefined) {
     return false
   }
 
-  const normalized = normalizePath(filepath)
+  // Root /sea always "exists"
+  if (key === '') {
+    return true
+  }
 
-  // Match /sea or /sea/...
-  return (
-    normalized === SEA_PREFIX ||
-    normalized === `${SEA_PREFIX}/` ||
-    StringPrototypeStartsWith(normalized, `${SEA_PREFIX}/`)
-  )
+  // Check if asset key exists using cached SafeSet for O(1) lookup
+  // (defensive null check for seaModule)
+  if (!seaModule) {
+    return false
+  }
+
+  // Build seaKeySet cache on first use (lazy initialization)
+  if (seaKeySet === undefined) {
+    const keys = seaModule.getAssetKeys()
+    seaKeySet = new SafeSet()
+    for (let i = 0, { length } = keys; i < length; i += 1) {
+      SetPrototypeAdd(seaKeySet, keys[i])
+    }
+  }
+
+  return SetPrototypeHas(seaKeySet, key)
 }
 
 /**
@@ -132,174 +175,48 @@ function getSeaAssetKey(filepath) {
 }
 
 /**
- * Create ENOENT error for SEA path
- * @param {string} filepath - Original path
- * @param {string} syscall - System call name
- * @returns {Error}
+ * Check if SEA module is available and we're running as a SEA
+ * @returns {boolean}
  */
-function createSeaENOENT(filepath, syscall = 'open') {
-  const error = new ErrorConstructor(
-    `ENOENT: no such file or directory, ${syscall} '${filepath}'`,
-  )
-  error.code = 'ENOENT'
-  error.errno = -2
-  error.syscall = syscall
-  error.path = filepath
-  return error
-}
-
-/**
- * Create EISDIR error for SEA path
- * @param {string} filepath - Original path
- * @returns {Error}
- */
-function createSeaEISDIR(filepath) {
-  const error = new ErrorConstructor(
-    `EISDIR: illegal operation on a directory, read '${filepath}'`,
-  )
-  error.code = 'EISDIR'
-  error.errno = -21
-  error.syscall = 'read'
-  error.path = filepath
-  return error
-}
-
-/**
- * Create ENOTDIR error for SEA path
- * @param {string} filepath - Original path
- * @returns {Error}
- */
-function createSeaENOTDIR(filepath) {
-  const error = new ErrorConstructor(
-    `ENOTDIR: not a directory, scandir '${filepath}'\n` +
-      'Hint: SEA assets are flat - use fs.readdirSync("/sea") to list all assets',
-  )
-  error.code = 'ENOTDIR'
-  error.errno = -20
-  error.syscall = 'scandir'
-  error.path = filepath
-  return error
-}
-
-/**
- * Read file from SEA assets
- * @param {string} filepath - SEA path (e.g., '/sea/config.json')
- * @param {object} [options] - fs.readFileSync options
- * @returns {Buffer|string|undefined} File content or undefined if not SEA path
- */
-function readFileFromSea(filepath, options) {
-  if (!isSeaPath(filepath) || !isSeaAvailable()) {
-    return
-  }
-
-  const key = getSeaAssetKey(filepath)
-  if (key === undefined) {
-    throw createSeaENOENT(filepath, 'open')
-  }
-
-  // Root /sea is a directory
-  if (key === '') {
-    throw createSeaEISDIR(filepath)
-  }
-
-  // Defensive null check for seaModule
-  if (!seaModule) {
-    throw createSeaENOENT(filepath, 'open')
+function isSeaAvailable() {
+  if (seaAvailable !== undefined) {
+    return seaAvailable
   }
 
   try {
-    // Get asset as ArrayBuffer or string
-    const encoding = options?.encoding
-    const asset = seaModule.getAsset(key, encoding)
-
-    // If no encoding specified, convert ArrayBuffer to Buffer
-    if (encoding === undefined || encoding === 'buffer') {
-      return BufferFrom(asset)
+    // Lazy-load node:sea module (experimental but required for SEA asset access)
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
+    seaModule = require('node:sea')
+    seaAvailable = seaModule.isSea()
+    if (seaAvailable) {
+      debug('SEA mode detected, /sea path enabled')
     }
-
-    return asset
-  } catch (error) {
-    // Convert SEA error to ENOENT
-    if (error.code === 'ERR_SINGLE_EXECUTABLE_APPLICATION_ASSET_NOT_FOUND') {
-      throw createSeaENOENT(filepath, 'open')
-    }
-    throw error
-  }
-}
-
-/**
- * Check if asset exists in SEA
- * @param {string} filepath - SEA path
- * @returns {boolean|undefined} True/false if SEA path, undefined otherwise
- */
-function existsInSea(filepath) {
-  if (!isSeaPath(filepath) || !isSeaAvailable()) {
-    return
-  }
-
-  const key = getSeaAssetKey(filepath)
-  if (key === undefined) {
-    return false
-  }
-
-  // Root /sea always "exists"
-  if (key === '') {
-    return true
-  }
-
-  // Check if asset key exists using cached SafeSet for O(1) lookup
-  // (defensive null check for seaModule)
-  if (!seaModule) {
-    return false
-  }
-
-  // Build seaKeySet cache on first use (lazy initialization)
-  if (seaKeySet === undefined) {
-    const keys = seaModule.getAssetKeys()
-    seaKeySet = new SafeSet()
-    for (let i = 0, { length } = keys; i < length; i += 1) {
-      SetPrototypeAdd(seaKeySet, keys[i])
-    }
-  }
-
-  return SetPrototypeHas(seaKeySet, key)
-}
-
-/**
- * Get stat for SEA asset
- * @param {string} filepath - SEA path
- * @returns {object|undefined} Stat object or undefined if not SEA path
- */
-function statFromSea(filepath) {
-  if (!isSeaPath(filepath) || !isSeaAvailable()) {
-    return
-  }
-
-  const key = getSeaAssetKey(filepath)
-  if (key === undefined) {
-    throw createSeaENOENT(filepath, 'stat')
-  }
-
-  // Root /sea is a directory
-  if (key === '') {
-    return createStatObject(true, 0, 0o755)
-  }
-
-  // Check if asset exists
-  if (!existsInSea(filepath)) {
-    throw createSeaENOENT(filepath, 'stat')
-  }
-
-  // Get asset to determine size (defensive null check for seaModule)
-  if (!seaModule) {
-    throw createSeaENOENT(filepath, 'stat')
-  }
-  try {
-    const asset = seaModule.getRawAsset(key)
-    return createStatObject(false, asset.byteLength, 0o644)
   } catch {
-    throw createSeaENOENT(filepath, 'stat')
+    // node:sea not available or not running as SEA
+    seaAvailable = false
   }
+
+  return seaAvailable
+}
+
+/**
+ * Check if a path is a SEA asset path (/sea/...)
+ * @param {string} filepath - Path to check
+ * @returns {boolean}
+ */
+function isSeaPath(filepath) {
+  if (!filepath || typeof filepath !== 'string') {
+    return false
+  }
+
+  const normalized = normalizePath(filepath)
+
+  // Match /sea or /sea/...
+  return (
+    normalized === SEA_PREFIX ||
+    normalized === `${SEA_PREFIX}/` ||
+    StringPrototypeStartsWith(normalized, `${SEA_PREFIX}/`)
+  )
 }
 
 /**
@@ -404,6 +321,89 @@ function readdirFromSea(filepath, options) {
   }
 
   return keys
+}
+
+/**
+ * Read file from SEA assets
+ * @param {string} filepath - SEA path (e.g., '/sea/config.json')
+ * @param {object} [options] - fs.readFileSync options
+ * @returns {Buffer|string|undefined} File content or undefined if not SEA path
+ */
+function readFileFromSea(filepath, options) {
+  if (!isSeaPath(filepath) || !isSeaAvailable()) {
+    return
+  }
+
+  const key = getSeaAssetKey(filepath)
+  if (key === undefined) {
+    throw createSeaENOENT(filepath, 'open')
+  }
+
+  // Root /sea is a directory
+  if (key === '') {
+    throw createSeaEISDIR(filepath)
+  }
+
+  // Defensive null check for seaModule
+  if (!seaModule) {
+    throw createSeaENOENT(filepath, 'open')
+  }
+
+  try {
+    // Get asset as ArrayBuffer or string
+    const encoding = options?.encoding
+    const asset = seaModule.getAsset(key, encoding)
+
+    // If no encoding specified, convert ArrayBuffer to Buffer
+    if (encoding === undefined || encoding === 'buffer') {
+      return BufferFrom(asset)
+    }
+
+    return asset
+  } catch (error) {
+    // Convert SEA error to ENOENT
+    if (error.code === 'ERR_SINGLE_EXECUTABLE_APPLICATION_ASSET_NOT_FOUND') {
+      throw createSeaENOENT(filepath, 'open')
+    }
+    throw error
+  }
+}
+
+/**
+ * Get stat for SEA asset
+ * @param {string} filepath - SEA path
+ * @returns {object|undefined} Stat object or undefined if not SEA path
+ */
+function statFromSea(filepath) {
+  if (!isSeaPath(filepath) || !isSeaAvailable()) {
+    return
+  }
+
+  const key = getSeaAssetKey(filepath)
+  if (key === undefined) {
+    throw createSeaENOENT(filepath, 'stat')
+  }
+
+  // Root /sea is a directory
+  if (key === '') {
+    return createStatObject(true, 0, 0o755)
+  }
+
+  // Check if asset exists
+  if (!existsInSea(filepath)) {
+    throw createSeaENOENT(filepath, 'stat')
+  }
+
+  // Get asset to determine size (defensive null check for seaModule)
+  if (!seaModule) {
+    throw createSeaENOENT(filepath, 'stat')
+  }
+  try {
+    const asset = seaModule.getRawAsset(key)
+    return createStatObject(false, asset.byteLength, 0o644)
+  } catch {
+    throw createSeaENOENT(filepath, 'stat')
+  }
 }
 
 module.exports = ObjectFreeze({

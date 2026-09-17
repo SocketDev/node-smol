@@ -1,7 +1,7 @@
 /**
  * Get tool version from external-tools.json.
  *
- * Zero external dependencies — safe to run before pnpm install.
+ * Zero external dependencies — safe to run before `pnpm install`.
  *
  * Usage:
  * node get-tool-version.mts <tool-name> [version-key]
@@ -39,7 +39,7 @@ const versionKey = args[1] || 'version'
 if (!toolName) {
   const usage =
     'Usage: get-tool-version.mts <tool-name> [version-key] [--package-root <path>]'
-  // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before pnpm install, no lib logger available yet
+  // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before `pnpm install`, no lib logger available yet
   console.error(usage) // socket-hook: allow logger
   process.exitCode = 1
 } else {
@@ -47,24 +47,24 @@ if (!toolName) {
     const data = JSON.parse(readFileSync(EXTERNAL_TOOLS_PATH, 'utf8'))
     const tool = data.tools?.[toolName]
     if (!tool) {
-      // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before pnpm install, no lib logger available yet
+      // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before `pnpm install`, no lib logger available yet
       console.error(`Tool '${toolName}' not found in external-tools.json`) // socket-hook: allow logger
-      // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before pnpm install, no lib logger available yet
+      // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before `pnpm install`, no lib logger available yet
       console.error(`Available: ${Object.keys(data.tools || {}).join(', ')}`) // socket-hook: allow logger
       process.exitCode = 1
     } else {
       const value = tool[versionKey] ?? tool.version
       if (!value) {
-        // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before pnpm install, no lib logger available yet
+        // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before `pnpm install`, no lib logger available yet
         console.error(`No '${versionKey}' found for tool '${toolName}'`) // socket-hook: allow logger
         process.exitCode = 1
       } else {
-        // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before pnpm install, no lib logger available yet
+        // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before `pnpm install`, no lib logger available yet
         console.log(value) // socket-hook: allow logger
       }
     }
   } catch (e) {
-    // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before pnpm install, no lib logger available yet
+    // oxlint-disable-next-line socket/no-console-prefer-logger -- runs before `pnpm install`, no lib logger available yet
     console.error(e.message) // socket-hook: allow logger
     process.exitCode = 1
   }

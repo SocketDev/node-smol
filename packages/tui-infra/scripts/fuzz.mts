@@ -35,6 +35,7 @@ import {
   TUI_INCLUDE_SEARCH_DIR,
   TUI_SRC_DIR,
 } from '../lib/paths.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
@@ -147,7 +148,7 @@ export async function linksLibFuzzer(cxx: string): Promise<boolean> {
  * undefined when the box has none. `TUI_INFRA_FUZZER_CXX` jumps the queue.
  */
 export async function detectFuzzerCompiler(): Promise<string | undefined> {
-  const override = process.env['TUI_INFRA_FUZZER_CXX']
+  const override = getEnvValue('TUI_INFRA_FUZZER_CXX')
   const candidates = override
     ? [override, ...FUZZER_CXX_CANDIDATES]
     : FUZZER_CXX_CANDIDATES
@@ -265,7 +266,7 @@ export async function runFuzzTarget(config: {
  * env var raises both; CI sets it above the 15s local default.
  */
 export function resolveFuzzTimeSeconds(): number {
-  const ms = Number(process.env['FUZZ_TIME_MS']) || 15_000
+  const ms = Number(getEnvValue('FUZZ_TIME_MS')) || 15_000
   return Math.max(1, Math.round(ms / 1000))
 }
 

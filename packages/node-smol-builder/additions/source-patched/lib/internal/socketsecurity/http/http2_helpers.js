@@ -38,14 +38,6 @@ const {
 // Lazy debug — createDebug reads process.env.DEBUG which may not be available
 // during early module loading (Node.js bootstrap order).
 let _debug
-function debug(...args) {
-  if (!_debug) {
-    const { createDebug } = require('internal/socketsecurity/smol/debug')
-    _debug = createDebug('smol:http2')
-  }
-  return _debug(...args)
-}
-
 // Create HTTP/2 server with optimized settings.
 function createHttp2Server(options) {
   const opts = { __proto__: null, ...options }
@@ -80,42 +72,28 @@ function createHttp2Server(options) {
   return Http2CreateSecureServer(serverOptions)
 }
 
-// Send response with Link preload headers for dependencies.
-function sendWithPreloads(stream, headers, data, dependencies = []) {
-  // Add Link headers for preloading dependencies. Dependency names come
-  // from untrusted upstream packument data — filter to strict npm name
-  // grammar so CR/LF/`;`/`,`/`>` can't terminate the Link header early
-  // (response splitting / fake-header injection).
-  const safeDeps = ArrayPrototypeFilter(
-    dependencies,
-    dep =>
-      typeof dep === 'string' &&
-      RegExpPrototypeTest(NPM_PACKAGE_NAME_REGEX, dep),
-  )
-  if (safeDeps.length > 0) {
-    const linkHeader = ArrayPrototypeJoin(
-      ArrayPrototypeMap(safeDeps, dep => `</${dep}>; rel=preload; as=fetch`),
-      ', ',
-    )
-
-    headers['link'] = linkHeader
+function debug(...args) {
+  if (!_debug) {
+    const { createDebug } = require('internal/socketsecurity/smol/debug')
+    _debug = createDebug('smol:http2')
   }
-
-  // Send response.
-  stream.respond(headers)
-  stream.end(data)
+  return _debug(...args)
 }
 
-// Send packument with dependency preloads.
-function sendPackumentWithDeps(stream, packument, dependencies) {
-  const headers = {
+// Get session statistics.
+function getHttp2Stats(session) {
+  const state = session.state
+  return {
     __proto__: null,
-    ':status': 200,
-    'content-type': 'application/json',
-    'cache-control': 'public, max-age=3600',
+    effectiveLocalWindowSize: state.effectiveLocalWindowSize,
+    effectiveRecvDataLength: state.effectiveRecvDataLength,
+    localSettings: session.localSettings,
+    localWindowSize: state.localWindowSize,
+    nextStreamID: state.nextStreamID,
+    outboundQueueSize: state.outboundQueueSize,
+    remoteSettings: session.remoteSettings,
+    remoteWindowSize: state.remoteWindowSize,
   }
-
-  sendWithPreloads(stream, headers, JSONStringify(packument), dependencies)
 }
 
 // Handle HTTP/2 session with optimizations.
@@ -145,20 +123,42 @@ function optimizeHttp2Session(session) {
   })
 }
 
-// Get session statistics.
-function getHttp2Stats(session) {
-  const state = session.state
-  return {
+// Send packument with dependency preloads.
+function sendPackumentWithDeps(stream, packument, dependencies) {
+  const headers = {
     __proto__: null,
-    effectiveLocalWindowSize: state.effectiveLocalWindowSize,
-    effectiveRecvDataLength: state.effectiveRecvDataLength,
-    localSettings: session.localSettings,
-    localWindowSize: state.localWindowSize,
-    nextStreamID: state.nextStreamID,
-    outboundQueueSize: state.outboundQueueSize,
-    remoteSettings: session.remoteSettings,
-    remoteWindowSize: state.remoteWindowSize,
+    ':status': 200,
+    'content-type': 'application/json',
+    'cache-control': 'public, max-age=3600',
   }
+
+  sendWithPreloads(stream, headers, JSONStringify(packument), dependencies)
+}
+
+// Send response with Link preload headers for dependencies.
+function sendWithPreloads(stream, headers, data, dependencies = []) {
+  // Add Link headers for preloading dependencies. Dependency names come
+  // from untrusted upstream packument data — filter to strict npm name
+  // grammar so CR/LF/`;`/`,`/`>` can't terminate the Link header early
+  // (response splitting / fake-header injection).
+  const safeDeps = ArrayPrototypeFilter(
+    dependencies,
+    dep =>
+      typeof dep === 'string' &&
+      RegExpPrototypeTest(NPM_PACKAGE_NAME_REGEX, dep),
+  )
+  if (safeDeps.length > 0) {
+    const linkHeader = ArrayPrototypeJoin(
+      ArrayPrototypeMap(safeDeps, dep => `</${dep}>; rel=preload; as=fetch`),
+      ', ',
+    )
+
+    headers['link'] = linkHeader
+  }
+
+  // Send response.
+  stream.respond(headers)
+  stream.end(data)
 }
 
 module.exports = {

@@ -39,10 +39,10 @@ import {
 } from 'local-build-infra/lib/platform-mappings'
 import { verifyReleaseChecksum } from 'local-build-infra/lib/release-checksums/core'
 import { extractTarball } from 'local-build-infra/lib/tarball-utils'
-import { getSubmoduleVersion } from 'local-build-infra/lib/version-helpers'
+import { getSubmoduleVersion } from 'local-build-infra/lib/tool-versions'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -51,6 +51,7 @@ import {
   downloadSocketBtmRelease,
 } from '@socketsecurity/lib-stable/releases/socket-btm'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
@@ -75,8 +76,8 @@ const packageRoot = path.join(__dirname, '..')
 const curlUpstream = path.join(packageRoot, 'upstream', 'curl')
 const mbedtlsUpstream = path.join(packageRoot, 'upstream', 'mbedtls')
 
-const CROSS_COMPILE = process.env['CROSS_COMPILE'] === '1'
-const TARGET_ARCH = process.env['TARGET_ARCH'] || process.arch
+const CROSS_COMPILE = getEnvValue('CROSS_COMPILE') === '1'
+const TARGET_ARCH = getEnvValue('TARGET_ARCH') || process.arch
 
 /**
  * Get build directories for a given platform-arch.
@@ -102,7 +103,7 @@ export function getBuildDirs(platformArch) {
     BUILD_STAGES.FINAL,
     'mbedtls',
   )
-  return { buildDir, curlBuildDir, mbedtlsBuildDir }
+  return { __proto__: null, buildDir, curlBuildDir, mbedtlsBuildDir }
 }
 
 /**
@@ -145,12 +146,97 @@ export function curlExistsAt(dir) {
  * }>}
  */
 export async function verifyArchiveChecksum(archivePath, assetName) {
-  return verifyReleaseChecksum({
-    assetName,
-    filePath: archivePath,
-    tempDir: path.join(packageRoot, 'build', 'temp'),
-    tool: 'curl',
-  })
+  return verifyReleaseChecksum(archivePath, assetName, 'curl')
+}
+
+async function deleteArchiveState(downloadedArchive, versionFile) {
+  await safeDelete(downloadedArchive)
+  if (existsSync(versionFile)) {
+    await safeDelete(versionFile)
+  }
+}
+
+async function validateGzipArchive(downloadedArchive, versionFile) {
+  const magic = Buffer.alloc(2)
+  const file = await fs.open(downloadedArchive, 'r')
+  try {
+    await file.read(magic, 0, 2, 0)
+  } finally {
+    await file.close()
+  }
+  if (magic[0] === 0x1f && magic[1] === 0x8b) {
+    return
+  }
+  await deleteArchiveState(downloadedArchive, versionFile)
+  throw new Error(
+    'Downloaded archive is not a valid gzip file (missing magic bytes). ' +
+      `File may be corrupted or truncated. Deleted ${downloadedArchive} to force re-download.`,
+  )
+}
+
+async function validateDownloadedChecksum(
+  downloadedArchive,
+  assetName,
+  versionFile,
+) {
+  logger.info('Verifying archive checksum…')
+  const result = await verifyArchiveChecksum(downloadedArchive, assetName)
+  if (!result.valid) {
+    await deleteArchiveState(downloadedArchive, versionFile)
+    throw new Error(
+      'Archive checksum mismatch - file is corrupted.\n' +
+        `  Expected: ${result.expected}\n` +
+        `  Actual:   ${result.actual}\n` +
+        `Deleted ${downloadedArchive} to force re-download.`,
+    )
+  }
+  if (result.actual) {
+    logger.info(
+      `Checksum verified: ${result.actual.slice(0, 16)}...${result.actual.slice(-8)}`,
+    )
+  }
+}
+
+async function extractDownloadedArchive(
+  downloadedArchive,
+  extractDir,
+  versionFile,
+) {
+  try {
+    await extractTarball(downloadedArchive, extractDir, {
+      createDir: false,
+      stdio: 'inherit',
+      validate: true,
+    })
+  } catch (error) {
+    await deleteArchiveState(downloadedArchive, versionFile)
+    throw new Error(
+      `Failed to extract curl archive from ${downloadedArchive}: ${errorMessage(error)}. ` +
+        'Deleted corrupted archive to allow re-download on next run.',
+      { cause: error },
+    )
+  }
+}
+
+async function clearExtractionDirectories(extractDir) {
+  const paths = ['include', 'lib', 'bin'].map(name =>
+    path.join(extractDir, name),
+  )
+  for (let i = 0, { length } = paths; i < length; i += 1) {
+    const itemPath = paths[i]
+    if (existsSync(itemPath)) {
+      await safeDelete(itemPath)
+    }
+  }
+}
+
+function validateExtractedFiles(extractDir) {
+  for (let i = 0, { length } = CURL_REQUIRED_FILES; i < length; i += 1) {
+    const file = CURL_REQUIRED_FILES[i]
+    if (!existsSync(path.join(extractDir, file))) {
+      throw new Error(`Expected file not found after extraction: ${file}`)
+    }
+  }
 }
 
 /**
@@ -227,95 +313,17 @@ export async function downloadCurl(options = {}) {
     `Archive size: ${(archiveStats.size / 1024 / 1024).toFixed(2)} MB`,
   )
 
-  // Check gzip magic bytes (0x1f 0x8b) to verify it's a valid gzip file.
-  const gzipMagic = Buffer.alloc(2)
-  const fd = await fs.open(downloadedArchive, 'r')
-  try {
-    await fd.read(gzipMagic, 0, 2, 0)
-  } finally {
-    await fd.close()
-  }
-
-  if (gzipMagic[0] !== 0x1f || gzipMagic[1] !== 0x8b) {
-    // Delete corrupted archive and version file so next run will re-download.
-    await safeDelete(downloadedArchive)
-    if (existsSync(versionFile)) {
-      await safeDelete(versionFile)
-    }
-    throw new Error(
-      'Downloaded archive is not a valid gzip file (missing magic bytes). ' +
-        `File may be corrupted or truncated. Deleted ${downloadedArchive} to force re-download.`,
-    )
-  }
-
-  // Verify SHA256 checksum to detect corrupt/truncated downloads.
-  logger.info('Verifying archive checksum…')
-  const checksumResult = await verifyArchiveChecksum(
-    downloadedArchive,
-    assetName,
-  )
-  if (!checksumResult.valid) {
-    await safeDelete(downloadedArchive)
-    if (existsSync(versionFile)) {
-      await safeDelete(versionFile)
-    }
-    throw new Error(
-      'Archive checksum mismatch - file is corrupted.\n' +
-        `  Expected: ${checksumResult.expected}\n` +
-        `  Actual:   ${checksumResult.actual}\n` +
-        `Deleted ${downloadedArchive} to force re-download.`,
-    )
-  }
-  // Only log checksum if it was actually verified (not skipped due to missing expected checksum).
-  if (checksumResult.actual) {
-    logger.info(
-      `Checksum verified: ${checksumResult.actual.slice(0, 16)}...${checksumResult.actual.slice(-8)}`,
-    )
-  }
+  await validateGzipArchive(downloadedArchive, versionFile)
+  await validateDownloadedChecksum(downloadedArchive, assetName, versionFile)
 
   // Clean extraction directory to prevent "File exists" errors from cached layers.
   // This handles cases where Docker cached a partial extraction before failure.
-  const curlIncludeDir = path.join(extractDir, 'include')
-  const curlLibDir = path.join(extractDir, 'lib')
-  const curlBinDir = path.join(extractDir, 'bin')
-  if (existsSync(curlIncludeDir)) {
-    await safeDelete(curlIncludeDir)
-  }
-  if (existsSync(curlLibDir)) {
-    await safeDelete(curlLibDir)
-  }
-  if (existsSync(curlBinDir)) {
-    await safeDelete(curlBinDir)
-  }
+  await clearExtractionDirectories(extractDir)
 
   // Extract using cross-platform tarball utility (handles Windows path conversion).
   // Release tarballs are already flat - no top-level directory to strip.
-  try {
-    await extractTarball(downloadedArchive, extractDir, {
-      createDir: false,
-      stdio: 'inherit',
-      validate: true,
-    })
-  } catch (e) {
-    // On extraction failure, delete the corrupted archive to allow re-download.
-    await safeDelete(downloadedArchive)
-    if (existsSync(versionFile)) {
-      await safeDelete(versionFile)
-    }
-    throw new Error(
-      `Failed to extract curl archive from ${downloadedArchive}: ${errorMessage(e)}. ` +
-        'Deleted corrupted archive to allow re-download on next run.',
-      { cause: e },
-    )
-  }
-
-  // Verify expected files exist after extraction.
-  for (let i = 0, { length } = CURL_REQUIRED_FILES; i < length; i += 1) {
-    const file = CURL_REQUIRED_FILES[i]
-    if (!existsSync(path.join(extractDir, file))) {
-      throw new Error(`Expected file not found after extraction: ${file}`)
-    }
-  }
+  await extractDownloadedArchive(downloadedArchive, extractDir, versionFile)
+  validateExtractedFiles(extractDir)
 
   // Write version file after cleanup to ensure curl exists check passes.
   await fs.writeFile(versionFile, CURL_VERSION, 'utf8')

@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url'
 import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
-import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
+import { parseArgs } from '@socketsecurity/lib-stable/exe/argv/parse'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -50,50 +50,11 @@ async function main() {
   logger.log('🧪 ONNX Runtime Test Suite Runner')
   logger.log('')
 
-  // Verify ONNX Runtime source upstream.
-  const onnxSourcePath = UPSTREAM_PATH
-  if (!existsSync(onnxSourcePath)) {
-    logger.fail('ONNX Runtime source upstream not found')
-    logger.log('')
-    logger.log('Initialize upstream:')
-    logger.log(
-      '  node scripts/fleet/git-partial-submodule.mts clone packages/onnxruntime-builder/upstream/onnxruntime',
-    )
-    logger.log('')
-    process.exitCode = 1
+  const inputs = await validateOnnxInputs()
+  if (!inputs) {
     return
   }
-
-  logger.log(`Source directory: ${onnxSourcePath}`)
-  logger.log('')
-
-  // Check for CMake build system.
-  const cmakeListsPath = path.join(onnxSourcePath, 'CMakeLists.txt')
-  if (!existsSync(cmakeListsPath)) {
-    logger.fail(`CMakeLists.txt not found: ${cmakeListsPath}`)
-    process.exitCode = 1
-    return
-  }
-
-  // Verify our WASM build exists.
-  const platformArch = await getCurrentPlatform()
-  const { outputFinalDir } = getBuildPaths(BUILD_MODE, platformArch)
-  const wasmPath = path.join(outputFinalDir, 'ort.wasm')
-  const mjsPath = path.join(outputFinalDir, 'ort.mjs')
-
-  if (!existsSync(wasmPath) || !existsSync(mjsPath)) {
-    logger.fail('ONNX Runtime WASM build not found')
-    logger.log('')
-    logger.log('Build ONNX Runtime WASM first:')
-    logger.log('  pnpm --filter onnxruntime-builder build')
-    logger.log('')
-    process.exitCode = 1
-    return
-  }
-
-  logger.log(`WASM module: ${wasmPath}`)
-  logger.log(`MJS wrapper: ${mjsPath}`)
-  logger.log('')
+  const { onnxSourcePath } = inputs
 
   // Ensure CMake is installed.
   logger.step('Checking build dependencies…')
@@ -203,6 +164,46 @@ async function main() {
     logger.log('')
     process.exitCode = result.code
   }
+}
+
+async function validateOnnxInputs() {
+  const onnxSourcePath = UPSTREAM_PATH
+  if (!existsSync(onnxSourcePath)) {
+    logger.fail('ONNX Runtime source upstream not found')
+    logger.log('')
+    logger.log('Initialize upstream:')
+    logger.log(
+      '  node scripts/fleet/git-partial-submodule.mts clone packages/onnxruntime-builder/upstream/onnxruntime',
+    )
+    logger.log('')
+    process.exitCode = 1
+    return undefined
+  }
+  logger.log(`Source directory: ${onnxSourcePath}`)
+  logger.log('')
+  const cmakeListsPath = path.join(onnxSourcePath, 'CMakeLists.txt')
+  if (!existsSync(cmakeListsPath)) {
+    logger.fail(`CMakeLists.txt not found: ${cmakeListsPath}`)
+    process.exitCode = 1
+    return undefined
+  }
+  const platformArch = await getCurrentPlatform()
+  const { outputFinalDir } = getBuildPaths(BUILD_MODE, platformArch)
+  const wasmPath = path.join(outputFinalDir, 'ort.wasm')
+  const mjsPath = path.join(outputFinalDir, 'ort.mjs')
+  if (!existsSync(wasmPath) || !existsSync(mjsPath)) {
+    logger.fail('ONNX Runtime WASM build not found')
+    logger.log('')
+    logger.log('Build ONNX Runtime WASM first:')
+    logger.log('  pnpm --filter onnxruntime-builder build')
+    logger.log('')
+    process.exitCode = 1
+    return undefined
+  }
+  logger.log(`WASM module: ${wasmPath}`)
+  logger.log(`MJS wrapper: ${mjsPath}`)
+  logger.log('')
+  return { __proto__: null, onnxSourcePath }
 }
 
 main().catch(error => {

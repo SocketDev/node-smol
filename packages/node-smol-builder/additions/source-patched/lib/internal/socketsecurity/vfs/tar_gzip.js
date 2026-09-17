@@ -21,6 +21,34 @@ const {
 } = primordials
 
 /**
+ * Auto-detect and parse TAR or TAR.GZ archive
+ *
+ * @param {Buffer} buffer - TAR or gzipped TAR archive
+ * @param {Object} options - Parsing options
+ * @returns {Map<string, Buffer>} Map of filename to file content
+ */
+function parseAuto(buffer, options) {
+  const opts = { __proto__: null, ...options }
+  if (!BufferIsBuffer(buffer)) {
+    throw new TypeErrorConstructor('buffer must be a Buffer')
+  }
+
+  // Check if gzipped (magic number: 1f 8b)
+  if (buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b) {
+    if (ProcessEnv.NODE_DEBUG_VFS) {
+      ProcessRawDebug('VFS: Detected gzip-compressed TAR archive')
+    }
+    return parseTarGzip(buffer, opts)
+  }
+
+  // Otherwise assume uncompressed TAR
+  if (ProcessEnv.NODE_DEBUG_VFS) {
+    ProcessRawDebug('VFS: Detected uncompressed TAR archive')
+  }
+  return parseTar(buffer, opts)
+}
+
+/**
  * Parse gzipped TAR archive into a Map of filename -> Buffer
  *
  * @param {Buffer} gzipBuffer - Gzipped TAR archive data
@@ -58,34 +86,6 @@ function parseTarGzip(gzipBuffer, options) {
     }
     throw new ErrorConstructor(`Gzip decompression failed: ${error.message}`)
   }
-}
-
-/**
- * Auto-detect and parse TAR or TAR.GZ archive
- *
- * @param {Buffer} buffer - TAR or gzipped TAR archive
- * @param {Object} options - Parsing options
- * @returns {Map<string, Buffer>} Map of filename to file content
- */
-function parseAuto(buffer, options) {
-  const opts = { __proto__: null, ...options }
-  if (!BufferIsBuffer(buffer)) {
-    throw new TypeErrorConstructor('buffer must be a Buffer')
-  }
-
-  // Check if gzipped (magic number: 1f 8b)
-  if (buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b) {
-    if (ProcessEnv.NODE_DEBUG_VFS) {
-      ProcessRawDebug('VFS: Detected gzip-compressed TAR archive')
-    }
-    return parseTarGzip(buffer, opts)
-  }
-
-  // Otherwise assume uncompressed TAR
-  if (ProcessEnv.NODE_DEBUG_VFS) {
-    ProcessRawDebug('VFS: Detected uncompressed TAR archive')
-  }
-  return parseTar(buffer, opts)
 }
 
 module.exports = ObjectFreeze({

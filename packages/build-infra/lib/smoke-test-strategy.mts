@@ -56,6 +56,16 @@ export function isCrossCompiled(
   return arch !== hostArch
 }
 
+export function isDarwinX64CrossCompile(
+  hostPlatform: NodeJS.Platform,
+  hostArch: string,
+  targetArch: string,
+): boolean {
+  return (
+    hostPlatform === 'darwin' && hostArch === 'arm64' && targetArch === 'x64'
+  )
+}
+
 /**
  * Check if Docker is available for musl testing.
  */
@@ -69,6 +79,16 @@ export async function isDockerAvailable(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+export function isLinuxArm64CrossCompile(
+  hostPlatform: NodeJS.Platform,
+  hostArch: string,
+  targetArch: string,
+): boolean {
+  return (
+    hostPlatform === 'linux' && hostArch === 'x64' && targetArch === 'arm64'
+  )
 }
 
 /**
@@ -162,15 +182,11 @@ export function selectCrossCompileSmokeTestStrategy(
     return hasDocker ? 'docker-musl' : 'docker-static'
   }
 
-  const isLinuxArm64CrossCompile =
-    hostPlatform === 'linux' && targetArch === 'arm64' && hostArch === 'x64'
-  if (isLinuxArm64CrossCompile) {
+  if (isLinuxArm64CrossCompile(hostPlatform, hostArch, targetArch)) {
     return hasQemu ? 'qemu-arm64' : 'qemu-static'
   }
 
-  const isDarwinX64CrossCompile =
-    hostPlatform === 'darwin' && targetArch === 'x64' && hostArch === 'arm64'
-  if (isDarwinX64CrossCompile) {
+  if (isDarwinX64CrossCompile(hostPlatform, hostArch, targetArch)) {
     return hasRosetta ? 'rosetta-darwin-x64' : 'rosetta-static'
   }
 

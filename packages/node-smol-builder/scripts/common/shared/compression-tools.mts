@@ -29,6 +29,7 @@ import {
 } from '@socketsecurity/lib-stable/releases/socket-btm'
 
 import { BINPRESS_DIR, BUILD_INFRA_DIR } from '../../paths.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
@@ -49,9 +50,9 @@ const logger = getDefaultLogger()
 export async function downloadToolIfMissing(tool, platform, arch, libc) {
   const binaryName = platform === 'win32' ? `${tool}.exe` : tool
   const platformArch = getPlatformArch(platform, arch, libc)
-  const buildAllFromSource = envAsBoolean(process.env['BUILD_ALL_FROM_SOURCE'])
+  const buildAllFromSource = envAsBoolean(getEnvValue('BUILD_ALL_FROM_SOURCE'))
   const buildToolsFromSource =
-    buildAllFromSource || envAsBoolean(process.env['BUILD_TOOLS_FROM_SOURCE'])
+    buildAllFromSource || envAsBoolean(getEnvValue('BUILD_TOOLS_FROM_SOURCE'))
 
   // Check if the requested platform matches the current runtime platform.
   // Local builds (packages/binpress/build/*/<platformArch>/out/Final/) are built

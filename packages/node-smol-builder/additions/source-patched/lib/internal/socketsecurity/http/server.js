@@ -25,13 +25,6 @@ const {
 
 // Native HTTP binding (lazy).
 let _smolHttpBinding
-function smolHttp() {
-  if (!_smolHttpBinding) {
-    _smolHttpBinding = internalBinding('smol_http')
-  }
-  return _smolHttpBinding
-}
-
 /**
  * Create a single uWS server instance (called by primary or worker).
  * @returns {object} Server instance
@@ -252,6 +245,13 @@ function serve(options) {
       })
     },
   }
+}
+
+function smolHttp() {
+  if (!_smolHttpBinding) {
+    _smolHttpBinding = internalBinding('smol_http')
+  }
+  return _smolHttpBinding
 }
 
 module.exports = {

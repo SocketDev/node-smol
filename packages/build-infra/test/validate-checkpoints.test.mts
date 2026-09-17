@@ -6,11 +6,10 @@
 
 import { afterEach, beforeEach, describe, expect, it, test } from 'vitest'
 
-import { writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdirSync } from '@socketsecurity/lib-stable/fs/safe'
 import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -67,23 +66,12 @@ export function createValidTar(tarPath: string): void {
   const testFile = path.join(contentDir, 'test.txt')
   writeFileSync(testFile, 'test content')
 
-  // GNU tar reads a drive-letter colon as a remote-host spec; --force-local
-  // keeps C:\... paths local on Windows runners.
-  const result = spawnSync(
-    'tar',
-    [
-      '-cf',
-      tarPath,
-      '-C',
-      contentDir,
-      'test.txt',
-      ...(WIN32 ? ['--force-local'] : []),
-    ],
-    {
-      encoding: 'utf8',
-      stdio: 'pipe',
-    },
-  )
+  const relativeTarPath = path.relative(contentDir, tarPath)
+  const result = spawnSync('tar', ['-cf', relativeTarPath, 'test.txt'], {
+    cwd: contentDir,
+    encoding: 'utf8',
+    stdio: 'pipe',
+  })
 
   if (result.status !== 0) {
     throw new Error(`Failed to create tar archive: ${result.stderr}`)
@@ -104,21 +92,12 @@ export function createValidTarGz(tarPath: string): void {
   const testFile = path.join(contentDir, 'test.txt')
   writeFileSync(testFile, 'test content')
 
-  const result = spawnSync(
-    'tar',
-    [
-      '-czf',
-      tarPath,
-      '-C',
-      contentDir,
-      'test.txt',
-      ...(WIN32 ? ['--force-local'] : []),
-    ],
-    {
-      encoding: 'utf8',
-      stdio: 'pipe',
-    },
-  )
+  const relativeTarPath = path.relative(contentDir, tarPath)
+  const result = spawnSync('tar', ['-czf', relativeTarPath, 'test.txt'], {
+    cwd: contentDir,
+    encoding: 'utf8',
+    stdio: 'pipe',
+  })
 
   if (result.status !== 0) {
     throw new Error(`Failed to create tar.gz archive: ${result.stderr}`)
@@ -182,7 +161,9 @@ describe('valid checkpoints', () => {
     const checkpointDir = path.join(packagePath, 'build', 'prod', 'checkpoints')
     safeMkdirSync(checkpointDir)
 
-    createValidTar(path.join(checkpointDir, 'stage1.tar'))
+    const archivePath = path.join(checkpointDir, 'stage1.tar')
+    createValidTar(archivePath)
+    expect(existsSync(archivePath)).toBeTruthy()
 
     const result = validateCheckpoints({
       buildMode: 'prod',
@@ -202,7 +183,9 @@ describe('valid checkpoints', () => {
     const checkpointDir = path.join(packagePath, 'build', 'prod', 'checkpoints')
     safeMkdirSync(checkpointDir)
 
-    createValidTarGz(path.join(checkpointDir, 'stage1.tar.gz'))
+    const archivePath = path.join(checkpointDir, 'stage1.tar.gz')
+    createValidTarGz(archivePath)
+    expect(existsSync(archivePath)).toBeTruthy()
 
     const result = validateCheckpoints({
       buildMode: 'prod',

@@ -182,11 +182,11 @@ function buildInsertQuery(rows, columns, paramStyle = '$') {
  */
 function hashQuery(query) {
   // FNV-1a hash (32-bit).
-  let hash = 0x811c9dc5
+  let hash = 0x81_1c_9d_c5
   for (let i = 0; i < query.length; i++) {
     hash ^= StringPrototypeCharCodeAt(query, i)
     // Multiply by FNV prime using MathImul for faster 32-bit multiplication.
-    hash = MathImul(hash, 0x01000193) >>> 0
+    hash = MathImul(hash, 0x01_00_01_93) >>> 0
   }
   return NumberPrototypeToString(hash, 16)
 }

@@ -2,6 +2,7 @@
  * Centralized path resolution for node-smol-builder.
  *
  * Supports hierarchical organization:
+ *
  * - Phase: common, release, stripped, compressed, final
  * - Specificity: shared → platform/shared → platform/arch.
  *
@@ -23,6 +24,7 @@ import { BUILD_STAGES, CHECKPOINTS } from 'local-build-infra/lib/constants'
 import { getAssetPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
 import { getSocketHomePath } from '@socketsecurity/lib-stable/paths/socket'
+import { PACKAGE_ROOT as YOGA_LAYOUT_BUILDER_DIR_FROM_OWNER } from 'local-yoga-layout-builder/scripts/paths'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -122,6 +124,7 @@ export function getBuildPaths(
   const outputFinalNodeDir = path.join(outputFinalDir, 'node')
 
   return {
+    __proto__: null,
     buildDir,
     nodeSourceDir,
     outDir,
@@ -177,6 +180,7 @@ export function getBuildSourcePaths(
   const phases = PHASE_DEPS[phase] || [phase]
 
   return {
+    __proto__: null,
     // Common scripts affect all phases
     common: getCommonScriptsPaths(platform, arch),
 
@@ -229,6 +233,7 @@ export function getCumulativeBuildSourcePaths(
   const phases = PHASE_DEPS[phase] || [phase]
 
   return {
+    __proto__: null,
     // Common scripts affect all phases
     common: getCommonScriptsPaths(platform, arch),
 
@@ -368,6 +373,7 @@ export function getSharedBuildPaths() {
   const checkpointsDir = path.join(buildDir, 'checkpoints')
 
   return {
+    __proto__: null,
     buildDir,
     checkpointsDir,
     configureScript: path.join(nodeSourceDir, 'configure'),
@@ -385,8 +391,6 @@ export function getSharedBuildPaths() {
 // Sibling packages that own their own scripts/paths.mts (dawn-builder,
 // yoga-layout-builder) get their PACKAGE_ROOT imported here; siblings
 // without a canonical paths.mts are re-derived (no other owner exists).
-import { PACKAGE_ROOT as YOGA_LAYOUT_BUILDER_DIR_FROM_OWNER } from 'local-yoga-layout-builder/scripts/paths'
-
 export const YOGA_LAYOUT_BUILDER_DIR = YOGA_LAYOUT_BUILDER_DIR_FROM_OWNER
 
 export const BINPRESS_DIR = path.join(PACKAGE_ROOT, '..', 'binpress')

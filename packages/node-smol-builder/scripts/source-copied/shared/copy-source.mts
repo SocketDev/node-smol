@@ -10,7 +10,7 @@ import path from 'node:path'
 import {
   cleanCheckpoint,
   createCheckpoint,
-} from 'local-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import {
   getCheckpointData,
@@ -55,26 +55,14 @@ export async function cloneNodeSource(config) {
     cleanBuild,
   )
 
-  // Check Node version mismatch
-  let versionMismatch = false
-  if (!needsClone) {
-    const checkpointData = await getCheckpointData(
-      sharedBuildDir,
-      packageName,
-      CHECKPOINTS.SOURCE_COPIED,
-    )
-    if (checkpointData && checkpointData.nodeVersion !== nodeVersion) {
-      logger.log(
-        `Node version changed from ${checkpointData.nodeVersion} to ${nodeVersion}, re-cloning…`,
-      )
-      versionMismatch = true
-    } else if (checkpointData && checkpointData.nodeSha !== nodeSha) {
-      logger.log(
-        `Node SHA changed from ${checkpointData.nodeSha?.slice(0, 8)} to ${nodeSha.slice(0, 8)}, re-cloning…`,
-      )
-      versionMismatch = true
-    }
-  }
+  const versionMismatch = needsClone
+    ? false
+    : await detectNodeSourceMismatch({
+        nodeSha,
+        nodeVersion,
+        packageName,
+        sharedBuildDir,
+      })
 
   if (!needsClone && !versionMismatch) {
     logger.log('')
@@ -122,28 +110,7 @@ export async function cloneNodeSource(config) {
     logger.info('Copying pristine source from upstream to build directory…')
     logger.log('')
 
-    // Verify upstream commit matches expected SHA (if SHA is provided).
-    if (nodeSha) {
-      const verifyResult = await spawn(
-        'git',
-        ['-C', upstreamPath, 'rev-parse', 'HEAD'],
-        { stdio: 'pipe' },
-      )
-
-      if (verifyResult.code !== 0) {
-        throw new Error('Failed to verify upstream commit SHA')
-      }
-
-      const upstreamSha = verifyResult.stdout.trim()
-      if (upstreamSha !== nodeSha) {
-        throw new Error(
-          `Upstream SHA mismatch: expected ${nodeSha}, got ${upstreamSha}. ` +
-            `Please update the upstream to the correct commit: cd ${upstreamPath} && git checkout ${nodeSha}`,
-        )
-      }
-
-      logger.success(`Upstream SHA verified (${nodeSha.slice(0, 8)})`)
-    }
+    await verifyNodeUpstreamSha(upstreamPath, nodeSha)
 
     // Copy upstream to shared source directory.
     await safeMkdir(path.dirname(sharedSourceDir))
@@ -177,43 +144,88 @@ export async function cloneNodeSource(config) {
     )
     logger.log('')
   } else if (needsClone && existsSync(sharedSourceDir)) {
-    // Case 3: Source dir exists but checkpoint is missing.
-    // Validate the existing source and create checkpoint.
-    logger.step('Recovering Missing Checkpoint')
-    logger.substep('Source directory exists but checkpoint is missing')
-    logger.log('')
-    logger.info('Validating existing source directory…')
-
-    const configureScript = path.join(sharedSourceDir, 'configure')
-    if (!existsSync(configureScript)) {
-      // Source directory is invalid, need to re-copy from upstream
-      logger.warn(
-        'Existing source directory is invalid (missing configure script)',
-      )
-      logger.info('Will re-copy from upstream…')
-      await safeDelete(sharedSourceDir, { recursive: true })
-
-      // Recursively call to handle the fresh clone
-      await cloneNodeSource(config)
-      return
-    }
-
-    logger.success('Existing source directory is valid')
-    logger.log('Creating checkpoint from existing source…')
-
-    await createCheckpoint(
-      sharedBuildDir,
-      CHECKPOINTS.SOURCE_COPIED,
-      async () => {
-        logger.substep('Source directory validated')
-      },
-      {
-        artifactPath: sharedSourceDir,
-        nodeSha,
-        nodeVersion,
-        packageName,
-      },
-    )
-    logger.log('')
+    await recoverNodeSourceCheckpoint(config)
   }
+}
+
+export async function detectNodeSourceMismatch({
+  nodeSha,
+  nodeVersion,
+  packageName,
+  sharedBuildDir,
+}) {
+  const checkpointData = await getCheckpointData(
+    sharedBuildDir,
+    packageName,
+    CHECKPOINTS.SOURCE_COPIED,
+  )
+  if (!checkpointData) {
+    return false
+  }
+  if (checkpointData.nodeVersion !== nodeVersion) {
+    logger.log(
+      `Node version changed from ${checkpointData.nodeVersion} to ${nodeVersion}, re-cloning…`,
+    )
+    return true
+  }
+  if (checkpointData.nodeSha !== nodeSha) {
+    logger.log(
+      `Node SHA changed from ${checkpointData.nodeSha?.slice(0, 8)} to ${nodeSha.slice(0, 8)}, re-cloning…`,
+    )
+    return true
+  }
+  return false
+}
+
+export async function recoverNodeSourceCheckpoint(config) {
+  const { nodeSha, nodeVersion, packageName, sharedBuildDir, sharedSourceDir } =
+    {
+      __proto__: null,
+      ...config,
+    }
+  logger.step('Recovering Missing Checkpoint')
+  logger.substep('Source directory exists but checkpoint is missing')
+  logger.log('')
+  logger.info('Validating existing source directory…')
+  const configureScript = path.join(sharedSourceDir, 'configure')
+  if (!existsSync(configureScript)) {
+    logger.warn(
+      'Existing source directory is invalid (missing configure script)',
+    )
+    logger.info('Will re-copy from upstream…')
+    await safeDelete(sharedSourceDir, { recursive: true })
+    await cloneNodeSource(config)
+    return
+  }
+  logger.success('Existing source directory is valid')
+  logger.log('Creating checkpoint from existing source…')
+  await createCheckpoint(
+    sharedBuildDir,
+    CHECKPOINTS.SOURCE_COPIED,
+    async () => {
+      logger.substep('Source directory validated')
+    },
+    { artifactPath: sharedSourceDir, nodeSha, nodeVersion, packageName },
+  )
+  logger.log('')
+}
+
+export async function verifyNodeUpstreamSha(upstreamPath, nodeSha) {
+  if (!nodeSha) {
+    return
+  }
+  const result = await spawn('git', ['-C', upstreamPath, 'rev-parse', 'HEAD'], {
+    stdio: 'pipe',
+  })
+  if (result.code !== 0) {
+    throw new Error('Failed to verify upstream commit SHA')
+  }
+  const upstreamSha = result.stdout.trim()
+  if (upstreamSha !== nodeSha) {
+    throw new Error(
+      `Upstream SHA mismatch: expected ${nodeSha}, got ${upstreamSha}. ` +
+        `Please update the upstream to the correct commit: cd ${upstreamPath} && git checkout ${nodeSha}`,
+    )
+  }
+  logger.success(`Upstream SHA verified (${nodeSha.slice(0, 8)})`)
 }

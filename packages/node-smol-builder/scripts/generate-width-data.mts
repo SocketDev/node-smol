@@ -69,7 +69,7 @@ export function mergeRanges(input: Range[]): Range[] {
   const sorted = [...input].toSorted((a, b) => a[0] - b[0])
   const merged: Range[] = [sorted[0]]
   for (let i = 1, { length } = sorted; i < length; i += 1) {
-    const [lo, hi] = sorted[i]
+    const { 0: lo, 1: hi } = sorted[i]
     const last = merged[merged.length - 1]
     if (lo <= last[1] + 1) {
       if (hi > last[1]) {
@@ -163,7 +163,7 @@ async function main() {
     let out = `extern const uint32_t ${name}[][2];\n`
     out += `const uint32_t ${name}[][2] = {\n`
     for (let i = 0, { length } = ranges; i < length; i += 1) {
-      const [lo, hi] = ranges[i]
+      const { 0: lo, 1: hi } = ranges[i]
       out += `    {0x${lo.toString(16)}, 0x${hi.toString(16)}},\n`
     }
     out += '};\n'

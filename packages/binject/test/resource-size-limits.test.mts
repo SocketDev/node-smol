@@ -24,6 +24,7 @@ import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { MAX_SEA_BLOB_SIZE, MAX_VFS_SIZE } from './helpers/constants.mts'
 import { getBinjectPath } from './helpers/paths.mts'
+import { createTestFile, execCommand } from './helpers/size-fixtures.mts'
 import { tolerantTimeout } from '../../../test/fleet/_shared/lib/timing.mts'
 
 const TIMEOUT_30S = tolerantTimeout(30_000)
@@ -40,8 +41,6 @@ let testDir: string
 // hook left it false at that moment, so skipIf(!binjectExists) was always
 // skipIf(true) and the whole suite silently never ran.
 const binjectExists = existsSync(BINJECT)
-
-import { createTestFile, execCommand } from './helpers/size-fixtures.mts'
 
 // Companion SEA blob shared by the VFS tests (--vfs requires --sea).
 let vfsSeaBlob: string

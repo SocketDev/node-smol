@@ -37,10 +37,6 @@ import {
   NODE_BINARY,
   PACKAGE_DIR,
 } from './helpers/binpress-env.mts'
-
-const TIMEOUT_60S = tolerantTimeout(60_000)
-const TIMEOUT_90S = tolerantTimeout(90_000)
-
 import {
   countPressedDataSections,
   findPressedDataSections,
@@ -49,6 +45,9 @@ import {
   parseSections,
 } from './helpers/pe-sections.mts'
 import type { PeSection } from './helpers/pe-sections.mts'
+
+const TIMEOUT_60S = tolerantTimeout(60_000)
+const TIMEOUT_90S = tolerantTimeout(90_000)
 
 // Only run on Windows where PE is native
 describe.skipIf(process.platform !== 'win32' || !existsSync(BINPRESS))(

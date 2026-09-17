@@ -43,6 +43,7 @@ import {
   getCurrentPlatformArch,
   isMusl,
 } from 'local-build-infra/lib/platform-mappings'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
@@ -215,6 +216,93 @@ function emptyStubCArray(varName: string) {
   return `/* Stub not available - empty placeholder */\nconst unsigned char ${varName}[] = { 0x00 };\nconst size_t ${varName}_len = 0;\n\n`
 }
 
+export interface StubConfig {
+  arch: string
+  libc: string | undefined
+  name: string
+  platform: string
+}
+
+export const STUB_CONFIGS: readonly StubConfig[] = [
+  { arch: 'arm64', libc: undefined, name: 'darwin-arm64', platform: 'darwin' },
+  { arch: 'x64', libc: undefined, name: 'darwin-x64', platform: 'darwin' },
+  { arch: 'arm64', libc: undefined, name: 'linux-arm64', platform: 'linux' },
+  { arch: 'x64', libc: undefined, name: 'linux-x64', platform: 'linux' },
+  { arch: 'arm64', libc: 'musl', name: 'linux-arm64-musl', platform: 'linux' },
+  { arch: 'x64', libc: 'musl', name: 'linux-x64-musl', platform: 'linux' },
+  { arch: 'arm64', libc: undefined, name: 'win32-arm64', platform: 'win32' },
+  { arch: 'x64', libc: undefined, name: 'win32-x64', platform: 'win32' },
+]
+
+export async function downloadConfiguredStubs(config) {
+  const results = await Promise.allSettled(
+    STUB_CONFIGS.map(stub =>
+      downloadStub(
+        stub.platform,
+        stub.arch,
+        stub.libc,
+        config.buildDir,
+        config.downloadDir,
+        config.localStubPath,
+        config.activePlatform,
+        config.activeArch,
+        config.activeLibc,
+        config.releaseTag,
+      ),
+    ),
+  )
+  const failures = results.filter(result => result.status === 'rejected')
+  if (failures.length > 0) {
+    throw new Error(
+      `Failed to download ${failures.length} stubs: ${failures.map(result => result.reason?.message || result.reason).join(', ')}`,
+    )
+  }
+  return results.map(result =>
+    result.status === 'fulfilled' ? result.value : undefined,
+  )
+}
+
+export async function convertStubsToArrays(stubFiles) {
+  const results = await Promise.allSettled(
+    STUB_CONFIGS.map((config, index) => {
+      const stubPath = stubFiles[index]
+      const variableName = `stub_${config.name.replaceAll('-', '_').replace('win32', 'win')}`
+      return stubPath
+        ? binaryToCArray(stubPath, variableName)
+        : emptyStubCArray(variableName)
+    }),
+  )
+  const failures = results.filter(result => result.status === 'rejected')
+  if (failures.length > 0) {
+    throw new Error(
+      `Failed to convert ${failures.length} stubs to C arrays: ${failures.map(result => result.reason?.message || result.reason).join(', ')}`,
+    )
+  }
+  return results.map(result =>
+    result.status === 'fulfilled' ? result.value : '',
+  )
+}
+
+export async function reportAndCleanStubs(stubFiles) {
+  for (let i = 0, { length } = STUB_CONFIGS; i < length; i += 1) {
+    const stubPath = stubFiles[i]
+    if (!stubPath) {
+      continue
+    }
+    try {
+      // The summary reports the file size.
+      // oxlint-disable-next-line socket/prefer-exists-sync -- size consumed
+      const stats = await fs.stat(stubPath)
+      logger.info(
+        `${STUB_CONFIGS[i].name}: ${(stats.size / 1024).toFixed(1)}KB`,
+      )
+    } catch {
+      logger.warn(`${STUB_CONFIGS[i].name}: file not found or inaccessible`)
+    }
+    await safeDelete(stubPath)
+  }
+}
+
 export async function main() {
   const platformArch = await getCurrentPlatformArch()
   const buildDir = getPlatformBuildDir(BINPRESS_DIR, platformArch)
@@ -223,8 +311,8 @@ export async function main() {
   // build-infra/lib/paths owns the 'build/downloaded' segment.
   const downloadDir = path.join(getDownloadedDir(BUILD_INFRA_DIR), 'stubs')
   // Use EMBEDDED_STUBS_OUTPUT from Makefile if provided, otherwise default
-  const outputFile = process.env['EMBEDDED_STUBS_OUTPUT']
-    ? path.resolve(process.env['EMBEDDED_STUBS_OUTPUT'])
+  const outputFile = getEnvValue('EMBEDDED_STUBS_OUTPUT')
+    ? path.resolve(getEnvValue('EMBEDDED_STUBS_OUTPUT'))
     : path.join(buildDir, 'embedded_stubs.c')
   // Local stub path (built by bin-stub-builder package). Final-binary layout
   // owned by build-infra/lib/paths.getFinalBinaryPath.
@@ -244,7 +332,7 @@ export async function main() {
 
   // Detect current platform for local stub usage
   const activePlatform = process.platform
-  const activeArch = process.env['TARGET_ARCH'] || process.arch
+  const activeArch = getEnvValue('TARGET_ARCH') || process.arch
   const activeLibc = (await isMusl()) ? 'musl' : undefined
 
   // Check if we have a local stub for current platform
@@ -273,106 +361,21 @@ export async function main() {
 
   // Download all stubs in parallel (or use local stub for current platform)
   logger.info('Downloading stubs…')
-  const stubConfigs = [
-    {
-      arch: 'arm64',
-      libc: undefined,
-      name: 'darwin-arm64',
-      platform: 'darwin',
-    },
-    { arch: 'x64', libc: undefined, name: 'darwin-x64', platform: 'darwin' },
-    { arch: 'arm64', libc: undefined, name: 'linux-arm64', platform: 'linux' },
-    { arch: 'x64', libc: undefined, name: 'linux-x64', platform: 'linux' },
-    {
-      arch: 'arm64',
-      libc: 'musl',
-      name: 'linux-arm64-musl',
-      platform: 'linux',
-    },
-    { arch: 'x64', libc: 'musl', name: 'linux-x64-musl', platform: 'linux' },
-    { arch: 'arm64', libc: undefined, name: 'win32-arm64', platform: 'win32' },
-    { arch: 'x64', libc: undefined, name: 'win32-x64', platform: 'win32' },
-  ]
-  const stubResults = await Promise.allSettled(
-    stubConfigs.map(config =>
-      downloadStub(
-        config.platform,
-        config.arch,
-        config.libc,
-        buildDir,
-        downloadDir,
-        localStubPath,
-        activePlatform,
-        activeArch,
-        activeLibc,
-        releaseTag,
-      ),
-    ),
-  )
-
-  // Extract values and collect failures
-  const stubDownloadFailures = stubResults.filter(r => r.status === 'rejected')
-  if (stubDownloadFailures.length > 0) {
-    throw new Error(
-      `Failed to download ${stubDownloadFailures.length} stubs: ${stubDownloadFailures.map(r => r.reason?.message || r.reason).join(', ')}`,
-    )
-  }
-  // Every result is fulfilled past the rejected-count throw above; the
-  // ternary keeps positions stable for the destructuring below.
-  const stubFiles = stubResults.map(r =>
-    r.status === 'fulfilled' ? r.value : undefined,
-  )
-  const [
-    stubDarwinArm64,
-    stubDarwinX64,
-    stubLinuxArm64,
-    stubLinuxX64,
-    stubLinuxArm64Musl,
-    stubLinuxX64Musl,
-    stubWinArm64,
-    stubWinX64,
-  ] = stubFiles
+  const stubFiles = await downloadConfiguredStubs({
+    activeArch,
+    activeLibc,
+    activePlatform,
+    buildDir,
+    downloadDir,
+    localStubPath,
+    releaseTag,
+  })
 
   logger.error('')
   logger.info('Embedding stubs into C arrays…')
 
   // Convert to C arrays in parallel (or use empty placeholders for missing stubs)
-  const cArrayResults = await Promise.allSettled([
-    stubDarwinArm64
-      ? binaryToCArray(stubDarwinArm64, 'stub_darwin_arm64')
-      : emptyStubCArray('stub_darwin_arm64'),
-    stubDarwinX64
-      ? binaryToCArray(stubDarwinX64, 'stub_darwin_x64')
-      : emptyStubCArray('stub_darwin_x64'),
-    stubLinuxArm64
-      ? binaryToCArray(stubLinuxArm64, 'stub_linux_arm64')
-      : emptyStubCArray('stub_linux_arm64'),
-    stubLinuxX64
-      ? binaryToCArray(stubLinuxX64, 'stub_linux_x64')
-      : emptyStubCArray('stub_linux_x64'),
-    stubLinuxArm64Musl
-      ? binaryToCArray(stubLinuxArm64Musl, 'stub_linux_arm64_musl')
-      : emptyStubCArray('stub_linux_arm64_musl'),
-    stubLinuxX64Musl
-      ? binaryToCArray(stubLinuxX64Musl, 'stub_linux_x64_musl')
-      : emptyStubCArray('stub_linux_x64_musl'),
-    stubWinArm64
-      ? binaryToCArray(stubWinArm64, 'stub_win_arm64')
-      : emptyStubCArray('stub_win_arm64'),
-    stubWinX64
-      ? binaryToCArray(stubWinX64, 'stub_win_x64')
-      : emptyStubCArray('stub_win_x64'),
-  ])
-  const cArrayFailures = cArrayResults.filter(r => r.status === 'rejected')
-  if (cArrayFailures.length > 0) {
-    throw new Error(
-      `Failed to convert ${cArrayFailures.length} stubs to C arrays: ${cArrayFailures.map(r => r.reason?.message || r.reason).join(', ')}`,
-    )
-  }
-  // Every result is fulfilled past the rejected-count throw above.
-  const cArrays = cArrayResults.map(r =>
-    r.status === 'fulfilled' ? r.value : '',
-  )
+  const cArrays = await convertStubsToArrays(stubFiles)
 
   // Start output file
   let output = `/**
@@ -398,41 +401,7 @@ export async function main() {
   // Print summary
   logger.error('')
   logger.info('Stub summary:')
-  const stubEntries: Array<[string, string | undefined]> = [
-    ['darwin-arm64', stubDarwinArm64],
-    ['darwin-x64', stubDarwinX64],
-    ['linux-arm64', stubLinuxArm64],
-    ['linux-x64', stubLinuxX64],
-    ['linux-arm64-musl', stubLinuxArm64Musl],
-    ['linux-x64-musl', stubLinuxX64Musl],
-    ['win32-arm64', stubWinArm64],
-    ['win32-x64', stubWinX64],
-  ]
-  const stubSummary = stubEntries.filter(
-    (entry): entry is [string, string] =>
-      entry[1] !== undefined && entry[1] !== '',
-  )
-
-  // Loop variable is destructured.
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
-  for (const [name, stubPath] of stubSummary) {
-    try {
-      // Fs.stat() calls consume stats.size for the per-stub log message and
-      // per-platform size summary.
-      // oxlint-disable-next-line socket/prefer-exists-sync -- see above
-      const stats = await fs.stat(stubPath)
-      logger.info(`${name}: ${(stats.size / 1024).toFixed(1)}KB`)
-    } catch {
-      logger.warn(`${name}: file not found or inaccessible`)
-    }
-  }
-
-  // Clean up downloaded stubs from build directory
-  // Loop variable is destructured.
-  // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
-  for (const [, stubPath] of stubSummary) {
-    await safeDelete(stubPath)
-  }
+  await reportAndCleanStubs(stubFiles)
 }
 
 main().catch(err => {

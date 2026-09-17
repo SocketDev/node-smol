@@ -251,6 +251,7 @@ export function parseCacheKey(cacheKey) {
   const packageVersion = parts.join('.')
 
   return {
+    __proto__: null,
     arch: match[3],
     contentHash: match[4],
     nodeVersion: match[1],

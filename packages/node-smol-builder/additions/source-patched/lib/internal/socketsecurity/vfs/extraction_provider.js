@@ -158,7 +158,7 @@ function extractEntry(relativePath, entry, targetPath, rootDir, rootDirName) {
 
   // Handle symlinks
   if (
-    entry &&
+    entry !== null &&
     typeof entry === 'object' &&
     entry.type === 'symlink' &&
     entry.linkTarget
@@ -260,7 +260,8 @@ function extractEntry(relativePath, entry, targetPath, rootDir, rootDirName) {
  */
 class OnDiskExtractionProvider {
   constructor(options) {
-    const extractDir = options?.extractDir
+    const opts = { __proto__: null, ...options }
+  const extractDir = opts?.extractDir
     if (extractDir) {
       this._cacheDir = extractDir
     } else {
@@ -330,7 +331,8 @@ class OnDiskExtractionProvider {
  */
 class InMemoryExtractionProvider {
   constructor(options) {
-    const extractDir = options?.extractDir
+    const opts = { __proto__: null, ...options }
+  const extractDir = opts?.extractDir
     if (extractDir) {
       this._tempDir = extractDir
     } else {

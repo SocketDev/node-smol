@@ -32,8 +32,8 @@
  */
 
 declare module 'node:smol-http' {
-  import type { IncomingMessage, ServerResponse } from 'http'
-  import type { Socket } from 'net'
+  import type { IncomingMessage, ServerResponse } from 'node:http'
+  import type { Socket } from 'node:net'
 
   // ============================================================================
   // Bun.serve-compatible API

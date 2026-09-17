@@ -30,7 +30,7 @@ import {
   createCheckpoint,
 } from 'local-build-infra/lib/checkpoint-manager'
 import { CHECKPOINTS } from 'local-build-infra/lib/constants'
-import { checkModelBuildPrerequisites } from 'local-build-infra/lib/model-build-helpers'
+import { checkModelBuildPrerequisites } from 'local-build-infra/lib/model-build'
 import { getPythonCommand } from 'local-build-infra/lib/python-installer'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
@@ -44,6 +44,7 @@ import { downloadModel as downloadModelImpl } from './downloaded/shared/download
 import { getCheckpointChain } from './get-checkpoint-chain.mts'
 import { getBuildPaths, getCurrentPlatform, PACKAGE_ROOT } from './paths.mts'
 import { quantizeModel as quantizeModelImpl } from './quantized/shared/quantize-model.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 // Parse arguments.
 const args = new Set(process.argv.slice(2))
@@ -89,7 +90,7 @@ async function initBuildContext() {
   // non-source checkpoints. Model builds run natively per host (no cross-
   // compile), so passing process.* is safe.
   TARGET_PLATFORM = process.platform
-  TARGET_ARCH = process.env['TARGET_ARCH'] || process.arch
+  TARGET_ARCH = getEnvValue('TARGET_ARCH') || process.arch
   const { buildDir, modelsDir, outputFinalDir } = getBuildPaths(
     BUILD_MODE,
     PLATFORM_ARCH,

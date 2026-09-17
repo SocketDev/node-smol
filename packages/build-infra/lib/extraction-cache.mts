@@ -154,6 +154,7 @@ export function computeSourceHash(
   // regardless of whether `relativeTo` is provided.
   const entries = expandedPaths
     .map(absolutePath => ({
+      __proto__: null,
       absolutePath,
       hashPath: pathForHash(absolutePath),
     }))

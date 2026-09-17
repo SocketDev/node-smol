@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url'
 import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
-import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
+import { parseArgs } from '@socketsecurity/lib-stable/exe/argv/parse'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -50,50 +50,11 @@ async function main() {
   logger.log('🧪 Yoga Layout Test Suite Runner')
   logger.log('')
 
-  // Verify Yoga source upstream.
-  const yogaSourcePath = UPSTREAM_PATH
-  if (!existsSync(yogaSourcePath)) {
-    logger.fail('Yoga Layout source upstream not found')
-    logger.log('')
-    logger.log('Initialize upstream:')
-    logger.log(
-      '  node scripts/fleet/git-partial-submodule.mts clone packages/yoga-layout-builder/upstream/yoga',
-    )
-    logger.log('')
-    process.exitCode = 1
+  const inputs = await validateYogaInputs()
+  if (!inputs) {
     return
   }
-
-  logger.log(`Source directory: ${yogaSourcePath}`)
-  logger.log('')
-
-  // Check for CMake build system.
-  const cmakeListsPath = path.join(yogaSourcePath, 'CMakeLists.txt')
-  if (!existsSync(cmakeListsPath)) {
-    logger.fail(`CMakeLists.txt not found: ${cmakeListsPath}`)
-    process.exitCode = 1
-    return
-  }
-
-  // Verify our WASM build exists.
-  const platformArch = await getCurrentPlatform()
-  const { outputFinalDir } = getBuildPaths(BUILD_MODE, platformArch)
-  const wasmPath = path.join(outputFinalDir, 'yoga.wasm')
-  const jsPath = path.join(outputFinalDir, 'yoga.js')
-
-  if (!existsSync(wasmPath) || !existsSync(jsPath)) {
-    logger.fail('Yoga WASM build not found')
-    logger.log('')
-    logger.log('Build Yoga WASM first:')
-    logger.log('  pnpm --filter yoga-layout-builder build')
-    logger.log('')
-    process.exitCode = 1
-    return
-  }
-
-  logger.log(`WASM module: ${wasmPath}`)
-  logger.log(`JS wrapper: ${jsPath}`)
-  logger.log('')
+  const { yogaSourcePath } = inputs
 
   // Check if gentest exists (generated test files).
   const gentestDir = path.join(yogaSourcePath, 'gentest')
@@ -200,6 +161,46 @@ async function main() {
     logger.log('')
     process.exitCode = result.code
   }
+}
+
+async function validateYogaInputs() {
+  const yogaSourcePath = UPSTREAM_PATH
+  if (!existsSync(yogaSourcePath)) {
+    logger.fail('Yoga Layout source upstream not found')
+    logger.log('')
+    logger.log('Initialize upstream:')
+    logger.log(
+      '  node scripts/fleet/git-partial-submodule.mts clone packages/yoga-layout-builder/upstream/yoga',
+    )
+    logger.log('')
+    process.exitCode = 1
+    return undefined
+  }
+  logger.log(`Source directory: ${yogaSourcePath}`)
+  logger.log('')
+  const cmakeListsPath = path.join(yogaSourcePath, 'CMakeLists.txt')
+  if (!existsSync(cmakeListsPath)) {
+    logger.fail(`CMakeLists.txt not found: ${cmakeListsPath}`)
+    process.exitCode = 1
+    return undefined
+  }
+  const platformArch = await getCurrentPlatform()
+  const { outputFinalDir } = getBuildPaths(BUILD_MODE, platformArch)
+  const wasmPath = path.join(outputFinalDir, 'yoga.wasm')
+  const jsPath = path.join(outputFinalDir, 'yoga.js')
+  if (!existsSync(wasmPath) || !existsSync(jsPath)) {
+    logger.fail('Yoga WASM build not found')
+    logger.log('')
+    logger.log('Build Yoga WASM first:')
+    logger.log('  pnpm --filter yoga-layout-builder build')
+    logger.log('')
+    process.exitCode = 1
+    return undefined
+  }
+  logger.log(`WASM module: ${wasmPath}`)
+  logger.log(`JS wrapper: ${jsPath}`)
+  logger.log('')
+  return { __proto__: null, yogaSourcePath }
 }
 
 main().catch(error => {

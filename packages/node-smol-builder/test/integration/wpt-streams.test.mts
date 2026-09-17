@@ -49,7 +49,7 @@ describe.skipIf(skipTests)('WPT streams conformance', () => {
   it(
     'no unexpected failures vs EXPECTED_FAILURES list',
     async () => {
-      const result = await spawn('node', [RUNNER], {
+      const result = await spawn(process.execPath, [RUNNER], {
         stdio: 'inherit',
       })
       expect(result.code).toBe(0)

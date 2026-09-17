@@ -25,7 +25,7 @@ export function getCheckpointChain() {
 }
 
 function printChain() {
-  process.stdout.write(`${CHAIN.join(',')}\n`) // socket-hook: allow logger -- standalone script (no lib-stable import) runs in CI before pnpm install
+  process.stdout.write(`${CHAIN.join(',')}\n`) // socket-hook: allow logger -- standalone script (no lib-stable import) runs in CI before `pnpm install`
 }
 
 if (fileURLToPath(import.meta.url) === path.resolve(process.argv[1]!)) {

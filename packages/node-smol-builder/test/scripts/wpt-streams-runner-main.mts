@@ -35,6 +35,7 @@ import {
 
 const logger = getDefaultLogger()
 
+// oxlint-disable-next-line eslint/complexity -- test-runner result dispatcher
 async function main(): Promise<void> {
   const opts = parseArgs()
   // Fill the default dev binary when none was passed (async platform-arch

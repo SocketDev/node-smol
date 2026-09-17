@@ -30,11 +30,19 @@ import { parseArgs } from 'node:util'
 import { isPlainObject } from '@socketsecurity/lib-stable/objects/predicates'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
-import { isMainModule } from '../fleet/_shared/is-main-module.mts'
+import { isMainModule } from '../fleet/process/is-main-module.mts'
+import { runMain } from '../fleet/process/run-main.mts'
+import type { ScriptMeta } from '../fleet/process/run-main.mts'
 import { runCapture, runInherit } from '../fleet/registry-infra/shared.mts'
 import { loadSocketWheelhouseConfig, REPO_ROOT } from './paths.mts'
 
 const logger = getDefaultLogger()
+
+const SCRIPT_META: ScriptMeta = {
+  describe: 'Build the repository prebake images.',
+  help: 'Usage: pnpm run build [--target base|binary] [--dry-run] [--push] [--platforms <list>] [--json]',
+  json: 'result',
+}
 
 /**
  * One `docker.prebakes.prebakes[]` entry, narrowed from the untyped config
@@ -162,13 +170,19 @@ interface BaseTargetOptions {
 /**
  * Bake the declared prebake images. Returns the process exit code.
  */
+function isMultiPlatformLocalBuild(config: {
+  push: boolean
+  platforms: string
+}): boolean {
+  const cfg = { __proto__: null, ...config } as typeof config
+  return !cfg.push && cfg.platforms.includes(',')
+}
+
 async function runBaseTarget(
   options?: BaseTargetOptions | undefined,
 ): Promise<number> {
   const opts = { __proto__: null, ...options } as BaseTargetOptions
-  const dryRun = opts.dryRun ?? false
-  const { platformsOverride } = opts
-  const push = opts.push ?? false
+  const { dryRun = false, platformsOverride, push = false } = opts
   const loaded = loadSocketWheelhouseConfig(REPO_ROOT)
   if (!loaded) {
     logger.error(
@@ -205,7 +219,7 @@ async function runBaseTarget(
     const platforms =
       platformsOverride ??
       (push ? entry.platforms.join(',') : hostDockerPlatform())
-    if (!push && platforms.includes(',')) {
+    if (isMultiPlatformLocalBuild({ push, platforms })) {
       logger.error(
         'build.mts: buildx cannot --load a multi-platform build.\n' +
           `  Saw:   --platforms ${platforms} without --push.\n` +
@@ -271,6 +285,7 @@ export async function main(): Promise<void> {
     args: process.argv.slice(2),
     options: {
       'dry-run': { default: false, type: 'boolean' },
+      json: { default: false, type: 'boolean' },
       platforms: { type: 'string' },
       push: { default: false, type: 'boolean' },
       target: { default: 'base', type: 'string' },
@@ -299,8 +314,5 @@ export async function main(): Promise<void> {
 // Entrypoint-guarded: importing this module (unit tests of its exported
 // helpers) must not execute the script.
 if (isMainModule(import.meta.url)) {
-  main().catch((e: unknown) => {
-    logger.error(e)
-    process.exitCode = 1
-  })
+  runMain(main, SCRIPT_META)
 }

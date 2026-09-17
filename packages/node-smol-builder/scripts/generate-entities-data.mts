@@ -61,7 +61,11 @@ async function main() {
   const j = response['data']
 
   const entries = Object.entries(j)
-    .map(([k, v]) => ({ name: k.slice(1), chars: v.characters }))
+    .map(([k, v]) => ({
+      __proto__: null,
+      name: k.slice(1),
+      chars: v.characters,
+    }))
     .toSorted((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
 
   const nameBuf: number[] = []
@@ -83,8 +87,8 @@ async function main() {
 
   for (let i = 0, { length } = entries; i < length; i += 1) {
     const e = entries[i]
-    const [nameOff, nameLen] = appendUtf8(nameBuf, e.name)
-    const [valOff, valLen] = appendUtf8(valBuf, e.chars)
+    const { 0: nameOff, 1: nameLen } = appendUtf8(nameBuf, e.name)
+    const { 0: valOff, 1: valLen } = appendUtf8(valBuf, e.chars)
     // Pool offsets are emitted as uint16_t into the generated C++ struct;
     // a pool that crosses 65 535 bytes would silently truncate and corrupt
     // every later entity lookup at runtime. Fail loud at codegen instead so

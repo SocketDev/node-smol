@@ -8,20 +8,20 @@ const { ObjectDefineProperty, ObjectFreeze } = primordials
 let _SmolSqliteProvider
 let _SmolPgProvider
 
-function getSmolSqliteProvider() {
-  if (!_SmolSqliteProvider) {
-    _SmolSqliteProvider =
-      require('internal/socketsecurity/vfs/sqlite_provider').SmolSqliteProvider
-  }
-  return _SmolSqliteProvider
-}
-
 function getSmolPgProvider() {
   if (!_SmolPgProvider) {
     _SmolPgProvider =
       require('internal/socketsecurity/vfs/pg_provider').SmolPgProvider
   }
   return _SmolPgProvider
+}
+
+function getSmolSqliteProvider() {
+  if (!_SmolSqliteProvider) {
+    _SmolSqliteProvider =
+      require('internal/socketsecurity/vfs/sqlite_provider').SmolSqliteProvider
+  }
+  return _SmolSqliteProvider
 }
 
 const {
@@ -90,45 +90,45 @@ const {
 // Default export object with lazy SQL providers
 const defaultExport = {
   __proto__: null,
-  hasVFS,
-  config,
-  prefix,
-  size,
-  canBuildSea,
-  existsSync,
-  readFileSync,
-  statSync,
-  lstatSync,
-  readdirSync,
   accessSync,
-  realpathSync,
-  readlinkSync,
-  openSync,
+  canBuildSea,
   closeSync,
-  readSync,
-  fstatSync,
-  isVfsFd,
-  getVfsPath,
-  getRealPath,
-  promises,
+  config,
   createReadStream,
-  listFiles,
-  mount,
-  mountSync,
-  isVFSPath,
-  readFileAsBuffer,
-  readFileAsJSON,
-  readFileAsText,
-  readMultiple,
+  existsSync,
+  fstatSync,
+  getCacheStats,
+  getRealPath,
+  getVfsPath,
+  getVFSStats,
   handleNativeAddon,
+  hasVFS,
   isNativeAddon,
-  VFSError,
+  isVfsFd,
+  isVFSPath,
+  listFiles,
+  lstatSync,
   MAX_SYMLINK_DEPTH,
   MODE_COMPAT,
   MODE_IN_MEMORY,
   MODE_ON_DISK,
-  getCacheStats,
-  getVFSStats,
+  mount,
+  mountSync,
+  openSync,
+  prefix,
+  promises,
+  readdirSync,
+  readFileAsBuffer,
+  readFileAsJSON,
+  readFileAsText,
+  readFileSync,
+  readlinkSync,
+  readMultiple,
+  readSync,
+  realpathSync,
+  size,
+  statSync,
+  VFSError,
 }
 
 // Lazy-load SQL storage providers to avoid pulling in SQL infrastructure at startup.

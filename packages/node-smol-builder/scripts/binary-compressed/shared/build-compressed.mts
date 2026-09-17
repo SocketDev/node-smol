@@ -21,7 +21,7 @@ import {
   exec,
   getFileSize,
   smokeTestBinary,
-} from 'local-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 import { adHocSign } from 'local-build-infra/lib/sign'
@@ -225,5 +225,5 @@ export async function buildCompressed(config, buildOptions = {}) {
   logger.success('Binary compressed successfully')
   logger.logNewline()
 
-  return { compressed: true }
+  return { __proto__: null, compressed: true }
 }

@@ -14,7 +14,7 @@ import {
   formatDuration,
   getFileSize,
   writeCacheHash,
-} from 'local-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-steps'
 import {
   computeBuildInputsFingerprint,
   formatStaleCheckpointMessage,
@@ -27,7 +27,7 @@ import {
   nodeVersionRaw,
 } from 'local-build-infra/lib/constants'
 import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
-import { verifyNodeChecksum } from 'local-build-infra/lib/version-helpers'
+import { verifyNodeChecksum } from 'local-build-infra/lib/tool-versions'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -105,6 +105,7 @@ const { buildDir: SHARED_BUILD_DIR, nodeSourceDir: SHARED_SOURCE_DIR } =
 /**
  * Main build orchestrator.
  */
+// oxlint-disable-next-line eslint/complexity -- build phase dispatcher
 async function main() {
   // Start timing total build.
   const totalStart = Date.now()

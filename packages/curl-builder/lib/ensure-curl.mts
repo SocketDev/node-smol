@@ -6,8 +6,9 @@
  * pattern.
  *
  * Downstream consumers (verified via grep):
- * - bin-infra/lib/build-stubs.mts (1 ensureCurl() call)
- * - bin-stub-builder/scripts/build.mts (1 ensureCurl() call)
+ *
+ * - Bin-infra/lib/build-stubs.mts (1 ensureCurl() call)
+ * - Bin-stub-builder/scripts/build.mts (1 ensureCurl() call)
  *
  * Both consume the return value as a directory string. Factory's
  * ensure() also returns a directory string; behavior preserved.

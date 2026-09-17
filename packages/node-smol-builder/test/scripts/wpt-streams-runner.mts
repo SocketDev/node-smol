@@ -12,10 +12,11 @@
  * (packages/temporal-infra/test/scripts/test262/). The harness lives as plain
  * .js text at test/fixtures/wpt/harness.js; it's concatenated, never loaded as
  * an entry point, so the binary's --without-amaro constraint does not apply to
- * it. Usage: pnpm --filter node-smol-builder run wpt:streams [-- <binary-path>]
- * pnpm --filter node-smol-builder run wpt:streams -- --force pnpm --filter
- * node-smol-builder run wpt:streams -- --filter=readable-streams If no binary
- * path provided, uses the dev Final binary.
+ * it. Usage: `pnpm --filter` node-smol-builder run wpt:streams [--
+ * <binary-path>] `pnpm --filter` node-smol-builder run wpt:streams -- --force
+ * `pnpm --filter` node-smol-builder run wpt:streams --
+ * --filter=readable-streams If no binary path provided, uses the dev Final
+ * binary.
  */
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -154,7 +155,7 @@ export async function ensureWptStreams(force: boolean = false): Promise<void> {
     // .gitmodules. Materializes only the streams/ subtree (~1 MB)
     // instead of the full ~5 GB WPT tree.
     await spawn(
-      'node',
+      process.execPath,
       [
         path.join(MONOREPO_ROOT, 'scripts', 'git-partial-submodule.mts'),
         'clone',

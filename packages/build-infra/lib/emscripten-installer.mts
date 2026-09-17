@@ -1,8 +1,5 @@
 /**
- * Emscripten SDK Installation Utilities.
- *
- * Provides utilities for automatically installing and activating Emscripten
- * SDK.
+ * @file Emscripten SDK installation and activation utilities.
  */
 
 import { existsSync, promises as fs, realpathSync } from 'node:fs'
@@ -10,7 +7,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { whichSync } from '@socketsecurity/lib-stable/bin/which'
+import { whichSync } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -21,16 +18,9 @@ import { errorMessage } from './error-utils.mts'
 const logger = getDefaultLogger()
 
 /**
- * Activate Emscripten SDK environment for current process.
- *
- * @param {object} options - Options.
- * @param {string} options.emsdkPath - Emscripten SDK path (default:
- *   auto-detect).
- * @param {string} options.version - Version to activate (default: 'latest').
- * @param {boolean} options.quiet - Suppress output.
- *
- * @returns {Promise<{ activated: boolean; env: object }>}
+ * Activate the Emscripten SDK environment for the current process.
  */
+// oxlint-disable-next-line eslint/complexity -- SDK activation dispatcher
 export async function activateEmscripten({
   emsdkPath,
   quiet = false,
@@ -42,7 +32,7 @@ export async function activateEmscripten({
     if (!quiet) {
       printError(`Emscripten SDK not found at ${resolvedEmsdkPath}`)
     }
-    return { activated: false, env: {} }
+    return { __proto__: null, activated: false, env: {} }
   }
 
   try {
@@ -64,7 +54,7 @@ export async function activateEmscripten({
       if (!quiet) {
         printError(`Failed to activate Emscripten ${version}`)
       }
-      return { activated: false, env: {} }
+      return { __proto__: null, activated: false, env: {} }
     }
 
     // Source the environment (construct_env).
@@ -122,19 +112,17 @@ export async function activateEmscripten({
       logger.success(`Emscripten ${version} activated`)
     }
 
-    return { activated: true, env: envVars }
+    return { __proto__: null, activated: true, env: envVars }
   } catch (e) {
     if (!quiet) {
       printError(`Error activating Emscripten: ${errorMessage(e)}`)
     }
-    return { activated: false, env: {} }
+    return { __proto__: null, activated: false, env: {} }
   }
 }
 
 /**
- * Check if Emscripten is available.
- *
- * @returns {boolean} True if emcc is in PATH.
+ * Check whether emcc is available.
  */
 export function checkEmscriptenAvailable() {
   return Boolean(whichSync('emcc', { nothrow: true }))
@@ -171,6 +159,7 @@ export function checkEmsdkInstalled(emsdkPath = getEmsdkPath()) {
  *   activated: boolean
  * }>}
  */
+// oxlint-disable-next-line eslint/complexity -- SDK availability dispatcher
 export async function ensureEmscripten({
   autoInstall = true,
   installPath,
@@ -214,7 +203,12 @@ export async function ensureEmscripten({
         }
       }
     }
-    return { activated: false, available: true, installed: false }
+    return {
+      __proto__: null,
+      activated: false,
+      available: true,
+      installed: false,
+    }
   }
 
   const emsdkPath = installPath || getEmsdkPath()
@@ -248,6 +242,7 @@ export async function ensureEmscripten({
       }
     }
     return {
+      __proto__: null,
       activated: activation.activated,
       available: activation.activated,
       installed: repaired,
@@ -255,7 +250,12 @@ export async function ensureEmscripten({
   }
 
   if (!autoInstall) {
-    return { activated: false, available: false, installed: false }
+    return {
+      __proto__: null,
+      activated: false,
+      available: false,
+      installed: false,
+    }
   }
 
   // Install Emscripten SDK.
@@ -269,7 +269,12 @@ export async function ensureEmscripten({
     version,
   })
   if (!installed) {
-    return { activated: false, available: false, installed: false }
+    return {
+      __proto__: null,
+      activated: false,
+      available: false,
+      installed: false,
+    }
   }
 
   // Activate after installation.
@@ -280,6 +285,7 @@ export async function ensureEmscripten({
   })
 
   return {
+    __proto__: null,
     activated: activation.activated,
     available: activation.activated,
     installed: true,
@@ -287,7 +293,7 @@ export async function ensureEmscripten({
 }
 
 /**
- * Default Emscripten SDK installation path.
+ * Return the default Emscripten SDK installation path.
  */
 export function getDefaultEmsdkPath() {
   return path.join(os.homedir(), '.emsdk')
@@ -363,6 +369,7 @@ export function getEmsdkSpawnEnv() {
  *
  * @returns {Promise<boolean>} True if installation succeeded.
  */
+// oxlint-disable-next-line eslint/complexity -- SDK installation dispatcher
 export async function installEmscripten({
   installPath,
   quiet = false,

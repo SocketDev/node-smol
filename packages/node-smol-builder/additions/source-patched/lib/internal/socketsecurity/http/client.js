@@ -23,10 +23,10 @@ const {
 // Lazy module loading.
 let _http, _https
 function getHttp() {
-  return _http || (_http = require('http'))
+  return _http || (_http = require('node:http'))
 }
 function getHttps() {
-  return _https || (_https = require('https'))
+  return _https || (_https = require('node:https'))
 }
 
 // Shared agents with keep-alive for connection reuse.
@@ -185,6 +185,7 @@ function request(url, options) {
  */
 function setPipelining(depth, options) {
   // Try to load undici from user's node_modules.
+  const opts = { __proto__: null, ...options }
   let undici
   try {
     undici = require('undici')
@@ -198,7 +199,7 @@ function setPipelining(depth, options) {
   setGlobalDispatcher(
     new Agent({
       pipelining: depth,
-      connections: options?.connections ?? undefined,
+      connections: opts?.connections ?? undefined,
       keepAliveTimeout: DEFAULT_KEEP_ALIVE_TIMEOUT,
       keepAliveMaxTimeout: DEFAULT_KEEP_ALIVE_MAX_TIMEOUT,
     }),

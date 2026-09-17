@@ -11,16 +11,17 @@ import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 import { getPythonCommand } from 'local-build-infra/lib/python-installer'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 // Model pipelines run natively per host, so passing process.* is safe.
 // createCheckpoint now requires explicit target for non-source checkpoints.
 const TARGET_PLATFORM = process.platform
-const TARGET_ARCH = process.env['TARGET_ARCH'] || process.arch
+const TARGET_ARCH = getEnvValue('TARGET_ARCH') || process.arch
 
 // Helper Python scripts live at <package>/python/*.py — three levels up
 // from this file (scripts/downloaded/shared/). Resolving via import.meta.url

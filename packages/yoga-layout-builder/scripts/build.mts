@@ -24,12 +24,12 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import {
   checkDiskSpace,
   freeDiskSpace,
-} from 'local-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 import { ensureEmscripten } from 'local-build-infra/lib/emscripten-installer'
 import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
-import { getEmscriptenVersion } from 'local-build-infra/lib/version-helpers'
+import { getEmscriptenVersion } from 'local-build-infra/lib/tool-versions'
 import { runPipelineCli } from 'local-build-infra/lib/build-pipeline'
 
 import {

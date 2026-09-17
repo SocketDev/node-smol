@@ -2,7 +2,7 @@
 
 /**
  * @file Enumerate GLIBC_2.x symbol versions pulled in by the built node binary.
- *   USAGE: pnpm --filter node-smol-builder run glibc:audit [--binary=PATH]
+ *   USAGE: `pnpm --filter` node-smol-builder run glibc:audit [--binary=PATH]
  *   [--floor=2.17] What it does:
  *
  *   1. Locates the most recent built binary (or uses --binary).

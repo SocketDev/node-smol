@@ -43,7 +43,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -228,24 +228,7 @@ async function main(): Promise<void> {
   // EPIPE-poisons `strings`'s exit code when `head` closes early, and
   // shell-quoting a path with whitespace would break it.
   logger.info('Embedded fileutils paths in binary:')
-  try {
-    const stringsResult = await spawn('strings', [genBin], {
-      stdio: ['ignore', 'pipe', 'inherit'],
-    })
-    const matches = (stringsResult.stdout ?? '')
-      .split(/\r?\n/)
-      .filter(
-        l =>
-          l.includes('fileutils/paths.go') || l.includes('tools/src/fileutils'),
-      )
-      .slice(0, 5)
-    for (let i = 0, { length } = matches; i < length; i += 1) {
-      const line = matches[i]!
-      logger.info(`  ${line}`)
-    }
-  } catch (e) {
-    logger.info(`strings probe skipped: ${errorMessage(e)}`)
-  }
+  await logEmbeddedFileutilsPaths(genBin)
   // Upstream Tint's glob.Scan walker has a latent bug:
   //
   //   if rel == ".git" { return filepath.SkipDir }
@@ -263,31 +246,7 @@ async function main(): Promise<void> {
   // invoking gen, and restore it after. We can't patch upstream (fleet
   // forbids forks of canonical upstream sources), and the gen tool
   // doesn't honor any env-var override.
-  const dotGit = path.join(UPSTREAM_DAWN_DIR, '.git')
-  const dotGitMoved = path.join(UPSTREAM_DAWN_DIR, '.git.moved-for-tint-gen')
-  const dotGitExists = existsSync(dotGit)
-  if (dotGitExists) {
-    await fs.rename(dotGit, dotGitMoved)
-  }
-  try {
-    logger.info(
-      `Running: ${genBin} sources ${genOutDir} (cwd=${UPSTREAM_DAWN_DIR})`,
-    )
-    const genResult = await spawn(genBin, ['sources', genOutDir], {
-      cwd: UPSTREAM_DAWN_DIR,
-      stdio: 'inherit',
-    })
-    logger.info(`gen exit code: ${genResult.code}`)
-    if (genResult.code !== 0) {
-      throw new Error(
-        `Tint source generation failed with exit code ${genResult.code}.`,
-      )
-    }
-  } finally {
-    if (dotGitExists) {
-      await fs.rename(dotGitMoved, dotGit)
-    }
-  }
+  await runTintGeneration(genBin, genOutDir)
   // Diagnostic: confirm the gen tool actually produced the canonical
   // first-target output file. If empty, fileutils.DawnRoot() returned
   // "" (couldn't walk up to DEPS) and glob matched 0 templates.
@@ -362,6 +321,58 @@ async function main(): Promise<void> {
     }
   }
   logger.success(`Dawn headers staged at ${headerDstDir}`)
+}
+
+async function logEmbeddedFileutilsPaths(genBin: string): Promise<void> {
+  try {
+    const stringsResult = await spawn('strings', [genBin], {
+      stdio: ['ignore', 'pipe', 'inherit'],
+    })
+    const matches = (stringsResult.stdout ?? '')
+      .split(/\r?\n/)
+      .filter(
+        line =>
+          line.includes('fileutils/paths.go') ||
+          line.includes('tools/src/fileutils'),
+      )
+      .slice(0, 5)
+    for (let i = 0, { length } = matches; i < length; i += 1) {
+      logger.info(`  ${matches[i]!}`)
+    }
+  } catch (e) {
+    logger.info(`strings probe skipped: ${errorMessage(e)}`)
+  }
+}
+
+async function runTintGeneration(
+  genBin: string,
+  genOutDir: string,
+): Promise<void> {
+  const dotGit = path.join(UPSTREAM_DAWN_DIR, '.git')
+  const dotGitMoved = path.join(UPSTREAM_DAWN_DIR, '.git.moved-for-tint-gen')
+  const dotGitExists = existsSync(dotGit)
+  if (dotGitExists) {
+    await fs.rename(dotGit, dotGitMoved)
+  }
+  try {
+    logger.info(
+      `Running: ${genBin} sources ${genOutDir} (cwd=${UPSTREAM_DAWN_DIR})`,
+    )
+    const genResult = await spawn(genBin, ['sources', genOutDir], {
+      cwd: UPSTREAM_DAWN_DIR,
+      stdio: 'inherit',
+    })
+    logger.info(`gen exit code: ${genResult.code}`)
+    if (genResult.code !== 0) {
+      throw new Error(
+        `Tint source generation failed with exit code ${genResult.code}.`,
+      )
+    }
+  } finally {
+    if (dotGitExists) {
+      await fs.rename(dotGitMoved, dotGit)
+    }
+  }
 }
 
 main().catch(err => {

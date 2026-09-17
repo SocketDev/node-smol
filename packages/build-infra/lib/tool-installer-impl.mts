@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
-import binPkg, { which } from '@socketsecurity/lib-stable/bin/which'
+import binPkg, { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -171,7 +171,7 @@ export async function installPackageManager(
  */
 // Ordered by install pipeline phase (install package manager → install tool →
 // resolve pinned → verify); alphabetizing across phases would scatter the flow.
-// oxlint-disable-next-line socket/sort-source-methods -- intentional ordering
+// oxlint-disable-next-line socket/sort-source-methods, eslint/complexity -- install flow
 export async function installTool(
   tool,
   packageManager,
@@ -377,6 +377,7 @@ export function resolvePinnedArtifact(tool, version) {
       return undefined
     }
     return {
+      __proto__: null,
       ...artifact,
       binary: WIN32 ? `${tool}.exe` : tool,
       archiveFormat: artifact.url.endsWith('.zip') ? 'zip' : 'tar.xz',

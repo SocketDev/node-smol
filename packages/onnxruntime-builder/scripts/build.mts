@@ -17,12 +17,12 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import {
   checkDiskSpace,
   freeDiskSpace,
-} from 'local-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 import { ensureEmscripten } from 'local-build-infra/lib/emscripten-installer'
 import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
-import { getEmscriptenVersion } from 'local-build-infra/lib/version-helpers'
+import { getEmscriptenVersion } from 'local-build-infra/lib/tool-versions'
 import { runPipelineCli } from 'local-build-infra/lib/build-pipeline'
 import { generateSync as generateSyncShared } from 'local-build-infra/wasm-synced/generate-sync-phase'
 
@@ -37,10 +37,11 @@ import { cloneOnnxSource } from './source-cloned/shared/clone-source.mts'
 import { compileWasm } from './wasm-compiled/shared/compile-wasm.mts'
 import { optimizeWasm } from './wasm-optimized/shared/optimize-wasm.mts'
 import { copyToRelease } from './wasm-released/shared/copy-to-release.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
-const IS_CI = process.env['CI'] === '1' || process.env['CI'] === 'true'
+const IS_CI = getEnvValue('CI') === '1' || getEnvValue('CI') === 'true'
 
 export async function main() {
   const pkgJson = JSON.parse(

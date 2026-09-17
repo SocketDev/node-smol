@@ -7,7 +7,7 @@
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { getFileSize } from 'local-build-infra/lib/build-steps'
 import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
 
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
@@ -111,6 +111,7 @@ export async function optimizeWasm(config) {
 
   const wasmSize = await getFileSize(optimizedWasmFile)
   return {
+    __proto__: null,
     artifactPath: optimizedDir,
     binaryPath: path.relative(buildDir, optimizedWasmFile),
     binarySize: wasmSize,

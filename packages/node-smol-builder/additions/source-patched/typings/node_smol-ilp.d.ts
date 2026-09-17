@@ -35,7 +35,7 @@
  * @module
  */
 declare module 'node:smol-ilp' {
-  import { EventEmitter } from 'events'
+  import type { EventEmitter } from 'node:events'
 
   /** Timestamp units for ILP protocol */
   export const TimeUnit: Readonly<{
@@ -44,9 +44,9 @@ declare module 'node:smol-ilp' {
     Milliseconds: 2
     Seconds: 3
     /** Get the current timestamp in the specified unit */
-    now(unit?: TimeUnitValue): bigint
+    now(unit?: TimeUnitValue | undefined): bigint
     /** Convert a Date object to timestamp in the specified unit */
-    fromDate(date: Date, unit?: TimeUnitValue): bigint
+    fromDate(date: Date, unit?: TimeUnitValue | undefined): bigint
     /** Convert timestamp from one unit to another */
     convert(
       value: number | bigint,
@@ -87,23 +87,23 @@ declare module 'node:smol-ilp' {
   /** Sender options */
   export interface SenderOptions {
     /** Host to connect to (default: 'localhost') */
-    host?: string
+    host?: string | undefined
     /** Port to connect to (default: 9009) */
-    port?: number
+    port?: number | undefined
     /** Connection timeout in ms (default: 10_000) */
-    connectTimeout?: number
+    connectTimeout?: number | undefined
     /** Send timeout in ms (default: 30_000) */
-    sendTimeout?: number
+    sendTimeout?: number | undefined
     /** Initial buffer size (default: 65536) */
-    bufferSize?: number
+    bufferSize?: number | undefined
     /** Maximum buffer size (default: 104857600 = 100MB) */
-    maxBufferSize?: number
+    maxBufferSize?: number | undefined
     /** Enable auto-flush (default: false) */
-    autoFlush?: boolean
+    autoFlush?: boolean | undefined
     /** Flush after this many rows (default: 1000) */
-    autoFlushRows?: number
+    autoFlushRows?: number | undefined
     /** Flush interval in ms (0 = disabled, default: 0) */
-    autoFlushInterval?: number
+    autoFlushInterval?: number | undefined
   }
 
   /** Sender statistics */
@@ -112,7 +112,7 @@ declare module 'node:smol-ilp' {
     rowsSent: number
     bytesSent: number
     bytesBuffered: number
-    lastError?: string
+    lastError?: string | undefined
   }
 
   /** Flush event stats */
@@ -124,21 +124,21 @@ declare module 'node:smol-ilp' {
   /** Timestamp column specification */
   export interface TimestampSpec {
     value: number | bigint
-    unit?: TimeUnitValue
+    unit?: TimeUnitValue | undefined
   }
 
   /** Row data for insertRow convenience method */
   export interface RowData {
     /** Symbol (tag) columns - indexed for filtering */
-    symbols?: Record<string, string>
+    symbols?: Record<string, string> | undefined
     /** Field columns - actual data values */
-    fields?: Record<string, string | boolean | number | bigint>
+    fields?: Record<string, string | boolean | number | bigint> | undefined
     /** Timestamp columns */
-    timestamps?: Record<string, TimestampSpec | number | bigint>
+    timestamps?: Record<string, TimestampSpec | number | bigint> | undefined
     /** Row timestamp */
-    timestamp?: number | bigint
+    timestamp?: number | bigint | undefined
     /** Timestamp unit (default: TimeUnit.Nanoseconds) */
-    timestampUnit?: TimeUnitValue
+    timestampUnit?: TimeUnitValue | undefined
   }
 
   /** Buffer pressure info */
@@ -152,7 +152,7 @@ declare module 'node:smol-ilp' {
   export interface WarningInfo {
     type: string
     message: string
-    table?: string
+    table?: string | undefined
   }
 
   /** Sender events */
@@ -363,7 +363,7 @@ declare module 'node:smol-ilp' {
   /** BulkRowBuilder options */
   export interface BulkRowBuilderOptions {
     /** Rows per batch before auto-flush (default: 1000) */
-    batchSize?: number
+    batchSize?: number | undefined
   }
 
   /** BulkRowBuilder stats */

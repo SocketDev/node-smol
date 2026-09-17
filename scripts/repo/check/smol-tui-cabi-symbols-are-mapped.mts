@@ -1,19 +1,8 @@
 #!/usr/bin/env node
-/*
- * @file Repo check — every `extern "C"` symbol stuie's `stuie-cabi` crate
- *   exports is accounted for by `packages/tui-infra/cabi-symbol-map.json`:
- *   ported with verifiable evidence, explicitly out of scope, or explicitly
- *   pending under a named plan. The committed snapshot
- *   `packages/tui-infra/cabi-symbols.snapshot.json` is the hermetic input, so
- *   CI needs neither a stuie checkout nor the network. Modes: argless
- *   validates the map against the snapshot and, when a stuie checkout is
- *   reachable, also re-extracts live and fails on drift — that argless path is
- *   what `scripts/fleet/check.mts` invokes, so it writes nothing. `--update`
- *   re-extracts from the checkout and rewrites the snapshot; it is the only
- *   mode that writes. `--self-test` proves the gate can fail by feeding it a
- *   phantom symbol no map row covers. The pure extractor and validator live in
- *   `./smol-tui-cabi-symbols-are-mapped/audit.mts`, re-exported here so tests
- *   and callers have one import path.
+/**
+ * Validate the C ABI map against its committed snapshot without source
+ * discovery. Only --update reads the contained source after commit and checksum
+ * verification.
  */
 
 import crypto from 'node:crypto'
@@ -21,11 +10,19 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
+import { isAgent } from '@socketsecurity/lib-stable/env/agents'
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
-import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import { isMainModule } from '../../fleet/_shared/is-main-module.mts'
+import { isMainModule } from '../../fleet/process/is-main-module.mts'
+import { runMain } from '../../fleet/process/run-main.mts'
+import type { ScriptMeta } from '../../fleet/process/run-main.mts'
+import { repositoryContainsTarget } from '../../../.git-hooks/_shared/repo-containment.mts'
+import {
+  assertStuieSourcePath,
+  readStuieSourcePin,
+  verifyStuieSource,
+} from './smol-tui-cabi-symbols-are-mapped/source.mts'
 import { REPO_ROOT } from '../paths.mts'
 import {
   CABI_SRC_SUBDIR,
@@ -52,29 +49,16 @@ export * from './smol-tui-cabi-symbols-are-mapped/audit.mts'
 
 const logger = getDefaultLogger()
 
-/**
- * Compare the snapshot's symbol set against a live extraction from `stuieDir`.
- * Undefined when the two agree, otherwise a message naming the delta.
- */
-export function describeSnapshotDrift(
-  snapshot: CabiSymbolSnapshot,
-  stuieDir: string,
-): string | undefined {
-  const live = new Set(extractCheckoutSymbols(stuieDir).map(sym => sym.name))
-  const stored = new Set(snapshot.symbols.map(sym => sym.name))
-  const added = [...live].filter(name => !stored.has(name))
-  const gone = [...stored].filter(name => !live.has(name))
-  if (added.length === 0 && gone.length === 0) {
-    return undefined
-  }
-  return `snapshot drift vs ${stuieDir}: ${added.length} only in the checkout [${added.slice(0, 5).join(', ')}], ${gone.length} only in the snapshot [${gone.slice(0, 5).join(', ')}]. Run \`node ${CHECK_REL_PATH} --update\`.`
+const SCRIPT_META: ScriptMeta = {
+  describe: 'Verify the committed C ABI symbol snapshot.',
+  help: 'Usage: smol-tui-cabi-symbols-are-mapped [--update|--self-test]',
+  json: 'result',
 }
 
-/**
- * Every C ABI symbol a stuie checkout currently exports, sorted by name.
- */
-export function extractCheckoutSymbols(stuieDir: string): CabiSymbol[] {
-  return extractSnapshotFromCheckout(stuieDir).symbols
+function reportSuccess(message: string): void {
+  if (!isAgent()) {
+    logger.success(message)
+  }
 }
 
 /**
@@ -83,7 +67,11 @@ export function extractCheckoutSymbols(stuieDir: string): CabiSymbol[] {
 export function extractSnapshotFromCheckout(
   stuieDir: string,
 ): CabiSymbolSnapshot {
+  assertStuieSourcePath(REPO_ROOT, stuieDir)
   const srcDir = path.join(stuieDir, CABI_SRC_SUBDIR)
+  if (!repositoryContainsTarget(REPO_ROOT, srcDir)) {
+    throw new TypeError('C ABI source directory escapes the repository.')
+  }
   const names = readdirSync(srcDir)
     .filter(name => name.endsWith('.rs'))
     .toSorted()
@@ -92,34 +80,26 @@ export function extractSnapshotFromCheckout(
   for (let i = 0, { length } = names; i < length; i += 1) {
     const name = names[i]!
     const rel = `${CABI_SRC_SUBDIR}/${name}`
-    const text = readFileSync(path.join(srcDir, name), 'utf8')
+    const file = path.join(srcDir, name)
+    if (!repositoryContainsTarget(REPO_ROOT, file)) {
+      throw new TypeError('C ABI source file escapes the repository.')
+    }
+    const text = readFileSync(file, 'utf8')
     hashes.push([rel, crypto.createHash('sha256').update(text).digest('hex')])
     symbols.push(...extractCabiSymbols(text, rel))
   }
   const gitmodulesPath = path.join(stuieDir, '.gitmodules')
+  if (!repositoryContainsTarget(REPO_ROOT, gitmodulesPath)) {
+    throw new TypeError('Source metadata escapes the repository.')
+  }
   return {
     files: Object.fromEntries(hashes),
     opentuiPin: readOpentuiPin(
       existsSync(gitmodulesPath) ? readFileSync(gitmodulesPath, 'utf8') : '',
     ),
-    stuieCommit: readGitHead(stuieDir),
+    stuieCommit: readStuieSourcePin(REPO_ROOT).ref,
     symbols: symbols.toSorted(compareCabiSymbolName),
   }
-}
-
-/**
- * HEAD of the stuie checkout, or an empty string when git cannot answer.
- */
-export function readGitHead(stuieDir: string): string {
-  // Main() is a sync CLI writer; HEAD must resolve before the snapshot is
-  // serialized.
-  // oxlint-disable-next-line socket/prefer-async-spawn -- see note above
-  const result = spawnSync('git', ['-C', stuieDir, 'rev-parse', 'HEAD'], {
-    encoding: 'utf8',
-  })
-  return result.status === 0 && typeof result.stdout === 'string'
-    ? result.stdout.trim()
-    : ''
 }
 
 /**
@@ -127,7 +107,7 @@ export function readGitHead(stuieDir: string): string {
  */
 export function readRepoFileText(file: string): string | undefined {
   const absolute = path.join(REPO_ROOT, file)
-  if (!existsSync(absolute)) {
+  if (!repositoryContainsTarget(REPO_ROOT, absolute) || !existsSync(absolute)) {
     return undefined
   }
   try {
@@ -135,17 +115,6 @@ export function readRepoFileText(file: string): string | undefined {
   } catch {
     return undefined
   }
-}
-
-/**
- * The stuie checkout to extract from, or undefined when none is reachable.
- */
-export function resolveStuieDir(): string | undefined {
-  const candidate =
-    process.env['STUIE_DIR'] ?? path.join(REPO_ROOT, '..', 'stuie')
-  return existsSync(path.join(candidate, CABI_SRC_SUBDIR))
-    ? candidate
-    : undefined
 }
 
 /**
@@ -188,11 +157,21 @@ export function runSelfTest(): boolean {
   )
 }
 
-function main(): void {
+function containedCabiAuditPath(file: string): string {
+  const target = path.join(REPO_ROOT, file)
+  if (!repositoryContainsTarget(REPO_ROOT, target)) {
+    throw new TypeError(
+      'Audit input is outside the repository. Where: C ABI snapshot or map. Saw an external path, wanted a contained file. Fix: restore the repository audit inputs.',
+    )
+  }
+  return target
+}
+
+export async function main(): Promise<void> {
   const argv = process.argv.slice(2)
   if (argv.includes('--self-test')) {
     if (runSelfTest()) {
-      logger.success(`${LOG_PREFIX} self-test: the phantom symbol was caught.`)
+      reportSuccess(`${LOG_PREFIX} self-test: the phantom symbol was caught.`)
       return
     }
     logger.fail(
@@ -201,34 +180,24 @@ function main(): void {
     process.exitCode = 1
     return
   }
-  const stuieDir = resolveStuieDir()
+  const snapshotPath = containedCabiAuditPath(SNAPSHOT_REL_PATH)
+  const mapPath = containedCabiAuditPath(MAP_REL_PATH)
   if (argv.includes('--update')) {
-    if (!stuieDir) {
-      logger.fail(
-        `${LOG_PREFIX} --update needs a stuie checkout; set STUIE_DIR or clone stuie to ${path.join(REPO_ROOT, '..', 'stuie')}.`,
-      )
-      process.exitCode = 1
-      return
-    }
+    const stuieDir = await verifyStuieSource(REPO_ROOT)
     const snapshot = extractSnapshotFromCheckout(stuieDir)
-    writeFileSync(
-      path.join(REPO_ROOT, SNAPSHOT_REL_PATH),
-      `${JSON.stringify(snapshot, undefined, 2)}\n`,
-    )
-    logger.success(
+    writeFileSync(snapshotPath, `${JSON.stringify(snapshot, undefined, 2)}\n`)
+    reportSuccess(
       `${LOG_PREFIX} wrote ${SNAPSHOT_REL_PATH}: ${snapshot.symbols.length} symbols from stuie ${snapshot.stuieCommit.slice(0, 12)}.`,
     )
     return
   }
-  const snapshotPath = path.join(REPO_ROOT, SNAPSHOT_REL_PATH)
   if (!existsSync(snapshotPath)) {
     logger.fail(
-      `${LOG_PREFIX} missing ${SNAPSHOT_REL_PATH} — it is generated, so run \`node ${CHECK_REL_PATH} --update\` against a stuie checkout.`,
+      `${LOG_PREFIX} missing ${SNAPSHOT_REL_PATH} — it is generated, so run \`node ${CHECK_REL_PATH} --update\` after materializing the pinned stuie source.`,
     )
     process.exitCode = 1
     return
   }
-  const mapPath = path.join(REPO_ROOT, MAP_REL_PATH)
   if (!existsSync(mapPath)) {
     logger.fail(
       `${LOG_PREFIX} missing ${MAP_REL_PATH} — it is hand-curated, so add one row per snapshot symbol with status ported, out-of-scope, or pending.`,
@@ -258,14 +227,11 @@ function main(): void {
     return
   }
   const findings = validateMap(snapshot, map, readRepoFileText)
-  let drift: string | undefined
-  if (stuieDir) {
-    drift = describeSnapshotDrift(snapshot, stuieDir)
-  } else {
-    logger.warn(
-      `${LOG_PREFIX} DRIFT LEG SKIPPED — no stuie checkout at STUIE_DIR or ${path.join(REPO_ROOT, '..', 'stuie')}, so the snapshot was validated but not re-derived from stuie.`,
-    )
-  }
+  const pin = readStuieSourcePin(REPO_ROOT)
+  const drift =
+    snapshot.stuieCommit === pin.ref
+      ? undefined
+      : 'Snapshot commit differs from the pinned source. Run the snapshot update after materializing the declared revision.'
   if (findings.length || drift) {
     const summary = summarize(findings)
     logger.fail(
@@ -280,11 +246,11 @@ function main(): void {
     process.exitCode = 1
     return
   }
-  logger.success(
+  reportSuccess(
     `${LOG_PREFIX} all ${snapshot.symbols.length} stuie-cabi symbols are mapped across ${map.rows.length} rows.`,
   )
 }
 
 if (isMainModule(import.meta.url)) {
-  main()
+  runMain(main, SCRIPT_META)
 }

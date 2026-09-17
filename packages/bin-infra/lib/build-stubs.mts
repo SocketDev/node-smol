@@ -31,7 +31,7 @@ import { verifyReleaseChecksum } from 'local-build-infra/lib/release-checksums/c
 import { ensureCurl } from 'local-curl-builder/lib/ensure-curl'
 
 import { envAsBoolean } from '@socketsecurity/lib-stable/env/boolean'
-import { getCI } from '@socketsecurity/lib-stable/env/ci'
+import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { downloadSocketBtmRelease } from '@socketsecurity/lib-stable/releases/socket-btm'
@@ -158,11 +158,11 @@ export async function downloadPrebuiltStub(
 
     // Verify SHA256 checksum to detect corrupt/truncated downloads.
     logger.info('Verifying archive checksum…')
-    const checksumResult = await verifyReleaseChecksum({
+    const checksumResult = await verifyReleaseChecksum(
+      tarballPath,
       assetName,
-      filePath: tarballPath,
-      tool: 'stubs',
-    })
+      'stubs',
+    )
     if (!checksumResult.valid) {
       await safeDelete(tarballPath)
       throw new Error(
@@ -312,7 +312,7 @@ export async function ensureStubs(
     logger.info(`Source build failed: ${errorMessage(e)}`)
 
     // In CI (stub build workflow), fail immediately without fallback.
-    if (getCI()) {
+    if (isCIEnvironment()) {
       throw new Error(
         `Stub build from source failed in CI - no fallback allowed: ${errorMessage(e)}`,
         { cause: e },

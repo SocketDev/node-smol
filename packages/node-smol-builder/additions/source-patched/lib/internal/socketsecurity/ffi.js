@@ -42,7 +42,7 @@ const {
 let _fs
 function lazyFs() {
   if (!_fs) {
-    _fs = require('fs')
+    _fs = require('node:fs')
   }
   return _fs
 }
@@ -414,7 +414,7 @@ class Library {
       // text matching is fragile (binding.cc owns these strings) but the
       // surface area is small (3 native error texts) and a missing match
       // falls through to a generic FFIError preserving the original cause.
-      const msg = (err && err.message) || ''
+      const msg = (err?.message) || ''
       let code = FFI_ERROR_CODES.ENOSYM
       if (
         msg.indexOf('Symbol not found') === -1 &&

@@ -15,6 +15,9 @@ import {
   analyzePatchContent,
   checkPatchConflicts,
 } from 'local-build-infra/lib/patch-validator'
+import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
+
+const logger = getDefaultLogger()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -131,7 +134,7 @@ describe('zero File Overlaps', () => {
     const overlaps = checkPatchConflicts(patchData)
 
     if (overlaps.length > 0) {
-      console.log('\n❌ UNEXPECTED FILE OVERLAPS DETECTED:')
+      logger.log('\n❌ UNEXPECTED FILE OVERLAPS DETECTED:')
       for (const overlap of overlaps) {
         console.log(`  ${overlap.severity.toUpperCase()}: ${overlap.message}`)
       }
@@ -152,8 +155,9 @@ describe('zero File Overlaps', () => {
 
       // Extract modified files.
       const files = []
-      const lines = content.split('\n')
-      for (const line of lines) {
+      const lines = content.split(/\r?\n/)
+      for (let i = 0, { length } = lines; i < length; i += 1) {
+        const line = lines[i]!
         if (line.startsWith('--- a/')) {
           const file = line.slice(6).trim()
           if (file !== '/dev/null') {
@@ -204,8 +208,9 @@ describe('zero File Overlaps', () => {
 
       // Extract modified files.
       const files = []
-      const lines = content.split('\n')
-      for (const line of lines) {
+      const lines = content.split(/\r?\n/)
+      for (let i = 0, { length } = lines; i < length; i += 1) {
+        const line = lines[i]!
         if (line.startsWith('--- a/')) {
           const file = line.slice(6).trim()
           if (file !== '/dev/null') {
@@ -324,7 +329,7 @@ describe('patch Metadata', () => {
       EXPECTED_PATCHES.map(async name => {
         const patchPath = path.join(PATCHES_DIR, name)
         const content = await fs.readFile(patchPath, 'utf8')
-        const lines = content.split('\n').length
+        const lines = content.split(/\r?\n/).length
         return { lines, name }
       }),
     )

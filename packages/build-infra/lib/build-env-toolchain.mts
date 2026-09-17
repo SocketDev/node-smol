@@ -14,7 +14,7 @@ import { envAsBoolean } from '@socketsecurity/lib-stable/env/boolean'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { DOCKER_ENV_FILE, PODMAN_ENV_FILE } from './constants.mts'
-import { getMinPythonVersion } from './version-helpers.mts'
+import { getMinPythonVersion } from './tool-versions.mts'
 
 /**
  * Throw an error if download is blocked by BUILD_*_FROM_SOURCE flags. Use this
@@ -66,6 +66,7 @@ export async function checkPython() {
         const patch = Number.parseInt(match[3], 10)
 
         return {
+          __proto__: null,
           available: true,
           command: cmd,
           meetsRequirement:
@@ -76,7 +77,7 @@ export async function checkPython() {
     }
   }
 
-  return { available: false }
+  return { __proto__: null, available: false }
 }
 
 /**
@@ -84,14 +85,18 @@ export async function checkPython() {
  */
 export async function checkRust() {
   if (!(await commandExists('rustc'))) {
-    return { available: false, reason: 'rustc not found' }
+    return { __proto__: null, available: false, reason: 'rustc not found' }
   }
 
   const version = await getCommandOutput('rustc', ['--version'])
   const match = version.match(/rustc (\d+\.\d+\.\d+)/)
 
   if (!match) {
-    return { available: false, reason: 'version detection failed' }
+    return {
+      __proto__: null,
+      available: false,
+      reason: 'version detection failed',
+    }
   }
 
   const targets = await getCommandOutput('rustup', [
@@ -101,6 +106,7 @@ export async function checkRust() {
   ])
   if (!targets.includes('wasm32-unknown-unknown')) {
     return {
+      __proto__: null,
       available: false,
       fix: 'rustup target add wasm32-unknown-unknown',
       reason: 'wasm32-unknown-unknown target not installed',
@@ -109,13 +115,14 @@ export async function checkRust() {
 
   if (!(await commandExists('wasm-pack'))) {
     return {
+      __proto__: null,
       available: false,
       fix: 'cargo install wasm-pack',
       reason: 'wasm-pack not found',
     }
   }
 
-  return { available: true, version: match[1] }
+  return { __proto__: null, available: true, version: match[1] }
 }
 
 /**
@@ -149,6 +156,7 @@ export async function commandExists(cmd) {
 export function getBuildSourceFlags() {
   const buildAllFromSource = envAsBoolean(process.env['BUILD_ALL_FROM_SOURCE'])
   return {
+    __proto__: null,
     buildAllFromSource,
     buildDepsFromSource:
       buildAllFromSource || envAsBoolean(process.env['BUILD_DEPS_FROM_SOURCE']),

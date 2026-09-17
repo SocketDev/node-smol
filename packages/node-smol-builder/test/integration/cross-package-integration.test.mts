@@ -18,23 +18,17 @@ import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { getSocketDlxDir } from '@socketsecurity/lib-stable/paths/socket'
 
 import { getLatestFinalBinary } from '../paths.mts'
-import {
-  execCommand,
-  getBinaryPath,
-} from './cross-package-integration-helpers.mts'
+import { execCommand, getBinaryPath } from './cross-package-integration.mts'
 import { tolerantTimeout } from '../../../../test/fleet/_shared/lib/timing.mts'
 
-export {
-  execCommand,
-  getBinaryPath,
-} from './cross-package-integration-helpers.mts'
+export { execCommand, getBinaryPath } from './cross-package-integration.mts'
 
 const logger = getDefaultLogger()
 

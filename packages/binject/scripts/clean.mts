@@ -9,6 +9,8 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
+import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
+import { errorMessage } from 'local-build-infra/lib/error-utils'
 import {
   runCommand as runCommandRaw,
   selectMakefile,
@@ -19,9 +21,6 @@ const runCommand = runCommandRaw as (
   args: string[],
   cwd?: string | undefined,
 ) => Promise<void>
-
-import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
-import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const packageRoot = path.join(__dirname, '..')

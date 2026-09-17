@@ -20,6 +20,7 @@
     "glibc:audit": "node scripts/audit-glibc-symbols.mts",
     "postinstall": "node scripts/setup-build-toolchain.mts",
     "test": "node scripts/test-with-memory-limit.mts",
+    "test:e2e": "node scripts/test-with-memory-limit.mts --config vitest.e2e.config.mts",
     "test:linux-x64-docker": "node scripts/test-linux-x64-docker.mts",
     "test:linux-x64-docker:musl": "node scripts/test-linux-x64-docker.mts --musl",
     "test:node-suite": "node scripts/test-node-suite.mts",
@@ -40,9 +41,9 @@
     "@vitest/coverage-v8": "catalog:",
     "acorn": "catalog:",
     "acorn-walk": "catalog:",
-    "experimental-fast-webstreams": "0.0.19",
+    "experimental-fast-webstreams": "catalog:",
     "octokit": "catalog:",
-    "snappy": "7.3.3",
+    "snappy": "catalog:",
     "vitest": "catalog:"
   }
 }

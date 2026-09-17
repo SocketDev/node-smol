@@ -241,13 +241,3 @@ describe('node:smol-sql documentation', () => {
     expect(content).toContain('sql`SELECT')
   })
 })
-
-// These modules use Node.js primordials (only available in Node.js internals)
-// or the internalBinding('smol_sql') API that only exists inside the SEA binary.
-// They are covered by integration tests in test/integration/.
-describe('Runtime code (not testable outside SEA)', () => {
-  it.todo('format-detection.js requires Node.js primordials')
-  it.todo('version-subset.js requires Node.js primordials')
-  it.todo('errors.js requires Node.js primordials and ErrorCaptureStackTrace')
-  it.todo('SQL module can only be tested inside SEA binary')
-})

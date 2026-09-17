@@ -33,10 +33,10 @@ import {
 } from 'local-build-infra/lib/platform-mappings'
 import { verifyReleaseChecksum } from 'local-build-infra/lib/release-checksums/core'
 import { extractTarball } from 'local-build-infra/lib/tarball-utils'
-import { getSubmoduleVersion } from 'local-build-infra/lib/version-helpers'
+import { getSubmoduleVersion } from 'local-build-infra/lib/tool-versions'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -47,6 +47,7 @@ import {
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { LIEF_REQUIRED_FILES } from '../lib/required-files.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
@@ -73,7 +74,7 @@ const liefPatchedDir = path.join(
 export function getLiefBuildDirs(platformArch) {
   const buildDir = getPlatformBuildDir(packageRoot, platformArch)
   const liefBuildDir = path.join(buildDir, 'out', BUILD_STAGES.FINAL, 'lief')
-  return { buildDir, liefBuildDir }
+  return { __proto__: null, buildDir, liefBuildDir }
 }
 
 /**
@@ -89,7 +90,7 @@ export function getLiefBuildDirs(platformArch) {
 export function getCurrentLiefPlatformArch() {
   const libc = detectLibc()
   // Respect TARGET_ARCH for cross-compilation (set by workflows/Makefiles)
-  const arch = process.env['TARGET_ARCH'] || process.arch
+  const arch = getEnvValue('TARGET_ARCH') || process.arch
   // Use asset platform naming (win instead of win32).
   return getAssetPlatformArch(process.platform, arch, libc)
 }
@@ -125,12 +126,7 @@ export function getDownloadedLiefDir(platformArch) {
  * }>}
  */
 export async function verifyArchiveChecksum(archivePath, assetName) {
-  return verifyReleaseChecksum({
-    assetName,
-    filePath: archivePath,
-    tempDir: path.join(packageRoot, 'build', 'temp'),
-    tool: 'lief',
-  })
+  return verifyReleaseChecksum(archivePath, assetName, 'lief')
 }
 
 /**
@@ -167,6 +163,7 @@ export function verifyLiefAt(dir) {
     })
     .map(req => (Array.isArray(req) ? `{${req.join(',')}}` : req))
   return {
+    __proto__: null,
     valid: missing.length === 0,
     missing,
   }
@@ -318,7 +315,7 @@ export async function runCommand(command, args, cwd, env = {}) {
  */
 export async function verifyMuslCompatibility(libPath) {
   if (!(await isMusl())) {
-    return { compatible: true }
+    return { __proto__: null, compatible: true }
   }
 
   logger.info('Verifying LIEF library for musl compatibility…')
@@ -333,6 +330,7 @@ export async function verifyMuslCompatibility(libPath) {
     await spawn('which', ['nm'], { stdio: 'pipe' })
   } catch {
     return {
+      __proto__: null,
       compatible: false,
       reason: 'nm not found; cannot verify musl compatibility',
     }
@@ -345,6 +343,7 @@ export async function verifyMuslCompatibility(libPath) {
     nmOutput = result?.stdout
   } catch (nmError) {
     return {
+      __proto__: null,
       compatible: false,
       reason: `nm failed on ${libPath}: ${errorMessage(nmError)}`,
     }
@@ -352,6 +351,7 @@ export async function verifyMuslCompatibility(libPath) {
 
   if (!nmOutput) {
     return {
+      __proto__: null,
       compatible: false,
       reason: 'nm returned empty output; cannot verify musl compatibility',
     }
@@ -381,13 +381,14 @@ export async function verifyMuslCompatibility(libPath) {
   if (foundSymbols.length > 0) {
     logger.info(`Found ${foundSymbols.length} glibc fortify symbol(s)`)
     return {
+      __proto__: null,
       compatible: false,
       reason: `Library contains glibc-specific fortify symbols: ${foundSymbols.join(', ')}`,
     }
   }
 
   logger.info('No glibc fortify symbols found - library is musl-compatible')
-  return { compatible: true }
+  return { __proto__: null, compatible: true }
 }
 
 /**
@@ -947,7 +948,7 @@ async function main() {
           const sizeMB = (stats.size / 1024 / 1024).toFixed(2)
 
           // Extract arch from platformArch for checkpoint (e.g., "darwin-arm64" -> "arm64")
-          const targetArch = process.env['TARGET_ARCH'] || process.arch
+          const targetArch = getEnvValue('TARGET_ARCH') || process.arch
           const targetPlatform = WIN32 ? 'win' : process.platform
 
           await createCheckpoint(
@@ -1088,7 +1089,7 @@ async function main() {
     // miscompile via downstream link-time errors ("ignoring file ...
     // found architecture 'arm64', required architecture 'x86_64'").
     if (process.platform === 'darwin') {
-      const targetArch = process.env['TARGET_ARCH'] || process.arch
+      const targetArch = getEnvValue('TARGET_ARCH') || process.arch
       const osxArch = targetArch === 'x64' ? 'x86_64' : 'arm64'
       cmakeArgs.push(`-DCMAKE_OSX_ARCHITECTURES=${osxArch}`)
       logger.info(
@@ -1100,7 +1101,7 @@ async function main() {
     // LIEF must use the same compiler/ABI as binject to avoid linker errors
     if (WIN32) {
       // Support cross-compilation via TARGET_ARCH environment variable.
-      const targetArch = process.env['TARGET_ARCH']
+      const targetArch = getEnvValue('TARGET_ARCH')
       const isCrossCompileArm64 =
         targetArch === 'aarch64' || targetArch === 'arm64'
 
@@ -1305,7 +1306,7 @@ async function main() {
     logger.info('')
 
     // Create checkpoint.
-    const lbTargetArch = process.env['TARGET_ARCH'] || process.arch
+    const lbTargetArch = getEnvValue('TARGET_ARCH') || process.arch
     const lbTargetPlatform = WIN32 ? 'win' : process.platform
     await createCheckpoint(
       buildDir,

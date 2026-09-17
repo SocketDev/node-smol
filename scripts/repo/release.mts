@@ -33,11 +33,19 @@ import { parseArgs } from 'node:util'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
-import { isMainModule } from '../fleet/_shared/is-main-module.mts'
+import { isMainModule } from '../fleet/process/is-main-module.mts'
+import { runMain } from '../fleet/process/run-main.mts'
+import type { ScriptMeta } from '../fleet/process/run-main.mts'
 import { runCapture, runInherit } from '../fleet/registry-infra/shared.mts'
 import { RELEASE_ASSETS_DIR, REPO_ROOT } from './paths.mts'
 
 const logger = getDefaultLogger()
+
+const SCRIPT_META: ScriptMeta = {
+  describe: 'Assemble and optionally publish a draft GitHub release.',
+  help: 'Usage: pnpm run release --tag <version> [--dir <path>] [--notes-file <path>] [--publish] [--json]',
+  json: 'result',
+}
 
 const CHECKSUMS_BASENAME = 'checksums.txt'
 
@@ -92,12 +100,38 @@ const EMPTY_DIR_MESSAGE = (dir: string) =>
          missing and where the socket-btm sources are. Once artifacts exist,
          place them under the directory above (or pass --dir) and re-run.`
 
+async function collectReleaseDigests(
+  assets: string[],
+): Promise<Array<{ digest: string; file: string }>> {
+  const digests: Array<{ digest: string; file: string }> = []
+  for (let i = 0, { length } = assets; i < length; i += 1) {
+    const file = assets[i]!
+    // Sequential hashing keeps memory flat and the manifest ordering obvious.
+    // oxlint-disable-next-line no-await-in-loop -- sequential by design
+    digests.push({ digest: await sha256File(file), file })
+  }
+  return digests
+}
+
+function validateReleaseTag(tag: string | undefined): tag is string {
+  if (!tag || !TAG_PATTERN.test(tag)) {
+    logger.error(
+      `release.mts: --tag is required and must look like v1.2.3 (saw ${JSON.stringify(tag ?? '')}).\n` +
+        '  Fix:   pass --tag vX.Y.Z (the USER names the version — never invent one).',
+    )
+    process.exitCode = 1
+    return false
+  }
+  return true
+}
+
 export async function main(): Promise<void> {
   const { values } = parseArgs({
     allowPositionals: false,
     args: process.argv.slice(2),
     options: {
       dir: { type: 'string' },
+      json: { default: false, type: 'boolean' },
       'notes-file': { type: 'string' },
       publish: { default: false, type: 'boolean' },
       tag: { type: 'string' },
@@ -109,12 +143,7 @@ export async function main(): Promise<void> {
     : RELEASE_ASSETS_DIR
 
   const tag = values.tag
-  if (!tag || !TAG_PATTERN.test(tag)) {
-    logger.error(
-      `release.mts: --tag is required and must look like v1.2.3 (saw ${JSON.stringify(tag ?? '')}).\n` +
-        '  Fix:   pass --tag vX.Y.Z (the USER names the version — never invent one).',
-    )
-    process.exitCode = 1
+  if (!validateReleaseTag(tag)) {
     return
   }
 
@@ -130,13 +159,7 @@ export async function main(): Promise<void> {
     return
   }
 
-  const digests: Array<{ digest: string; file: string }> = []
-  for (let i = 0, { length } = assets; i < length; i += 1) {
-    const file = assets[i]!
-    // Sequential hashing keeps memory flat and the manifest ordering obvious.
-    // oxlint-disable-next-line no-await-in-loop -- sequential by design
-    digests.push({ digest: await sha256File(file), file })
-  }
+  const digests = await collectReleaseDigests(assets)
   const checksumsPath = path.join(dir, CHECKSUMS_BASENAME)
   const checksumsBody = renderChecksums(digests)
 
@@ -248,8 +271,5 @@ export async function main(): Promise<void> {
 // Entrypoint-guarded: importing this module (unit tests of its exported
 // helpers) must not execute the script.
 if (isMainModule(import.meta.url)) {
-  main().catch((e: unknown) => {
-    logger.error(e)
-    process.exitCode = 1
-  })
+  runMain(main, SCRIPT_META)
 }

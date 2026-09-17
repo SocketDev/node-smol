@@ -3,7 +3,7 @@
 /**
  * @file Bundle-driven node-smol compile orchestrator (plan + invoke).
  *   USAGE:
- *   pnpm --filter node-smol-builder run compile-for-bundle --\
+ *   `pnpm --filter` node-smol-builder run compile-for-bundle --\
  *   --bundle=path/to/main.js [--vfs=path/to/vfs.tar] [--overrides=package.json]\
  *   [--v8-lite] [--prod] [--dry-run]
  *   Pipeline (see docs/plans/bundle-driven-module-detection.md):
@@ -36,7 +36,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
-import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
+import { parseArgs } from '@socketsecurity/lib-stable/exe/argv/parse'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { detectBundleFeatures } from './detect-bundle-features.mts'
@@ -106,6 +106,33 @@ export function buildBuildArgs(config: {
 }
 
 async function main(): Promise<void> {
+  function applyV8LiteFlag(config: { manifest: unknown; requested: boolean }) {
+    const { manifest, requested } = config as typeof config & {
+      manifest: Awaited<ReturnType<typeof detectBundleFeatures>>
+    }
+    const enabled = requested && manifest.v8Lite.recommended
+    if (enabled && !manifest.configureFlags.includes('--v8-lite-mode')) {
+      manifest.configureFlags.push('--v8-lite-mode')
+    }
+    return enabled
+  }
+
+  async function readOverrides(overridesPath: string | undefined) {
+    if (!overridesPath) {
+      return undefined
+    }
+    try {
+      const { promises: fs } = await import('node:fs')
+      const pkg = JSON.parse(await fs.readFile(overridesPath, 'utf8'))
+      return pkg?.smol
+        ? { __proto__: null, drop: pkg.smol.drop, keep: pkg.smol.keep }
+        : undefined
+    } catch (e) {
+      logger.warn(`could not read overrides: ${errorMessage(e)}`)
+      return undefined
+    }
+  }
+
   const { values } = parseArgs({
     args:
       process.argv.slice(2)[0] === '--'
@@ -132,21 +159,8 @@ async function main(): Promise<void> {
   }
   const vfsPath = stringArg(values['vfs'])
 
-  let overrides:
-    | { keep?: string[] | undefined; drop?: string[] | undefined }
-    | undefined
   const overridesPath = stringArg(values['overrides'])
-  if (overridesPath) {
-    try {
-      const { promises: fs } = await import('node:fs')
-      const pkg = JSON.parse(await fs.readFile(overridesPath, 'utf8'))
-      overrides = pkg?.smol
-        ? { keep: pkg.smol.keep, drop: pkg.smol.drop }
-        : undefined
-    } catch (e) {
-      logger.warn(`could not read overrides: ${errorMessage(e)}`)
-    }
-  }
+  const overrides = await readOverrides(overridesPath)
 
   // 1. Detect.
   const manifest = await detectBundleFeatures({
@@ -154,11 +168,11 @@ async function main(): Promise<void> {
     vfsPath,
     overrides,
   })
-  const wantV8Lite = Boolean(values['v8-lite']) && manifest.v8Lite.recommended
+  const wantV8Lite = applyV8LiteFlag({
+    manifest,
+    requested: Boolean(values['v8-lite']),
+  })
   const allFlags = [...manifest.configureFlags]
-  if (wantV8Lite && !allFlags.includes('--v8-lite-mode')) {
-    allFlags.push('--v8-lite-mode')
-  }
 
   // 2. Cache key.
   const platformArch = await getCurrentPlatformArch()
@@ -207,7 +221,7 @@ async function main(): Promise<void> {
   // source-patched sub-phase, so this doesn't re-clone/re-patch unnecessarily.
   logger.log('')
   logger.log('Starting build…')
-  const r = await spawn('node', buildArgs, { stdio: 'inherit' })
+  const r = await spawn(process.execPath, buildArgs, { stdio: 'inherit' })
   if (r.code !== 0) {
     logger.fail(`build failed (exit ${r.code})`)
     process.exitCode = r.code ?? 1

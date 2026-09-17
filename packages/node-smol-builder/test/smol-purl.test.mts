@@ -6,12 +6,6 @@
  *
  * Gold standard: socket-packageurl-js (sibling fleet repo).
  */
-const PURL_SPEC_URL =
-  // Upstream PURL spec URL uses a legacy branch name we don't control.
-  // oxlint-disable-next-line socket/inclusive-language -- see note above
-  'https://github.com/package-url/purl-spec/tree/master/test-suite-data'
-void PURL_SPEC_URL
-
 import { describe, expect, it } from 'vitest'
 
 import './helpers/primordials-shim.mts'
@@ -25,6 +19,12 @@ import {
   tryParse,
   types,
 } from '../additions/source-patched/lib/internal/socketsecurity/purl.js'
+
+const PURL_SPEC_URL =
+  // Upstream PURL spec URL uses a legacy branch name we don't control.
+  // oxlint-disable-next-line socket/inclusive-language -- see note above
+  'https://github.com/package-url/purl-spec/tree/master/test-suite-data'
+void PURL_SPEC_URL
 
 describe('node:smol-purl', () => {
   describe('parse() - Basic parsing', () => {

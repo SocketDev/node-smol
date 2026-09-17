@@ -32,25 +32,13 @@ export function addPrimordialsProtection(content: string, filename: string) {
     return content
   }
 
-  // Build the primordials import based on what's needed
-  const primordialImports = []
-  if (usesPromiseResolve) {
-    primordialImports.push('PromiseResolve')
-  }
-  if (usesPromiseReject) {
-    primordialImports.push('PromiseReject')
-  }
-  if (usesNewPromise) {
-    primordialImports.push('SafePromise')
-  }
-  const injectSettleAll = usesPromiseAll && filename === 'pipe-to.js'
-  if (injectSettleAll) {
-    for (const name of ['PromisePrototypeThen', 'SafePromise']) {
-      if (!primordialImports.includes(name)) {
-        primordialImports.push(name)
-      }
-    }
-  }
+  const { injectSettleAll, primordialImports } = primordialImportsForUsage({
+    filename,
+    usesNewPromise,
+    usesPromiseAll,
+    usesPromiseReject,
+    usesPromiseResolve,
+  })
 
   // Find insertion point - after 'use strict' and any initial requires
   // Insert primordials import at the top, right after 'use strict'
@@ -96,4 +84,39 @@ export function addPrimordialsProtection(content: string, filename: string) {
   }
 
   return content
+}
+
+export function primordialImportsForUsage(config: {
+  filename: string
+  usesNewPromise: boolean
+  usesPromiseAll: boolean
+  usesPromiseReject: boolean
+  usesPromiseResolve: boolean
+}) {
+  const {
+    filename,
+    usesNewPromise,
+    usesPromiseAll,
+    usesPromiseReject,
+    usesPromiseResolve,
+  } = { __proto__: null, ...config }
+  const primordialImports: string[] = []
+  if (usesPromiseResolve) {
+    primordialImports.push('PromiseResolve')
+  }
+  if (usesPromiseReject) {
+    primordialImports.push('PromiseReject')
+  }
+  if (usesNewPromise) {
+    primordialImports.push('SafePromise')
+  }
+  const injectSettleAll = usesPromiseAll && filename === 'pipe-to.js'
+  if (injectSettleAll) {
+    for (const name of ['PromisePrototypeThen', 'SafePromise']) {
+      if (!primordialImports.includes(name)) {
+        primordialImports.push(name)
+      }
+    }
+  }
+  return { __proto__: null, injectSettleAll, primordialImports }
 }

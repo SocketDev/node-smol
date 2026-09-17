@@ -127,8 +127,8 @@ export async function processFileContent(sourcePath, version) {
     const stats = await fs.stat(sourcePath)
     let content = await fs.readFile(sourcePath, 'utf8')
     content = content.replaceAll('%SMOL_VERSION%', () => version)
-    return { content, mode: stats.mode, processed: true }
+    return { __proto__: null, content, mode: stats.mode, processed: true }
   }
 
-  return { processed: false }
+  return { __proto__: null, processed: false }
 }

@@ -13,7 +13,7 @@ module.exports = {
   __proto__: null,
   get createSecureServer() {
     if (!_mod) {
-      _mod = require('http2')
+      _mod = require('node:http2')
     }
     return _mod.createSecureServer
   },

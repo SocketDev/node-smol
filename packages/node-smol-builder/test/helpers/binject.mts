@@ -72,57 +72,13 @@ export async function runBinject(
     binjectName,
   )
 
-  // Build args based on resource type
-  const args = ['inject', '-e', absoluteBinaryPath, '-o', absoluteBinaryPath]
-
-  if (resourceName === 'BOTH') {
-    // Dual injection: both SEA and VFS
-    const seaPath = path.isAbsolute(resourcePath.sea)
-      ? resourcePath.sea
-      : path.join(testDir, resourcePath.sea)
-
-    args.push('--sea', seaPath)
-
-    // Handle VFS mode
-    if (vfsMode === 'compat') {
-      // VFS compatibility mode (no file bundling)
-      args.push('--vfs-compat')
-    } else {
-      const vfsPath = path.isAbsolute(resourcePath.vfs)
-        ? resourcePath.vfs
-        : path.join(testDir, resourcePath.vfs)
-
-      if (vfsMode === 'in-memory') {
-        args.push('--vfs-in-memory', vfsPath)
-      } else {
-        // Default: on-disk
-        args.push('--vfs-on-disk', vfsPath)
-      }
-    }
-  } else {
-    // Single injection: either SEA or VFS
-    const absoluteResourcePath = path.isAbsolute(resourcePath)
-      ? resourcePath
-      : path.join(testDir, resourcePath)
-
-    if (resourceName === 'NODE_SEA_BLOB') {
-      args.push('--sea', absoluteResourcePath)
-    } else if (resourceName === RESOURCE_SMOL_VFS_BLOB) {
-      // VFS must be injected with SEA, so we need to check if SEA already exists
-      // For now, just add --vfs flag (binject will error if SEA is missing)
-      if (vfsMode === 'in-memory') {
-        args.push('--vfs-in-memory', absoluteResourcePath)
-      } else if (vfsMode === 'compat') {
-        args.push('--vfs-compat')
-      } else {
-        args.push('--vfs-on-disk', absoluteResourcePath)
-      }
-    } else {
-      throw new Error(
-        `Unknown resource name: ${resourceName}. Expected NODE_SEA_BLOB, ${RESOURCE_SMOL_VFS_BLOB}, or BOTH`,
-      )
-    }
-  }
+  const args = createBinjectArgs({
+    absoluteBinaryPath,
+    resourceName,
+    resourcePath,
+    testDir,
+    vfsMode,
+  })
 
   // Build binject arguments using new CLI format:
   // binject inject -e <executable> -o <output> [--sea <path>] [--vfs <path>]
@@ -176,4 +132,53 @@ export async function runBinject(
   }
 
   return result
+}
+
+function createBinjectArgs({
+  absoluteBinaryPath,
+  resourceName,
+  resourcePath,
+  testDir,
+  vfsMode,
+}) {
+  const args = ['inject', '-e', absoluteBinaryPath, '-o', absoluteBinaryPath]
+  if (resourceName === 'BOTH') {
+    const seaPath = path.isAbsolute(resourcePath.sea)
+      ? resourcePath.sea
+      : path.join(testDir, resourcePath.sea)
+    args.push('--sea', seaPath)
+    if (vfsMode === 'compat') {
+      args.push('--vfs-compat')
+      return args
+    }
+    const vfsPath = path.isAbsolute(resourcePath.vfs)
+      ? resourcePath.vfs
+      : path.join(testDir, resourcePath.vfs)
+    args.push(
+      vfsMode === 'in-memory' ? '--vfs-in-memory' : '--vfs-on-disk',
+      vfsPath,
+    )
+    return args
+  }
+  const absoluteResourcePath = path.isAbsolute(resourcePath)
+    ? resourcePath
+    : path.join(testDir, resourcePath)
+  if (resourceName === 'NODE_SEA_BLOB') {
+    args.push('--sea', absoluteResourcePath)
+    return args
+  }
+  if (resourceName !== RESOURCE_SMOL_VFS_BLOB) {
+    throw new Error(
+      `Unknown resource name: ${resourceName}. Expected NODE_SEA_BLOB, ${RESOURCE_SMOL_VFS_BLOB}, or BOTH`,
+    )
+  }
+  if (vfsMode === 'compat') {
+    args.push('--vfs-compat')
+  } else {
+    args.push(
+      vfsMode === 'in-memory' ? '--vfs-in-memory' : '--vfs-on-disk',
+      absoluteResourcePath,
+    )
+  }
+  return args
 }

@@ -11,13 +11,14 @@ import process from 'node:process'
 import { printError } from 'local-build-infra/lib/build-output'
 import { ensureEmscripten } from 'local-build-infra/lib/emscripten-installer'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { getOptimizationFlags } from '../../lib/optimization-flags.mts'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 
 const logger = getDefaultLogger()
 
@@ -69,17 +70,17 @@ export async function configureCMake(config) {
   const toolchainSuffix = 'cmake/Modules/Platform/Emscripten.cmake'
   const searchPaths = []
 
-  if (process.env['EMSCRIPTEN']) {
+  if (getEnvValue('EMSCRIPTEN')) {
     searchPaths.push(
-      path.join(process.env['EMSCRIPTEN'], toolchainSuffix),
+      path.join(getEnvValue('EMSCRIPTEN'), toolchainSuffix),
       // Homebrew: EMSCRIPTEN is bin/, toolchain is in sibling libexec/
-      path.join(process.env['EMSCRIPTEN'], '..', 'libexec', toolchainSuffix),
+      path.join(getEnvValue('EMSCRIPTEN'), '..', 'libexec', toolchainSuffix),
     )
   }
-  if (process.env['EMSDK']) {
+  if (getEnvValue('EMSDK')) {
     searchPaths.push(
       path.join(
-        process.env['EMSDK'],
+        getEnvValue('EMSDK'),
         'upstream',
         'emscripten',
         toolchainSuffix,
@@ -146,6 +147,7 @@ export async function configureCMake(config) {
   logger.success('CMake configured')
 
   return {
+    __proto__: null,
     artifactPath: sourceDir,
     smokeTest: async () => {
       if (!existsSync(cmakeBuildDir)) {

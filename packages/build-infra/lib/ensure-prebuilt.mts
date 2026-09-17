@@ -32,10 +32,7 @@ import { errorMessage } from './error-utils.mts'
 // the actual error-handling path, where a failure to load it
 // degrades gracefully (the transient-error hint is omitted).
 import { getDownloadedDir } from './paths.mts'
-// The canonical copy is fleet-owned under scripts/fleet/build-infra/. A
-// member-local copy gets pruned by the next cascade, which is exactly what
-// happened to the one recovered here earlier.
-import { verifyReleaseChecksum } from '../../../scripts/fleet/build-infra/lib/release-checksums/core.mts'
+import { verifyReleaseChecksum } from './release-checksums/core.mts'
 import {
   detectLibc,
   downloadSocketBtmRelease,
@@ -182,6 +179,118 @@ export function createPrebuiltApi(config: PrebuiltConfig): PrebuiltApi {
     return existsAt(getLocalBuildDir(resolvedPlatformArch))
   }
 
+  async function deleteArchiveState(
+    downloadedArchive: string,
+    extractDir: string,
+  ): Promise<void> {
+    await safeDelete(downloadedArchive)
+    const versionFile = path.join(extractDir, '.version')
+    if (existsSync(versionFile)) {
+      await safeDelete(versionFile)
+    }
+  }
+
+  async function validateGzipArchive(
+    downloadedArchive: string,
+    extractDir: string,
+  ): Promise<void> {
+    const file = await fs.open(downloadedArchive, 'r')
+    const magic = Buffer.alloc(2)
+    try {
+      await file.read(magic, 0, 2, 0)
+    } finally {
+      await file.close()
+    }
+    if (magic[0] === 0x1f && magic[1] === 0x8b) {
+      return
+    }
+    await deleteArchiveState(downloadedArchive, extractDir)
+    throw new Error(
+      'Downloaded archive is not a valid gzip file (missing magic bytes). ' +
+        `File may be corrupted or truncated. Deleted ${downloadedArchive} to force re-download.`,
+    )
+  }
+
+  async function validateArchiveChecksum(
+    downloadedArchive: string,
+    extractDir: string,
+    assetName: string,
+  ): Promise<void> {
+    logger.info('Verifying archive checksum…')
+    const result = await verifyReleaseChecksum(
+      downloadedArchive,
+      assetName,
+      name,
+    )
+    if (!result.valid) {
+      await deleteArchiveState(downloadedArchive, extractDir)
+      throw new Error(
+        'Archive checksum mismatch - file is corrupted.\n' +
+          `  Expected: ${result.expected}\n` +
+          `  Actual:   ${result.actual}\n` +
+          `Deleted ${downloadedArchive} to force re-download.`,
+      )
+    }
+    if (result.actual) {
+      logger.info(
+        `Checksum verified: ${result.actual.slice(0, 16)}...${result.actual.slice(-8)}`,
+      )
+    }
+  }
+
+  async function cleanExtraction(
+    downloadedArchive: string,
+    extractDir: string,
+  ): Promise<void> {
+    const archiveBasename = path.basename(downloadedArchive)
+    const items = readdirSync(extractDir)
+    for (let i = 0, { length } = items; i < length; i += 1) {
+      const item = items[i]!
+      if (item === archiveBasename || item === '.version') {
+        continue
+      }
+      await safeDelete(path.join(extractDir, item), {
+        maxRetries: 3,
+        retryDelay: 100,
+      })
+    }
+  }
+
+  async function extractArchive(
+    downloadedArchive: string,
+    extractDir: string,
+  ): Promise<void> {
+    try {
+      await extractTarball(downloadedArchive, extractDir, {
+        createDir: false,
+        stdio: 'inherit',
+        validate: true,
+      })
+    } catch (error) {
+      await deleteArchiveState(downloadedArchive, extractDir)
+      throw new Error(
+        `Failed to extract ${name} archive from ${downloadedArchive}: ${errorMessage(error)}. ` +
+          'Deleted corrupted archive to allow re-download on next run.',
+        { cause: error },
+      )
+    }
+  }
+
+  async function validateExtractedFiles(
+    downloadedArchive: string,
+    extractDir: string,
+  ): Promise<void> {
+    const result = verifyAt(extractDir)
+    if (result.valid) {
+      return
+    }
+    await deleteArchiveState(downloadedArchive, extractDir)
+    throw new Error(
+      `${name} required files missing after extraction in ${extractDir}: ${result.missing.join(', ')}. ` +
+        'Deleted cached files to allow re-download on retry.',
+    )
+  }
+
   async function downloadPrebuilt(
     options: { platformArch?: string | undefined } = {},
   ): Promise<string | undefined> {
@@ -205,100 +314,11 @@ export function createPrebuiltApi(config: PrebuiltConfig): PrebuiltApi {
         )
       }
 
-      // Verify tarball integrity via gzip magic bytes — catches
-      // truncated downloads before the checksum stage.
-      const fd = await fs.open(downloadedArchive, 'r')
-      const gzipMagic = Buffer.alloc(2)
-      try {
-        await fd.read(gzipMagic, 0, 2, 0)
-      } finally {
-        await fd.close()
-      }
-      if (gzipMagic[0] !== 0x1f || gzipMagic[1] !== 0x8b) {
-        const versionFile = path.join(extractDir, '.version')
-        await safeDelete(downloadedArchive)
-        if (existsSync(versionFile)) {
-          await safeDelete(versionFile)
-        }
-        throw new Error(
-          'Downloaded archive is not a valid gzip file (missing magic bytes). ' +
-            `File may be corrupted or truncated. Deleted ${downloadedArchive} to force re-download.`,
-        )
-      }
-
-      // Verify SHA256 checksum — catches corrupted-but-magic-byte-valid
-      // downloads.
-      logger.info('Verifying archive checksum…')
-      const checksumResult = await verifyReleaseChecksum({
-        assetName,
-        filePath: downloadedArchive,
-        tempDir: path.join(packageRoot, 'build', 'temp'),
-        tool: name,
-      })
-      if (!checksumResult.valid) {
-        const versionFile = path.join(extractDir, '.version')
-        await safeDelete(downloadedArchive)
-        if (existsSync(versionFile)) {
-          await safeDelete(versionFile)
-        }
-        throw new Error(
-          'Archive checksum mismatch - file is corrupted.\n' +
-            `  Expected: ${checksumResult.expected}\n` +
-            `  Actual:   ${checksumResult.actual}\n` +
-            `Deleted ${downloadedArchive} to force re-download.`,
-        )
-      }
-      if (checksumResult.actual) {
-        logger.info(
-          `Checksum verified: ${checksumResult.actual.slice(0, 16)}...${checksumResult.actual.slice(-8)}`,
-        )
-      }
-
-      // Clean stale extraction (cached Docker layers / partial extracts).
-      const extractDirContents = readdirSync(extractDir)
-      const archiveBasename = path.basename(downloadedArchive)
-      for (let i = 0, { length } = extractDirContents; i < length; i += 1) {
-        const item = extractDirContents[i]
-        if (item !== archiveBasename && item !== '.version') {
-          const itemPath = path.join(extractDir, item)
-          await safeDelete(itemPath, { maxRetries: 3, retryDelay: 100 })
-        }
-      }
-
-      try {
-        await extractTarball(downloadedArchive, extractDir, {
-          createDir: false,
-          stdio: 'inherit',
-          validate: true,
-        })
-      } catch (e) {
-        const versionFile = path.join(extractDir, '.version')
-        await safeDelete(downloadedArchive)
-        if (existsSync(versionFile)) {
-          await safeDelete(versionFile)
-        }
-        throw new Error(
-          `Failed to extract ${name} archive from ${downloadedArchive}: ${errorMessage(e)}. ` +
-            'Deleted corrupted archive to allow re-download on next run.',
-          { cause: e },
-        )
-      }
-
-      // Validate required-files after extraction. A successful extract
-      // that's missing required files = corrupted release; force a
-      // re-download next run.
-      const verifyResult = verifyAt(extractDir)
-      if (!verifyResult.valid) {
-        const versionFile = path.join(extractDir, '.version')
-        await safeDelete(downloadedArchive)
-        if (existsSync(versionFile)) {
-          await safeDelete(versionFile)
-        }
-        throw new Error(
-          `${name} required files missing after extraction in ${extractDir}: ${verifyResult.missing.join(', ')}. ` +
-            'Deleted cached files to allow re-download on retry.',
-        )
-      }
+      await validateGzipArchive(downloadedArchive, extractDir)
+      await validateArchiveChecksum(downloadedArchive, extractDir, assetName)
+      await cleanExtraction(downloadedArchive, extractDir)
+      await extractArchive(downloadedArchive, extractDir)
+      await validateExtractedFiles(downloadedArchive, extractDir)
 
       // Builder-specific post-check (e.g. LIEF's musl-compat probe).
       if (onExtracted) {

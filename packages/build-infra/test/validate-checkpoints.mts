@@ -9,7 +9,6 @@
 import { accessSync, constants, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
 /**
@@ -209,16 +208,12 @@ export function validateTarArchive(tarPath: string): boolean {
     const isCompressed = tarPath.endsWith('.tar.gz') || tarPath.endsWith('.tgz')
     const flags = isCompressed ? '-tzf' : '-tf'
 
-    // GNU tar reads a drive-letter colon as a remote-host spec; --force-local
-    // keeps C:\... paths local on Windows runners.
-    const result = spawnSync(
-      'tar',
-      [flags, tarPath, ...(WIN32 ? ['--force-local'] : [])],
-      {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    )
+    const archiveDir = path.dirname(tarPath)
+    const result = spawnSync('tar', [flags, path.basename(tarPath)], {
+      cwd: archiveDir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
 
     // Check that tar command succeeded and archive contains files.
     if (result.status !== 0) {

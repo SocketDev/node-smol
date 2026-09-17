@@ -1,0 +1,104 @@
+name: 📦 Publish prebake pack
+run-name: Publish prebake pack
+
+# Generic repo-owned prebake publisher: bakes every image declared in the
+# repo's own `.config/repo/socket-wheelhouse.json` `docker.prebakes` section
+# and pushes it to `<registry>/<name>:latest`. Builds on the runner via
+# buildx + QEMU; the only auth is the job's own GITHUB_TOKEN
+# (packages: write) for the registry push. Each Dockerfile's FLEET_BASE ARG
+# defaults to its published parent ref, so no build-args are injected here.
+# The wheelhouse's shared trunk (base → node-base/c-base/…) uses its own
+# depot-backed variant (template/overrides/socket-wheelhouse/) — heavy
+# compiles need native arm64 builders, which QEMU is not.
+#
+# Manual dispatch only — a bake publishes multi-hundred-MB artifacts consumers
+# pull, so it stays a deliberate act. `only` scopes to an image-name list
+# (declared manifest order is bottom-up); empty bakes everything declared.
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: 'Comma-separated image-name list (empty = all declared).'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  bake:
+    name: Bake + push prebakes
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Bootstrap checkout
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          TRIGGER_REF: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git init -q
+          git config --local advice.detachedHead false
+          git remote remove origin 2>/dev/null || true
+          git remote add origin "${SERVER_URL}/${REPOSITORY}"
+          FETCH_ARGS=(--no-tags --prune --depth 1 origin "${TRIGGER_REF}")
+          if [ -n "${GITHUB_TOKEN}" ]; then
+            AUTH_B64="$(printf 'x-access-token:%s' "${GITHUB_TOKEN}" | base64 | tr -d '\n')"
+            export GIT_CONFIG_COUNT=1
+            export GIT_CONFIG_KEY_0="http.${SERVER_URL}/.extraheader"
+            export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${AUTH_B64}"
+            git fetch "${FETCH_ARGS[@]}"
+          else
+            git fetch "${FETCH_ARGS[@]}"
+          fi
+          git checkout -q --detach FETCH_HEAD
+
+      - name: Checkout
+        uses: ./.github/actions/fleet/checkout
+        with:
+          payload-token-client-id: ${{ secrets.SOCKET_PR_CLIENT_ID }}
+          payload-token-private-key: ${{ secrets.SOCKET_PR_APP_PRIVATE_KEY }}
+
+      - name: Setup QEMU
+        env:
+          BINFMT_IMAGE: docker.io/tonistiigi/binfmt:qemu-v10.2.3-68@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 # 2026-06-08
+        run: docker run --privileged --rm "$BINFMT_IMAGE" --install all
+
+      - name: Setup buildx
+        run: |
+          docker buildx create --name fleet-prebake --driver docker-container --use
+          docker buildx inspect --bootstrap
+
+      - name: Login to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+      - name: Bake + push
+        env:
+          ONLY: ${{ inputs.only }}
+        run: |
+          set -euo pipefail
+          config=.config/repo/socket-wheelhouse.json
+          registry="$(jq -er '.docker.prebakes.registry' "$config")"
+          jq -c '.docker.prebakes.prebakes[]' "$config" | while IFS= read -r entry; do
+            name="$(jq -r '.name' <<<"$entry")"
+            if [ -n "$ONLY" ] && ! printf ',%s,' "$ONLY" | grep -qF ",$name,"; then
+              echo "skipping $name (not in only=$ONLY)"
+              continue
+            fi
+            dockerfile="$(jq -er '.dockerfile' <<<"$entry")"
+            platforms="$(jq -r '(.platforms // ["linux/amd64","linux/arm64"]) | join(",")' <<<"$entry")"
+            echo "baking $name from $dockerfile ($platforms)…"
+            docker buildx build \
+              -f "$dockerfile" \
+              -t "$registry/$name:latest" \
+              --platform "$platforms" \
+              --push .
+          done

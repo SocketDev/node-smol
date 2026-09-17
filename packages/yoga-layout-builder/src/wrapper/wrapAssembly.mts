@@ -16,10 +16,11 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates. MIT License.
  *
  * Conveniences added on top of the raw Emscripten bindings:
+ *
  * - Node.create() factory method
- * - node.free() for cleanup
+ * - Node.free() for cleanup
  * - Patched setters that accept strings like "100%" or "auto"
- * - calculateLayout with default parameters.
+ * - CalculateLayout with default parameters.
  */
 
 import {
@@ -128,6 +129,7 @@ export function wrapAssembly(lib) {
       measure: (...args) => {
         const { width, height } = measureFunction(...args)
         return {
+          __proto__: null,
           width: width ?? NaN,
           height: height ?? NaN,
         }
@@ -190,6 +192,7 @@ export function wrapAssembly(lib) {
   )
 
   return {
+    __proto__: null,
     // Core classes.
     Config: lib.Config,
     Node: lib.Node,

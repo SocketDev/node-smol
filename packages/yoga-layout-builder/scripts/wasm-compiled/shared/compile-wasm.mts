@@ -7,12 +7,9 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import {
-  formatDuration,
-  getFileSize,
-} from 'local-build-infra/lib/build-helpers'
+import { formatDuration, getFileSize } from 'local-build-infra/lib/build-steps'
 
-import { which } from '@socketsecurity/lib-stable/bin/which'
+import { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -101,6 +98,7 @@ export async function compileWasm(config) {
   const wasmSize = await getFileSize(buildWasmFile)
 
   return {
+    __proto__: null,
     artifactPath: path.dirname(buildWasmFile),
     binaryPath: path.relative(buildDir, path.dirname(buildWasmFile)),
     binarySize: wasmSize,
@@ -173,5 +171,5 @@ export function getLinkingFlags(buildMode) {
           '--bind',
         ]
 
-  return { cxxFlags, linkerFlags }
+  return { __proto__: null, cxxFlags, linkerFlags }
 }

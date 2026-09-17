@@ -9,7 +9,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { getFileSize } from 'local-build-infra/lib/build-helpers'
+import { getFileSize } from 'local-build-infra/lib/build-steps'
 import { computeBuildInputsFingerprint } from 'local-build-infra/lib/checkpoint-cache-key'
 import {
   createCheckpoint,

@@ -12,7 +12,7 @@ import path from 'node:path'
 
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
-import { makeExecutable } from 'local-build-infra/lib/build-helpers'
+import { makeExecutable } from 'local-build-infra/lib/build-steps'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { MAX_NODE_BINARY_SIZE } from './helpers/constants.mts'

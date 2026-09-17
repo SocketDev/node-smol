@@ -263,7 +263,7 @@ describeIf(canRun)('Signature Validation', () => {
     tolerantTimeout(30_000),
   )
 
-  describe.sequential('sequential Injections', () => {
+  describe('sequential Injections', () => {
     let testBinary1: string
     let testBinary2: string
 

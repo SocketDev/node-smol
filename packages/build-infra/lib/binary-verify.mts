@@ -54,6 +54,7 @@ export interface DockerBinaryTestOptions {
  * Perform static verification on a binary (for cross-compiled builds).
  *
  * Verifies:
+ *
  * 1. Binary is not empty
  * 2. Correct architecture (if cross-compiled)
  * 3. Valid binary format (Mach-O/ELF/PE)
@@ -67,6 +68,52 @@ export async function staticVerifyBinary(
   const { arch } = opts
   const targetPlatform = opts.platform || os.platform()
   const expectStatic = opts.static
+
+  function verifyArchitecture(fileInfo: string): boolean {
+    if (!arch) {
+      return true
+    }
+    const archPatterns: Partial<Record<'arm64' | 'x64', RegExp>> = {
+      arm64: /arm64|aarch64/i,
+      // Match the common x86-64, x64, and amd64 labels emitted by `file`.
+      x64: /x86[-_]64|x64|amd64/i,
+    }
+    const pattern = archPatterns[arch]
+    if (pattern && !pattern.test(fileInfo)) {
+      printError(`Expected ${arch} architecture but got: ${fileInfo}`)
+      return false
+    }
+    logger.success(`Confirmed ${arch} architecture`)
+    return true
+  }
+
+  function verifyFormat(fileInfo: string): boolean {
+    const formatChecks: Partial<
+      Record<string, { format: string | string[]; name: string }>
+    > = {
+      darwin: { format: 'Mach-O', name: 'Mach-O' },
+      linux: { format: 'ELF', name: 'ELF' },
+      win32: { format: ['PE32', 'MS Windows'], name: 'PE' },
+    }
+    const check = formatChecks[targetPlatform]
+    if (!check) {
+      return true
+    }
+    const formats = Array.isArray(check.format) ? check.format : [check.format]
+    if (!formats.some(format => fileInfo.includes(format))) {
+      printError(`Expected ${check.name} binary but got: ${fileInfo}`)
+      return false
+    }
+    logger.success(`Valid ${check.name} binary`)
+    if (targetPlatform === 'linux' && expectStatic) {
+      if (fileInfo.includes('statically linked')) {
+        logger.success('Binary is statically linked (musl)')
+      } else {
+        logger.warn('Binary may not be statically linked')
+      }
+    }
+    return true
+  }
 
   logger.substep('Performing static verification (cross-compiled binary)')
 
@@ -103,51 +150,8 @@ export async function staticVerifyBinary(
       return true
     }
 
-    // Verify architecture if specified
-    if (arch) {
-      const archPatterns: Partial<Record<'arm64' | 'x64', RegExp>> = {
-        arm64: /arm64|aarch64/i,
-        x64: /x86[-_]64|x64|amd64/i,
-      }
-
-      const pattern = archPatterns[arch]
-      if (pattern && !pattern.test(fileInfo)) {
-        printError(`Expected ${arch} architecture but got: ${fileInfo}`)
-        return false
-      }
-      logger.success(`Confirmed ${arch} architecture`)
-    }
-
-    // Verify binary format by target platform (not host — supports cross-compilation).
-    const formatChecks: Partial<
-      Record<string, { format: string | string[]; name: string }>
-    > = {
-      darwin: { format: 'Mach-O', name: 'Mach-O' },
-      linux: { format: 'ELF', name: 'ELF' },
-      win32: { format: ['PE32', 'MS Windows'], name: 'PE' },
-    }
-
-    const check = formatChecks[targetPlatform]
-    if (check) {
-      const formats = Array.isArray(check.format)
-        ? check.format
-        : [check.format]
-      const hasValidFormat = formats.some(fmt => fileInfo.includes(fmt))
-
-      if (!hasValidFormat) {
-        printError(`Expected ${check.name} binary but got: ${fileInfo}`)
-        return false
-      }
-      logger.success(`Valid ${check.name} binary`)
-
-      // Check static linking for musl (Linux only)
-      if (targetPlatform === 'linux' && expectStatic) {
-        if (fileInfo.includes('statically linked')) {
-          logger.success('Binary is statically linked (musl)')
-        } else {
-          logger.warn('Binary may not be statically linked')
-        }
-      }
+    if (!verifyArchitecture(fileInfo) || !verifyFormat(fileInfo)) {
+      return false
     }
 
     logger.success('Static verification passed')

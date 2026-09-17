@@ -197,7 +197,7 @@ export function loadExternalTools({
  * toolName: {
  * description: 'Human-readable description',
  * version: 'X.Y.Z',
- * packageManager: 'pip' | 'pnpm' | undefined,
+ * origin: 'pypi' | 'system' | string,
  * notes: 'string or array',
  * extras: ['extra1', 'extra2']  // for Python package extras
  * }
@@ -221,7 +221,7 @@ export const PYTHON_VERSIONS = (() => {
   // Loop variable is destructured.
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [name, config] of Object.entries(TOOL_VERSIONS)) {
-    if (config.packageManager === 'pip' && config.version) {
+    if (config.origin === 'pypi' && config.version) {
       versions[name] = config.version
     }
   }
@@ -240,11 +240,7 @@ export const PYTHON_PACKAGE_EXTRAS = (() => {
   // Loop variable is destructured.
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [name, config] of Object.entries(TOOL_VERSIONS)) {
-    if (
-      config.packageManager === 'pip' &&
-      config.extras &&
-      config.extras.length > 0
-    ) {
+    if (config.origin === 'pypi' && config.extras && config.extras.length > 0) {
       extras[name] = config.extras
     }
   }
@@ -271,9 +267,9 @@ export function getPinnedPackage(
   const tools = options ? loadExternalTools(options) : TOOL_VERSIONS
   const config = tools[packageName]
 
-  if (!config || config.packageManager !== 'pip' || !config.version) {
+  if (!config || config.origin !== 'pypi' || !config.version) {
     throw new Error(
-      `No pinned version found for ${packageName}. Add to external-tools.json with packageManager: "pip"`,
+      `No pinned PyPI version found for ${packageName}. Add it to external-tools.json with origin: "pypi".`,
     )
   }
 
@@ -428,7 +424,7 @@ export function loadPythonVersions(
   // Loop variable is destructured.
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const [name, config] of Object.entries(tools)) {
-    if (config.packageManager === 'pip' && config.version) {
+    if (config.origin === 'pypi' && config.version) {
       versions[name] = config.version
 
       if (config.extras && config.extras.length > 0) {

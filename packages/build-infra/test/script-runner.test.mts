@@ -6,10 +6,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 
-import type * as BinWhich from '@socketsecurity/lib-stable/bin/which'
+import type * as BinWhich from '@socketsecurity/lib-stable/exe/path/which'
 import type * as SpawnChild from '@socketsecurity/lib-stable/process/spawn/child'
 
-import * as binModule from '@socketsecurity/lib-stable/bin/which'
+import * as binModule from '@socketsecurity/lib-stable/exe/path/which'
 import * as spawnModule from '@socketsecurity/lib-stable/process/spawn/child'
 
 import {
@@ -22,7 +22,7 @@ import {
 } from '../lib/script-runner.mts'
 
 vi.mock<typeof BinWhich>(
-  import('@socketsecurity/lib-stable/bin/which'),
+  import('@socketsecurity/lib-stable/exe/path/which'),
   () => ({
     which: vi.fn(),
   }),
@@ -86,7 +86,9 @@ describe('script-runner', () => {
     it('should pass additional arguments to script', async () => {
       mockSpawn.mockResolvedValue({ code: 0 })
 
-      await runPnpmScript('my-package', 'test', ['--coverage', '--watch'])
+      await runPnpmScript('my-package', 'test', {
+        args: ['--coverage', '--watch'],
+      })
 
       expect(mockSpawn).toHaveBeenCalledWith(
         '/usr/local/bin/pnpm',
@@ -108,7 +110,7 @@ describe('script-runner', () => {
     it('should merge custom options', async () => {
       mockSpawn.mockResolvedValue({ code: 0 })
 
-      await runPnpmScript('my-package', 'build', [], {
+      await runPnpmScript('my-package', 'build', {
         cwd: '/custom/path',
         env: { NODE_ENV: 'test' },
       })
@@ -152,7 +154,7 @@ describe('script-runner', () => {
     it('should pass arguments to all packages', async () => {
       mockSpawn.mockResolvedValue({ code: 0 })
 
-      await runPnpmScriptAll('build', ['--prod'])
+      await runPnpmScriptAll('build', { args: ['--prod'] })
 
       expect(mockSpawn).toHaveBeenCalledWith(
         '/usr/local/bin/pnpm',
@@ -327,7 +329,7 @@ describe('script-runner', () => {
         stdout: 'output',
       })
 
-      const result = await runQuiet('echo', ['test'])
+      const result = await runQuiet('echo', { args: ['test'] })
 
       expect(mockSpawn).toHaveBeenCalledWith(
         'echo',
@@ -342,7 +344,7 @@ describe('script-runner', () => {
     it('should not use inherit stdio', async () => {
       mockSpawn.mockResolvedValue({ code: 0 })
 
-      await runQuiet('echo', ['test'])
+      await runQuiet('echo', { args: ['test'] })
 
       const callArgs = mockSpawn.mock.calls[0]![2]!
       expect(callArgs.stdio).not.toBe('inherit')
@@ -351,7 +353,7 @@ describe('script-runner', () => {
     it('should merge custom options', async () => {
       mockSpawn.mockResolvedValue({ code: 0 })
 
-      await runQuiet('echo', ['test'], { env: { TEST: '1' } })
+      await runQuiet('echo', { args: ['test'], env: { TEST: '1' } })
 
       expect(mockSpawn).toHaveBeenCalledWith(
         'echo',
@@ -403,7 +405,7 @@ describe('script-runner', () => {
     it('should build specific package when name provided', async () => {
       mockSpawn.mockResolvedValue({ code: 0 })
 
-      await pnpm.build('my-package')
+      await pnpm.build({ packageName: 'my-package' })
 
       expect(mockSpawn).toHaveBeenCalledWith(
         '/usr/local/bin/pnpm',
@@ -439,7 +441,7 @@ describe('script-runner', () => {
     it('should run tests in specific package when name provided', async () => {
       mockSpawn.mockResolvedValue({ code: 0 })
 
-      await pnpm.test('my-package')
+      await pnpm.test({ packageName: 'my-package' })
 
       expect(mockSpawn).toHaveBeenCalledWith(
         '/usr/local/bin/pnpm',
@@ -476,8 +478,8 @@ describe('script-runner', () => {
     it('should handle package-specific build and test', async () => {
       mockSpawn.mockResolvedValue({ code: 0 })
 
-      await pnpm.build('onnxruntime-builder')
-      await pnpm.test('onnxruntime-builder')
+      await pnpm.build({ packageName: 'onnxruntime-builder' })
+      await pnpm.test({ packageName: 'onnxruntime-builder' })
 
       expect(mockSpawn).toHaveBeenCalledTimes(2)
       expect(mockSpawn).toHaveBeenNthCalledWith(

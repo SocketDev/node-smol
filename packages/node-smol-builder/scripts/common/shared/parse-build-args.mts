@@ -9,7 +9,8 @@ import process from 'node:process'
 
 import { BYTES, CHECKPOINTS } from 'local-build-infra/lib/constants'
 
-import { parseArgs } from '@socketsecurity/lib-stable/argv/parse'
+import { parseArgs } from '@socketsecurity/lib-stable/exe/argv/parse'
+import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { getFeature } from '../../lib/smol-features.mts'
@@ -37,11 +38,12 @@ const VALID_CHECKPOINTS = [
  * job).
  */
 export function calculateCpuCount() {
-  if (process.env['BUILD_JOBS']) {
-    const envJobs = Number.parseInt(process.env['BUILD_JOBS'], 10)
+  const buildJobs = getEnvValue('BUILD_JOBS')
+  if (buildJobs) {
+    const envJobs = Number.parseInt(buildJobs, 10)
     if (Number.isNaN(envJobs) || envJobs < 1) {
       throw new Error(
-        `Invalid BUILD_JOBS value: ${process.env['BUILD_JOBS']} (must be a positive integer)`,
+        `Invalid BUILD_JOBS value: ${buildJobs} (must be a positive integer)`,
       )
     }
     return envJobs
@@ -91,6 +93,52 @@ export function parseSmolDropArg(raw) {
  * once, at module load, before anything downstream reads them.
  */
 export function parseBuildArgs() {
+  function setFeatureEnvironment(config: {
+    withDawn: boolean
+    withLief: boolean
+  }) {
+    const { withDawn, withLief } = config
+    if (withLief) {
+      process.env['BUILD_WITH_LIEF'] = 'true'
+    }
+    if (withDawn) {
+      process.env['BUILD_WITH_DAWN'] = 'true'
+    }
+  }
+
+  function validateCheckpointArgs(buildOnly, fromCheckpoint, stopAt) {
+    for (const [label, checkpoint] of [
+      ['checkpoint', fromCheckpoint],
+      ['stop-at checkpoint', stopAt],
+      ['build-only checkpoint', buildOnly],
+    ]) {
+      if (checkpoint && !VALID_CHECKPOINTS.includes(checkpoint)) {
+        throw new Error(
+          `Invalid ${label}: ${checkpoint}. Valid options: ${VALID_CHECKPOINTS.join(', ')}`,
+        )
+      }
+    }
+    if (buildOnly && stopAt) {
+      throw new Error('Cannot use both --build-only and --stop-at')
+    }
+    if (buildOnly && fromCheckpoint) {
+      throw new Error('Cannot use both --build-only and --from-checkpoint')
+    }
+  }
+
+  function validateTarget(targetLibc, targetPlatform) {
+    if (targetLibc && targetLibc !== 'musl' && targetLibc !== 'glibc') {
+      throw new Error(
+        `Invalid --libc value: ${targetLibc}. Valid options: musl, glibc`,
+      )
+    }
+    if (targetLibc && targetPlatform !== 'linux') {
+      throw new Error(
+        `--libc parameter is only valid for Linux platform (got platform: ${targetPlatform})`,
+      )
+    }
+  }
+
   const { values } = parseArgs({
     options: {
       'allow-cross': { short: 'X', type: 'boolean' },
@@ -120,17 +168,7 @@ export function parseBuildArgs() {
   const TARGET_ARCH = stringArg(values['arch']) || process.arch
   const TARGET_LIBC = stringArg(values['libc'])
 
-  // Validate libc parameter
-  if (TARGET_LIBC && TARGET_LIBC !== 'musl' && TARGET_LIBC !== 'glibc') {
-    throw new Error(
-      `Invalid --libc value: ${TARGET_LIBC}. Valid options: musl, glibc`,
-    )
-  }
-  if (TARGET_LIBC && TARGET_PLATFORM !== 'linux') {
-    throw new Error(
-      `--libc parameter is only valid for Linux platform (got platform: ${TARGET_PLATFORM})`,
-    )
-  }
+  validateTarget(TARGET_LIBC, TARGET_PLATFORM)
 
   const CLEAN_BUILD = Boolean(values['clean'])
   const AUTO_YES = Boolean(values['yes'])
@@ -138,28 +176,7 @@ export function parseBuildArgs() {
   const STOP_AT = stringArg(values['stop-at'])
   const BUILD_ONLY = stringArg(values['build-only'])
 
-  // Validate checkpoint name if provided.
-  if (FROM_CHECKPOINT && !VALID_CHECKPOINTS.includes(FROM_CHECKPOINT)) {
-    throw new Error(
-      `Invalid checkpoint: ${FROM_CHECKPOINT}. Valid options: ${VALID_CHECKPOINTS.join(', ')}`,
-    )
-  }
-  if (STOP_AT && !VALID_CHECKPOINTS.includes(STOP_AT)) {
-    throw new Error(
-      `Invalid stop-at checkpoint: ${STOP_AT}. Valid options: ${VALID_CHECKPOINTS.join(', ')}`,
-    )
-  }
-  if (BUILD_ONLY && !VALID_CHECKPOINTS.includes(BUILD_ONLY)) {
-    throw new Error(
-      `Invalid build-only checkpoint: ${BUILD_ONLY}. Valid options: ${VALID_CHECKPOINTS.join(', ')}`,
-    )
-  }
-  if (BUILD_ONLY && STOP_AT) {
-    throw new Error('Cannot use both --build-only and --stop-at')
-  }
-  if (BUILD_ONLY && FROM_CHECKPOINT) {
-    throw new Error('Cannot use both --build-only and --from-checkpoint')
-  }
+  validateCheckpointArgs(BUILD_ONLY, FROM_CHECKPOINT, STOP_AT)
 
   // Build mode: dev (fast builds) vs prod (optimized builds).
   // - CI: defaults to prod (unless --dev specified)
@@ -183,14 +200,10 @@ export function parseBuildArgs() {
   const EXTRA_CONFIGURE_FLAGS = parseSmolDropArg(values['without-smol'])
 
   // Set environment variables for tests to detect LIEF/Dawn availability.
-  if (WITH_LIEF) {
-    process.env['BUILD_WITH_LIEF'] = 'true'
-  }
-  if (WITH_DAWN) {
-    process.env['BUILD_WITH_DAWN'] = 'true'
-  }
+  setFeatureEnvironment({ withDawn: WITH_DAWN, withLief: WITH_LIEF })
 
   return {
+    __proto__: null,
     ARCH: TARGET_ARCH,
     AUTO_YES,
     BUILD_MODE,

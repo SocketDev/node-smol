@@ -11,7 +11,7 @@ import {
   checkNetworkConnectivity,
   checkPythonVersion,
   exec,
-} from 'local-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import {
   ensureGccVersion,
@@ -23,9 +23,9 @@ import {
   getInstallInstructions,
   getPackageManagerInstructions,
 } from 'local-build-infra/lib/tool-installer'
-import { getMinPythonVersion } from 'local-build-infra/lib/version-helpers'
+import { getMinPythonVersion } from 'local-build-infra/lib/tool-versions'
 
-import { whichSync } from '@socketsecurity/lib-stable/bin/which'
+import { whichSync } from '@socketsecurity/lib-stable/exe/path/which'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 const logger = getDefaultLogger()
@@ -110,45 +110,8 @@ export async function checkBuildEnvironment(buildDir) {
   }
 
   // Check 3c: Xcode version (macOS only).
-  if (process.platform === 'darwin') {
-    logger.log('Checking Xcode version…')
-    try {
-      const result = await exec('xcodebuild', ['-version'], {
-        encoding: 'utf8',
-        shell: false,
-      })
-      const match = result.stdout?.match(/Xcode (\d+\.\d+)/)
-      if (match) {
-        const version = match[1]
-        const parts = version.split('.')
-        const majorVersion = Number.parseInt(parts[0], 10)
-        if (Number.isNaN(majorVersion)) {
-          logger.warn(`Invalid Xcode version format: ${version}`)
-          allChecks = false
-        } else if (majorVersion >= 16) {
-          logger.success(`Xcode ${version} meets requirements (clang 19+)`)
-        } else {
-          logger.fail(`Xcode ${version} is too old (need Xcode 16+)`)
-          logger.substep(
-            'Node.js v24 requires Xcode 16+ with clang 19+ for C++20 support',
-          )
-          logger.substep(
-            'Older clang versions crash on large V8 files with -O3 optimization',
-          )
-          logger.substep(
-            'Install Xcode 16.1+ from: https://developer.apple.com/xcode/',
-          )
-          logger.substep(
-            'After install, run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer',
-          )
-          allChecks = false
-        }
-      } else {
-        logger.warn('Could not parse Xcode version (continuing anyway)')
-      }
-    } catch {
-      logger.warn('Could not check Xcode version (continuing anyway)')
-    }
+  if (process.platform === 'darwin' && !(await checkXcodeVersion())) {
+    allChecks = false
   }
 
   // Check 4: Network connectivity.
@@ -181,6 +144,48 @@ export async function checkBuildEnvironment(buildDir) {
 
   logger.success('Build environment is ready')
   logger.logNewline()
+}
+
+export async function checkXcodeVersion() {
+  logger.log('Checking Xcode version…')
+  try {
+    const result = await exec('xcodebuild', ['-version'], {
+      encoding: 'utf8',
+      shell: false,
+    })
+    const match = result.stdout?.match(/Xcode (\d+\.\d+)/)
+    if (!match) {
+      logger.warn('Could not parse Xcode version (continuing anyway)')
+      return true
+    }
+    const version = match[1]
+    const majorVersion = Number.parseInt(version.split('.')[0], 10)
+    if (Number.isNaN(majorVersion)) {
+      logger.warn(`Invalid Xcode version format: ${version}`)
+      return false
+    }
+    if (majorVersion >= 16) {
+      logger.success(`Xcode ${version} meets requirements (clang 19+)`)
+      return true
+    }
+    logger.fail(`Xcode ${version} is too old (need Xcode 16+)`)
+    logger.substep(
+      'Node.js v24 requires Xcode 16+ with clang 19+ for C++20 support',
+    )
+    logger.substep(
+      'Older clang versions crash on large V8 files with -O3 optimization',
+    )
+    logger.substep(
+      'Install Xcode 16.1+ from: https://developer.apple.com/xcode/',
+    )
+    logger.substep(
+      'After install, run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer',
+    )
+    return false
+  } catch {
+    logger.warn('Could not check Xcode version (continuing anyway)')
+    return true
+  }
 }
 
 /**
@@ -247,7 +252,7 @@ export async function checkRequiredTools({ arch, autoYes }) {
   }
 
   // Step 6: Check manual tools.
-  let allManualAvailable = true
+  const manualMissingTools = []
   // Loop variable is destructured.
   // oxlint-disable-next-line socket/prefer-cached-for-loop -- see above
   for (const { cmd, name } of manualTools) {
@@ -256,44 +261,40 @@ export async function checkRequiredTools({ arch, autoYes }) {
       logger.success(`${name} is available`)
     } else {
       logger.fail(`${name} is NOT available`)
-      allManualAvailable = false
+      manualMissingTools.push(name)
     }
   }
 
   // Step 7: Handle missing tools.
-  if (!result.allAvailable || !allManualAvailable) {
-    const missingTools = [
-      ...result.missing,
-      ...manualTools
-        .filter(t => !whichSync(t.cmd, { nothrow: true }))
-        .map(t => t.name),
-    ]
+  const missingTools = collectMissingTools(result.missing, manualMissingTools)
+  if (missingTools.length > 0) {
+    const instructions = []
+    instructions.push('Missing required build tools:')
+    instructions.push('')
 
-    if (missingTools.length > 0) {
-      const instructions = []
-      instructions.push('Missing required build tools:')
+    for (let i = 0, { length } = missingTools; i < length; i += 1) {
+      const tool = missingTools[i]
+      const toolInstructions = getInstallInstructions(tool)
+      instructions.push(...toolInstructions)
       instructions.push('')
-
-      for (let i = 0, { length } = missingTools; i < length; i += 1) {
-        const tool = missingTools[i]
-        const toolInstructions = getInstallInstructions(tool)
-        instructions.push(...toolInstructions)
-        instructions.push('')
-      }
-
-      if (IS_MACOS) {
-        instructions.push('For Xcode Command Line Tools:')
-        instructions.push('  xcode-select --install')
-      }
-
-      printError(
-        'Missing Required Tools',
-        'Some required build tools are not available.',
-        instructions,
-      )
-      throw new Error('Missing required build tools')
     }
+
+    if (IS_MACOS) {
+      instructions.push('For Xcode Command Line Tools:')
+      instructions.push('  xcode-select --install')
+    }
+
+    printError(
+      'Missing Required Tools',
+      'Some required build tools are not available.',
+      instructions,
+    )
+    throw new Error('Missing required build tools')
   }
 
   logger.log('')
+}
+
+export function collectMissingTools(missingTools, manualMissingTools) {
+  return [...missingTools, ...manualMissingTools]
 }

@@ -5,7 +5,7 @@
     "huggingface_hub": {
       "description": "HuggingFace Hub client library",
       "version": "0.30.2",
-      "packageManager": "pip"
+      "origin": "pypi"
     }
   }
 }

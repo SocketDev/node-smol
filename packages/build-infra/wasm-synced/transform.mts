@@ -2,6 +2,7 @@
  * Common AST transformations for both CJS and ESM sync wrappers.
  *
  * Applies transformations that are shared between CommonJS and ESM:
+ *
  * - Remove export/import statements
  * - Remove async/await keywords
  * - Transform WebAssembly.instantiate to synchronous WebAssembly.Instance
@@ -9,8 +10,9 @@
  * - Handle Node.js module patterns.
  *
  * Visitor implementations are split into:
- * - transform-decl-visitor.mts: declaration/function/async handlers
- * - transform-call-visitor.mts: call/variable/return handlers.
+ *
+ * - Transform-decl-visitor.mts: declaration/function/async handlers
+ * - Transform-call-visitor.mts: call/variable/return handlers.
  */
 
 import { Parser } from 'acorn'
@@ -19,6 +21,130 @@ import MagicString from 'magic-string'
 
 import { buildCallVisitor } from './transform-call-visitor.mts'
 import { buildDeclVisitor } from './transform-decl-visitor.mts'
+
+export function analyzeCountInstantiateParams(node, paramNames) {
+  const paramCounts = { __proto__: null }
+  let foundInstantiate = false
+  walkSimple(node, {
+    CallExpression(callNode) {
+      if (!analyzeIsAsyncWebAssemblyInstantiation(callNode.callee)) {
+        return
+      }
+      const importsArg = callNode.arguments[1]
+      if (importsArg?.type !== 'Identifier') {
+        return
+      }
+      const { name } = importsArg
+      if (paramNames.includes(name)) {
+        paramCounts[name] = (paramCounts[name] || 0) + 1
+        foundInstantiate = true
+      }
+    },
+  })
+  return { __proto__: null, foundInstantiate, paramCounts }
+}
+
+export function analyzeFindImportsSetup(node, mjsContent) {
+  for (const stmt of node.body.body) {
+    if (stmt.type !== 'VariableDeclaration') {
+      continue
+    }
+    for (const decl of stmt.declarations) {
+      const varName = decl.id?.name
+      const initType = decl.init?.type
+      if (
+        varName &&
+        (initType === 'CallExpression' ||
+          initType === 'NewExpression' ||
+          initType === 'ObjectExpression')
+      ) {
+        const stmtCode = mjsContent.slice(stmt.start, stmt.end)
+        return {
+          __proto__: null,
+          importsParam: varName,
+          importsSetup: stmtCode.endsWith(';') ? stmtCode : `${stmtCode};`,
+        }
+      }
+    }
+  }
+  return undefined
+}
+
+export function analyzeInspectWasmFunction(node) {
+  const result = {
+    __proto__: null,
+    hasAsyncWebAssemblyCall: false,
+    hasLoadingMechanism: false,
+    isNotAlreadySync: true,
+  }
+
+  walkSimple(node, {
+    CallExpression(callNode) {
+      const { callee } = callNode
+      if (analyzeIsAsyncWebAssemblyInstantiation(callee)) {
+        result.hasAsyncWebAssemblyCall = true
+      }
+      if (callee.type === 'Identifier' && callee.name === 'fetch') {
+        result.hasLoadingMechanism = true
+      }
+    },
+    Identifier(idNode) {
+      if (idNode.name === 'wasmBinary') {
+        result.hasLoadingMechanism = true
+      }
+    },
+    NewExpression(newNode) {
+      const { callee } = newNode
+      if (
+        callee.type === 'MemberExpression' &&
+        callee.object.type === 'Identifier' &&
+        callee.object.name === 'WebAssembly' &&
+        callee.property.type === 'Identifier' &&
+        callee.property.name === 'Instance'
+      ) {
+        result.isNotAlreadySync = false
+      }
+    },
+  })
+  return result
+}
+
+export function analyzeIsAsyncWebAssemblyInstantiation(callee) {
+  return (
+    callee.type === 'MemberExpression' &&
+    callee.object.type === 'Identifier' &&
+    callee.object.name === 'WebAssembly' &&
+    callee.property.type === 'Identifier' &&
+    (callee.property.name === 'instantiate' ||
+      callee.property.name === 'instantiateStreaming')
+  )
+}
+
+export function analyzeResolveImportsBinding(node, paramNames, mjsContent) {
+  const { foundInstantiate, paramCounts } = analyzeCountInstantiateParams(
+    node,
+    paramNames,
+  )
+  const sortedParams = Object.entries(paramCounts).toSorted(
+    ([, firstCount], [, secondCount]) => secondCount - firstCount,
+  )
+  if (sortedParams.length > 0) {
+    return {
+      __proto__: null,
+      importsParam: sortedParams[0][0],
+      importsSetup: '',
+    }
+  }
+  if (!foundInstantiate) {
+    const importsBinding = analyzeFindImportsSetup(node, mjsContent)
+    if (importsBinding) {
+      return importsBinding
+    }
+  }
+  return paramNames.length > 0
+    ? { __proto__: null, importsParam: paramNames[0], importsSetup: '' }
+    : { __proto__: null, importsParam: 'info', importsSetup: 'var info={};' }
+}
 
 /**
  * Apply common transformations to MJS content.
@@ -197,53 +323,11 @@ export async function applyCommonTransforms(config) {
     ancestor(ast3, {
       FunctionDeclaration(node) {
         const funcName = node.id?.name
-
-        let hasAsyncWebAssemblyCall = false
-        let hasLoadingMechanism = false
-        let isNotAlreadySync = true
-
-        // Use AST traversal to detect patterns
-        walkSimple(node, {
-          CallExpression(callNode) {
-            const callee = callNode.callee
-
-            // Check for WebAssembly.instantiate/instantiateStreaming
-            if (
-              callee.type === 'MemberExpression' &&
-              callee.object.type === 'Identifier' &&
-              callee.object.name === 'WebAssembly' &&
-              callee.property.type === 'Identifier' &&
-              (callee.property.name === 'instantiate' ||
-                callee.property.name === 'instantiateStreaming')
-            ) {
-              hasAsyncWebAssemblyCall = true
-            }
-
-            // Check for fetch calls
-            if (callee.type === 'Identifier' && callee.name === 'fetch') {
-              hasLoadingMechanism = true
-            }
-          },
-          Identifier(idNode) {
-            // Check for wasmBinary identifier
-            if (idNode.name === 'wasmBinary') {
-              hasLoadingMechanism = true
-            }
-          },
-          NewExpression(newNode) {
-            // Check for new WebAssembly.Instance (already sync)
-            const callee = newNode.callee
-            if (
-              callee.type === 'MemberExpression' &&
-              callee.object.type === 'Identifier' &&
-              callee.object.name === 'WebAssembly' &&
-              callee.property.type === 'Identifier' &&
-              callee.property.name === 'Instance'
-            ) {
-              isNotAlreadySync = false
-            }
-          },
-        })
+        const {
+          hasAsyncWebAssemblyCall,
+          hasLoadingMechanism,
+          isNotAlreadySync,
+        } = analyzeInspectWasmFunction(node)
 
         const isNotMainFunction =
           funcName !== 'Module' &&
@@ -261,96 +345,11 @@ export async function applyCommonTransforms(config) {
             param.type === 'AssignmentPattern' ? param.left.name : param.name,
           )
 
-          // Smart imports detection using AST traversal
-          let importsParam = paramNames[0] || 'imports'
-          let importsSetup = ''
-
-          // Strategy 1: Use Acorn to traverse the function body and find WebAssembly.instantiate calls
-          const paramCounts = {}
-          let foundInstantiate = false
-
-          walkSimple(node, {
-            CallExpression(callNode) {
-              const { callee } = callNode
-
-              // Check for WebAssembly.instantiate or WebAssembly.instantiateStreaming
-              if (
-                callee.type === 'MemberExpression' &&
-                callee.object.type === 'Identifier' &&
-                callee.object.name === 'WebAssembly' &&
-                callee.property.type === 'Identifier' &&
-                (callee.property.name === 'instantiate' ||
-                  callee.property.name === 'instantiateStreaming')
-              ) {
-                // The second argument is the imports object
-                const importsArg = callNode.arguments[1]
-                if (importsArg && importsArg.type === 'Identifier') {
-                  const argName = importsArg.name
-                  if (paramNames.includes(argName)) {
-                    paramCounts[argName] = (paramCounts[argName] || 0) + 1
-                    foundInstantiate = true
-                  }
-                }
-              }
-            },
-          })
-
-          // Use the parameter that appears most frequently
-          const paramEntries = Object.entries(paramCounts)
-          if (paramEntries.length > 0) {
-            const sortedParams = paramEntries.toSorted(([, a], [, b]) => b - a)
-            importsParam = sortedParams[0][0]
-          }
-
-          // Strategy 2: Look for variable declarations in the function body that construct imports
-          if (!foundInstantiate) {
-            const bodyStatements = node.body.body
-            for (let i = 0, { length } = bodyStatements; i < length; i += 1) {
-              const stmt = bodyStatements[i]
-              if (stmt.type === 'VariableDeclaration') {
-                // oxlint-disable-next-line socket/prefer-cached-for-loop -- iterable is not a bare identifier (could be Map/Set/Generator/expression)
-                for (const decl of stmt.declarations) {
-                  const varName = decl.id?.name
-                  if (!varName) {
-                    continue
-                  }
-
-                  // Look for object literal declarations using AST
-                  if (decl.init?.type === 'ObjectExpression') {
-                    const stmtCode = mjsContent.slice(stmt.start, stmt.end)
-                    importsSetup = stmtCode.endsWith(';')
-                      ? stmtCode
-                      : `${stmtCode};`
-                    importsParam = varName
-                    break
-                  }
-
-                  // Look for CallExpression or other complex initializers
-                  if (
-                    decl.init &&
-                    (decl.init.type === 'CallExpression' ||
-                      decl.init.type === 'NewExpression')
-                  ) {
-                    const stmtCode = mjsContent.slice(stmt.start, stmt.end)
-                    importsSetup = stmtCode.endsWith(';')
-                      ? stmtCode
-                      : `${stmtCode};`
-                    importsParam = varName
-                    break
-                  }
-                }
-                if (importsSetup) {
-                  break
-                }
-              }
-            }
-          }
-
-          // Strategy 3: Fallback - if we couldn't find anything, use first parameter or create default
-          if (!foundInstantiate && !importsSetup && paramNames.length === 0) {
-            importsParam = 'info'
-            importsSetup = 'var info={};'
-          }
+          const { importsParam, importsSetup } = analyzeResolveImportsBinding(
+            node,
+            paramNames,
+            mjsContent,
+          )
 
           s3.overwrite(
             node.body.start + 1,

@@ -70,7 +70,7 @@ const { freeLanguage, loadLanguage, parse, parseStream } = internalBinding(
 // The Array-of-arrays form (parse()) costs 50-80 ns per node in V8
 // allocation overhead; parseStream is ~1 ns per node (single memcpy).
 
-const STREAM_MAGIC = 0x53545356  // "STSV"
+const STREAM_MAGIC = 0x53_54_53_56  // "STSV"
 const STREAM_HEADER_SIZE = 12
 const STREAM_RECORD_SIZE = 20
 // TextDecoder is a WHATWG global, not part of Node's `primordials`;

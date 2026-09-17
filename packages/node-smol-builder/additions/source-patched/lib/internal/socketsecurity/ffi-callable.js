@@ -87,7 +87,8 @@ class JSCallback {
   #closed = false
 
   constructor(fn, options) {
-    if (typeof fn !== 'function') {
+    const opts = { __proto__: null, ...options }
+  if (typeof fn !== 'function') {
       throw new TypeErrorCtor('JSCallback(fn, options): fn must be a function')
     }
     if (typeof options !== 'object' || options === null) {
@@ -101,16 +102,16 @@ class JSCallback {
     // bun uses `returns`; we also accept `result` for parity with the
     // canonical signature-object form.
     const returnType =
-      options.returns !== undefined
-        ? options.returns
-        : options.result !== undefined
-          ? options.result
+      opts.returns !== undefined
+        ? opts.returns
+        : opts.result !== undefined
+          ? opts.result
           : 'void'
     const params =
-      options.args !== undefined
-        ? options.args
-        : options.parameters !== undefined
-          ? options.parameters
+      opts.args !== undefined
+        ? opts.args
+        : opts.parameters !== undefined
+          ? opts.parameters
           : []
 
     validateType(returnType)
@@ -224,7 +225,7 @@ function CFunction(definition) {
   try {
     result = binding().registerFunction(ptr, returnType, params)
   } catch (err) {
-    const msg = (err && err.message) || ''
+    const msg = (err?.message) || ''
     throw new FFIError(`CFunction: ${msg}`, {
       __proto__: null,
       code: FFI_ERROR_CODES.EBADARGS,

@@ -20,13 +20,13 @@ import {
   exec,
   getFileSize,
   smokeTestBinary,
-} from 'local-build-infra/lib/build-helpers'
+} from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import { CHECKPOINTS } from 'local-build-infra/lib/constants'
 import { ensureToolInstalled } from 'local-build-infra/lib/tool-installer'
 import colors from 'yoctocolors-cjs'
 
-import { whichSync } from '@socketsecurity/lib-stable/bin/which'
+import { whichSync } from '@socketsecurity/lib-stable/exe/path/which'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
@@ -53,6 +53,7 @@ const logger = getDefaultLogger()
  * @param {object} [buildOptions] - Optional build options.
  * @param {boolean} [buildOptions.skipCheckpoint] - Skip checkpoint creation.
  */
+// oxlint-disable-next-line eslint/complexity -- platform build phase dispatcher
 export async function buildStripped(config, buildOptions = {}) {
   const { skipCheckpoint = false } = buildOptions
   const {

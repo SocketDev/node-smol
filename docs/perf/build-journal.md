@@ -4,7 +4,7 @@ This journal owns the chronological record for node-smol build-time experiments:
 anything that changes how long a build takes rather than what it produces. Each
 entry states the hypothesis, the measured phase, the runtime and command, the
 result, the decision, and the next safe step.
-[node-smol-build-flags](../agents.md/repo/node-smol-build-flags.md) describes the
+[node-smol-build-flags](../repo/agents.md/node-smol-build-flags.md) describes the
 flags and linker a build currently uses, and
 [build-caching](../agents.md/repo/build-caching.md) describes the cache layers an
 experiment has to account for before it can attribute a change.
@@ -25,6 +25,9 @@ so an entry that does not name its cache state cannot be read as a delta.
 - **Follow-up** names the next experiment without treating it as completed work.
 
 ## 1. Replace gold with mold on the Linux release link
+
+<details>
+<summary>Experiment evidence and decision</summary>
 
 **Hypothesis.** mold links several times faster than gold on ELF targets, so
 swapping the Linux release linker would cut the link phase of a release build.
@@ -75,3 +78,5 @@ nothing while a pinned one carries version upkeep.
   Clang. Changing the compiler changes the optimizer, so that experiment owes
   binary-size and startup numbers against the current GCC baseline before it
   could ship.
+
+</details>

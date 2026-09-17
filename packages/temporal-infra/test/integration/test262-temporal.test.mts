@@ -42,7 +42,9 @@ describe.skipIf(skipTests)('Test262 Temporal conformance', () => {
   it(
     'no unexpected failures vs test262.allowlist',
     async () => {
-      const result = await spawn('node', [RUNNER], { stdio: 'inherit' })
+      const result = await spawn(process.execPath, [RUNNER], {
+        stdio: 'inherit',
+      })
       expect(result.code).toBe(0)
     },
     TIMEOUT_MS,
