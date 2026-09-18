@@ -54,7 +54,8 @@
     "./lib/docker-builder": "./lib/docker-builder.mts",
     "./lib/external-tools-schema": "./lib/external-tools-schema.mts",
     "./wasm-synced/generate-sync-phase": "./wasm-synced/generate-sync-phase.mts",
-    "./wasm-synced/wasm-sync-wrapper": "./wasm-synced/wasm-sync-wrapper.mts"
+    "./wasm-synced/wasm-sync-wrapper": "./wasm-synced/wasm-sync-wrapper.mts",
+    "./lib/tool-versions": "./lib/tool-versions.mts"
   },
   "scripts": {
     "build:docker": "node scripts/build-docker.mts",

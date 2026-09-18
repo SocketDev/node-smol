@@ -20,9 +20,14 @@ export * from '../fleet/paths.mts'
  */
 export const BUILD_DIR = path.join(REPO_ROOT, 'build')
 
-/**
- * Default staging directory `release.mts` reads assets from. Empty until the
- * binary build lane exists — `build.mts --target binary` names what is
- * missing.
- */
 export const RELEASE_ASSETS_DIR = path.join(BUILD_DIR, 'release')
+
+export const NODE_SMOL_BUILD_ENTRY = path.join(
+  REPO_ROOT,
+  'packages',
+  'node-smol-builder',
+  'scripts',
+  'common',
+  'shared',
+  'build.mts',
+)

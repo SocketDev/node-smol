@@ -10,7 +10,7 @@ import path from 'node:path'
 import { formatDuration, getFileSize } from 'local-build-infra/lib/build-steps'
 
 import { which } from '@socketsecurity/lib-stable/exe/path/which'
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -52,7 +52,7 @@ export async function compileWasm(config) {
     'emmake',
     ['cmake', '--build', cmakeBuildDir, '--target', 'yogacore'],
     {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'inherit',
     },
   )
@@ -81,7 +81,7 @@ export async function compileWasm(config) {
   ]
 
   const emppResult = await spawn(await which('em++'), emArgs, {
-    shell: WIN32,
+    shell: isWin32(),
     stdio: 'inherit',
   })
 

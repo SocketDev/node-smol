@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url'
 import { getBuildMode } from 'local-build-infra/lib/constants'
 import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 import { isSpawnError } from '@socketsecurity/lib-stable/process/spawn/errors'
 
@@ -80,7 +80,7 @@ describe('c Unit Tests', () => {
     'should build and run %s',
     async binaryName => {
       // Verify the binary was built. gcc on Windows appends .exe to -o.
-      const builtName = WIN32 ? `${binaryName}.exe` : binaryName
+      const builtName = isWin32() ? `${binaryName}.exe` : binaryName
       const binaryPath = path.join(outDir, builtName)
       expect(existsSync(binaryPath)).toBeTruthy()
 

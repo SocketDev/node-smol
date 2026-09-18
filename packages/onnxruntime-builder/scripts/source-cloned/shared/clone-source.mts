@@ -8,7 +8,7 @@
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { safeReadFile } from '@socketsecurity/lib-stable/fs/read-file'
 import {
@@ -137,7 +137,7 @@ export async function cloneOnnxSource(config) {
       sharedSourceDir,
     ],
     {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'inherit',
     },
   )
@@ -151,7 +151,7 @@ export async function cloneOnnxSource(config) {
     'git',
     ['-C', sharedSourceDir, 'rev-parse', 'HEAD'],
     {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'pipe',
     },
   )

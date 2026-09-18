@@ -21,7 +21,7 @@ import {
   parsePlatformArch,
 } from 'local-build-infra/lib/platform-mappings'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { detectLibc } from '@socketsecurity/lib-stable/releases/socket-btm'
 
 export { parsePlatformArch }
@@ -84,7 +84,7 @@ export function getMakefileName() {
  * @returns {string} Stub binary name
  */
 export function getStubBinaryName() {
-  return WIN32 ? 'smol_stub.exe' : 'smol_stub'
+  return isWin32() ? 'smol_stub.exe' : 'smol_stub'
 }
 
 /**

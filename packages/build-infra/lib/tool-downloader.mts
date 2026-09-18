@@ -17,7 +17,7 @@ import {
 import path from 'node:path'
 import process from 'node:process'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete } from '@socketsecurity/lib-stable/fs/safe'
 import { httpDownload } from '@socketsecurity/lib-stable/http-request/download'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -271,14 +271,14 @@ export async function extractArchive(archivePath, destDir, format) {
 
   if (format === 'zip') {
     const result = await spawn(
-      WIN32 ? 'powershell' : 'unzip',
-      WIN32
+      isWin32() ? 'powershell' : 'unzip',
+      isWin32()
         ? [
             '-Command',
             `Expand-Archive -Path '${archivePath.replace(/'/g, "''")}' -DestinationPath '${destDir.replace(/'/g, "''")}' -Force`,
           ]
         : ['-q', '-o', archivePath, '-d', destDir],
-      { stdio: 'inherit', shell: WIN32 },
+      { stdio: 'inherit', shell: isWin32() },
     )
     if (result.signal) {
       throw new Error(
@@ -292,7 +292,7 @@ export async function extractArchive(archivePath, destDir, format) {
     // tar.xz
     const result = await spawn('tar', ['xf', archivePath, '-C', destDir], {
       stdio: 'inherit',
-      shell: WIN32,
+      shell: isWin32(),
     })
     if (result.signal) {
       throw new Error(

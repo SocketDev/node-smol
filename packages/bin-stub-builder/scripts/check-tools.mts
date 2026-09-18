@@ -4,7 +4,7 @@
  */
 import process from 'node:process'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { runCheckTools } from 'local-build-infra/lib/check-tools'
@@ -23,7 +23,7 @@ export async function main() {
     autoInstallableTools.push('clang')
   } else if (IS_LINUX) {
     autoInstallableTools.push('gcc')
-  } else if (WIN32) {
+  } else if (isWin32()) {
     autoInstallableTools.push('gcc')
   }
 

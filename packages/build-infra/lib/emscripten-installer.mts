@@ -8,7 +8,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import { whichSync } from '@socketsecurity/lib-stable/exe/path/which'
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -36,7 +36,7 @@ export async function activateEmscripten({
   }
 
   try {
-    const emsdkCmd = WIN32 ? 'emsdk.bat' : './emsdk'
+    const emsdkCmd = isWin32() ? 'emsdk.bat' : './emsdk'
 
     // Activate the version.
     if (!quiet) {
@@ -46,7 +46,7 @@ export async function activateEmscripten({
     const activateResult = await spawn(emsdkCmd, ['activate', version], {
       cwd: resolvedEmsdkPath,
       env: getEmsdkSpawnEnv(),
-      shell: WIN32,
+      shell: isWin32(),
       stdio: quiet ? 'pipe' : 'inherit',
     })
 
@@ -58,14 +58,14 @@ export async function activateEmscripten({
     }
 
     // Source the environment (construct_env).
-    const constructEnvCmd = WIN32 ? 'emsdk_env.bat' : './emsdk_env.sh'
+    const constructEnvCmd = isWin32() ? 'emsdk_env.bat' : './emsdk_env.sh'
     const constructResult = await spawn(
-      WIN32 ? constructEnvCmd : 'bash',
-      WIN32 ? [] : ['-c', `source ${constructEnvCmd} && env`],
+      isWin32() ? constructEnvCmd : 'bash',
+      isWin32() ? [] : ['-c', `source ${constructEnvCmd} && env`],
       {
         cwd: resolvedEmsdkPath,
         env: getEmsdkSpawnEnv(),
-        shell: WIN32,
+        shell: isWin32(),
       },
     )
 
@@ -429,7 +429,7 @@ export async function installEmscripten({
     }
 
     // Activate the installed version.
-    const emsdkCmd = WIN32 ? 'emsdk.bat' : './emsdk'
+    const emsdkCmd = isWin32() ? 'emsdk.bat' : './emsdk'
     if (!quiet) {
       logger.info(`Activating Emscripten ${version}...`)
     }
@@ -437,7 +437,7 @@ export async function installEmscripten({
     const activateResult = await spawn(emsdkCmd, ['activate', version], {
       cwd: emsdkPath,
       env: getEmsdkSpawnEnv(),
-      shell: WIN32,
+      shell: isWin32(),
       stdio: quiet ? 'pipe' : 'inherit',
     })
 
@@ -481,12 +481,12 @@ export async function installEmsdkVersion({
   version = 'latest',
 } = {}) {
   const resolvedEmsdkPath = emsdkPath || getEmsdkPath()
-  const emsdkCmd = WIN32 ? 'emsdk.bat' : './emsdk'
+  const emsdkCmd = isWin32() ? 'emsdk.bat' : './emsdk'
   try {
     const installResult = await spawn(emsdkCmd, ['install', version], {
       cwd: resolvedEmsdkPath,
       env: getEmsdkSpawnEnv(),
-      shell: WIN32,
+      shell: isWin32(),
       stdio: quiet ? 'pipe' : 'inherit',
     })
     return installResult.code === 0

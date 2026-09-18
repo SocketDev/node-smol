@@ -1,26 +1,3 @@
-/*
- * @file Repo build lane entry. `node scripts/repo/build.mts` orchestrates what
- *   this repo can actually build TODAY, and refuses loudly to pretend about
- *   the rest.
- *   Targets:
- *
- *   - `--target base` (default) — REAL. Bakes the compile-environment image(s)
- *     declared in `.config/repo/socket-wheelhouse.json` `docker.prebakes` via
- *     `docker buildx build`, exactly like the prebake-publish workflow
- *     (.github/workflows/prebake-publish.yml) does on dispatch. Local default
- *     builds the host platform only and `--load`s it into the docker daemon;
- *     `--push` builds every declared platform and pushes to GHCR (needs a
- *     `docker login ghcr.io` with packages:write — the workflow dispatch is the
- *     canonical publisher, this flag exists for break-glass use).
- *   - `--target binary` — NOT PORTED YET. The node-smol binary build (Node source
- *     checkout + Socket patch series + builtins + SEA packaging +
- *     strip/compress) still lives in socket-btm's history; see the fail-loud
- *     message below for exactly what is missing and where the sources are.
- *     `--dry-run` prints the exact commands with their preconditions instead of
- *     running them. USAGE: node scripts/repo/build.mts [--target base|binary]
- *     [--dry-run] [--push] [--platforms linux/arm64,...]
- */
-
 import { existsSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -34,12 +11,17 @@ import { isMainModule } from '../fleet/process/is-main-module.mts'
 import { runMain } from '../fleet/process/run-main.mts'
 import type { ScriptMeta } from '../fleet/process/run-main.mts'
 import { runCapture, runInherit } from '../fleet/registry-infra/shared.mts'
-import { loadSocketWheelhouseConfig, REPO_ROOT } from './paths.mts'
+import {
+  loadSocketWheelhouseConfig,
+  NODE_SMOL_BUILD_ENTRY,
+  REPO_ROOT,
+} from './paths.mts'
 
 const logger = getDefaultLogger()
 
 const SCRIPT_META: ScriptMeta = {
-  describe: 'Build the repository prebake images.',
+  describe: 'Build repository prebake images or node-smol binaries.',
+  heavyJob: 'build',
   help: 'Usage: pnpm run build [--target base|binary] [--dry-run] [--push] [--platforms <list>] [--json]',
   json: 'result',
 }
@@ -142,24 +124,6 @@ export function buildxArgs(
     '.',
   ]
 }
-
-const BINARY_LANE_MISSING = `build.mts --target binary: no binary lane exists in this repo yet — refusing to fake one.
-  What:  the node-smol binary build (pinned Node source checkout, Socket patch
-         series, builtins/additions tree, SEA packaging, strip + compress,
-         platform artifact naming) has not been extracted into this repo.
-  Where: SocketDev/socket-btm .config/repo/node-smol-rust-extraction.json
-         marks packages/node-smol-builder and packages/npm as destined for
-         node-smol with removalStatus "removed" — the sources were dropped
-         from socket-btm (refactor(btm)!, commit 40b7e82a) before landing
-         here. The pre-drop tree is socket-btm@55f8f23a
-         packages/node-smol-builder (entry: scripts/common/shared/build.mts).
-  Saw:   this repo carries no Node source pin, no Node patch series (patches/
-         holds only a pnpm tool patch), no additions/ builtins tree, and no
-         SEA/strip/compress scripts. Only the compile-environment image
-         (--target base) is buildable today.
-  Fix:   port the builder from socket-btm@55f8f23a packages/node-smol-builder,
-         then wire this target to its entry script. Track the port before
-         cutting any GitHub release (scripts/repo/release.mts).`
 
 interface BaseTargetOptions {
   dryRun?: boolean | undefined
@@ -293,8 +257,12 @@ export async function main(): Promise<void> {
   })
   const target = values.target
   if (target === 'binary') {
-    logger.error(BINARY_LANE_MISSING)
-    process.exitCode = 1
+    const args = [NODE_SMOL_BUILD_ENTRY, '--prod', '--yes']
+    if (values['dry-run']) {
+      logger.log(`${process.execPath} ${args.join(' ')}`)
+      return
+    }
+    process.exitCode = await runInherit(process.execPath, args, REPO_ROOT)
     return
   }
   if (target !== 'base') {

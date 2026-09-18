@@ -20,7 +20,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
@@ -77,7 +77,7 @@ export async function runCommand(command, args, cwd) {
 
   const result = await spawn(command, args, {
     cwd,
-    shell: WIN32,
+    shell: isWin32(),
     stdio: 'inherit',
   })
 

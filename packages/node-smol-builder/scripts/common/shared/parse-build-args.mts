@@ -9,7 +9,7 @@ import process from 'node:process'
 
 import { BYTES, CHECKPOINTS } from 'local-build-infra/lib/constants'
 
-import { parseArgs } from '@socketsecurity/lib-stable/exe/argv/parse'
+import { parseArgs } from 'node:util'
 import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 

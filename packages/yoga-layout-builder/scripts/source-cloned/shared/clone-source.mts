@@ -7,7 +7,7 @@
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -73,7 +73,7 @@ export async function cloneYogaSource(config) {
       sharedSourceDir,
     ],
     {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'inherit',
     },
   )
@@ -87,7 +87,7 @@ export async function cloneYogaSource(config) {
     'git',
     ['-C', sharedSourceDir, 'rev-parse', 'HEAD'],
     {
-      shell: WIN32,
+      shell: isWin32(),
     },
   )
 

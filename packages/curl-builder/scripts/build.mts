@@ -43,7 +43,7 @@ import { getSubmoduleVersion } from 'local-build-infra/lib/tool-versions'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { which } from '@socketsecurity/lib-stable/exe/path/which'
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import {
@@ -514,7 +514,7 @@ export async function buildMbedTLS(mbedtlsBuildDir) {
     const osxArch = TARGET_ARCH === 'x64' ? 'x86_64' : 'arm64'
     cmakeArgs.push(`-DCMAKE_OSX_ARCHITECTURES=${osxArch}`)
     logger.info(`Cross-compiling mbedTLS for macOS ${osxArch}`)
-  } else if (WIN32) {
+  } else if (isWin32()) {
     // On Windows, use MinGW for consistent ABI.
     if (CROSS_COMPILE && TARGET_ARCH === 'arm64') {
       // Windows ARM64 cross-compilation using llvm-mingw.
@@ -689,7 +689,7 @@ export async function buildCurl(mbedtlsDir, curlBuildDir) {
     const osxArch = TARGET_ARCH === 'x64' ? 'x86_64' : 'arm64'
     cmakeArgs.push(`-DCMAKE_OSX_ARCHITECTURES=${osxArch}`)
     logger.info(`Cross-compiling curl for macOS ${osxArch}`)
-  } else if (WIN32) {
+  } else if (isWin32()) {
     // On Windows, use MinGW for consistent ABI.
     if (CROSS_COMPILE && TARGET_ARCH === 'arm64') {
       // Windows ARM64 cross-compilation using llvm-mingw.

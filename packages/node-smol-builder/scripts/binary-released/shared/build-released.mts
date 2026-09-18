@@ -22,7 +22,7 @@ import {
   clearBuildLog,
   createCheckpoint,
   estimateBuildTime,
-  exec,
+  execBuildStep,
   formatDuration,
   getBuildLogPath,
   getFileSize,
@@ -55,7 +55,7 @@ import colors from 'yoctocolors-cjs'
 import process from 'node:process'
 
 import { which, whichSync } from '@socketsecurity/lib-stable/exe/path/which'
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { LOG_SYMBOLS } from '@socketsecurity/lib-stable/logger/symbols'
@@ -825,14 +825,14 @@ export async function buildRelease(config, buildOptions = {}) {
     }
 
     // Windows: Clean stale junction links.
-    if (WIN32) {
+    if (isWin32()) {
       const configDirs = ['Release', 'Debug']
       for (let i = 0, { length } = configDirs; i < length; i += 1) {
         const configDir = configDirs[i]
         const junctionPath = path.join(modeSourceDir, configDir)
         if (existsSync(junctionPath)) {
           logger.log(`Removing stale ${configDir} directory/junction…`)
-          await exec('cmd.exe', ['/c', `rd /S /Q "${configDir}"`], {
+          await execBuildStep('cmd.exe', ['/c', `rd /S /Q "${configDir}"`], {
             cwd: modeSourceDir,
           })
           logger.log(`Removed ${configDir}`)
@@ -841,12 +841,12 @@ export async function buildRelease(config, buildOptions = {}) {
     }
 
     // Configure.
-    const configureCommand = WIN32 ? 'vcbuild.bat' : './configure'
-    const configureArgs = WIN32
+    const configureCommand = isWin32() ? 'vcbuild.bat' : './configure'
+    const configureArgs = isWin32()
       ? convertToVcbuildFlags(configureFlags)
       : configureFlags
 
-    logger.log(`::group::Running ${WIN32 ? 'vcbuild.bat' : './configure'}`)
+    logger.log(`::group::Running ${isWin32() ? 'vcbuild.bat' : './configure'}`)
 
     // Anonymize absolute build-host paths in DWARF and __FILE__ macros so the
     // shipped node-smol binary doesn't carry the dev's home dir... or
@@ -858,21 +858,21 @@ export async function buildRelease(config, buildOptions = {}) {
       CXXFLAGS: appendCCRemapFlags(getEnvValue('CXXFLAGS')),
     }
 
-    await exec(configureCommand, configureArgs, {
+    await execBuildStep(configureCommand, configureArgs, {
       cwd: modeSourceDir,
       env: buildEnv,
-      shell: WIN32,
+      shell: isWin32(),
     })
     logger.log('::endgroup::')
     logger.log(
       // Emoji is wrapped in colors.green() decorator before being embedded in
       // multi-line build summary; logger.success() would drop the color.
       // oxlint-disable-next-line socket/no-status-emoji -- see above
-      `${colors.green('✓')} ${WIN32 ? 'Build' : 'Configuration'} complete`,
+      `${colors.green('✓')} ${isWin32() ? 'Build' : 'Configuration'} complete`,
     )
     logger.log('')
 
-    if (WIN32) {
+    if (isWin32()) {
       logger.success('Windows build completed by vcbuild.bat')
       logger.log('')
     } else {
@@ -883,7 +883,7 @@ export async function buildRelease(config, buildOptions = {}) {
   // Compile (Unix only, Windows already done).
   if (!needsBuild) {
     logger.log('')
-  } else if (!WIN32) {
+  } else if (!isWin32()) {
     const jobCount = CPU_COUNT
     const timeEstimate = estimateBuildTime(jobCount)
 
@@ -960,11 +960,15 @@ export async function buildRelease(config, buildOptions = {}) {
         logger.warn(
           `node.gyp is newer than build.ninja (${new Date(gypStat.mtimeMs).toISOString()} > ${new Date(ninjaStat.mtimeMs).toISOString()}) — re-running configure to refresh ninja source list`,
         )
-        await exec(WIN32 ? 'vcbuild.bat' : './configure', configureArgs, {
-          cwd: modeSourceDir,
-          env: buildEnv,
-          shell: WIN32,
-        })
+        await execBuildStep(
+          isWin32() ? 'vcbuild.bat' : './configure',
+          configureArgs,
+          {
+            cwd: modeSourceDir,
+            env: buildEnv,
+            shell: isWin32(),
+          },
+        )
         logger.success('Configure re-run complete; ninja refreshed')
       }
     } catch (err) {
@@ -975,10 +979,14 @@ export async function buildRelease(config, buildOptions = {}) {
 
     try {
       const ninjaCommand = whichSync('ninja')
-      await exec(ninjaCommand, ['-C', 'out/Release', `-j${CPU_COUNT}`], {
-        cwd: modeSourceDir,
-        env: process.env,
-      })
+      await execBuildStep(
+        ninjaCommand,
+        ['-C', 'out/Release', `-j${CPU_COUNT}`],
+        {
+          cwd: modeSourceDir,
+          env: process.env,
+        },
+      )
       logger.log('::endgroup::')
     } catch (e) {
       logger.log('::endgroup::')

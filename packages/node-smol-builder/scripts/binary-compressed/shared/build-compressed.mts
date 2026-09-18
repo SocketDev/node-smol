@@ -18,7 +18,7 @@ import process from 'node:process'
 
 import {
   createCheckpoint,
-  exec,
+  execBuildStep,
   getFileSize,
   smokeTestBinary,
 } from 'local-build-infra/lib/build-steps'
@@ -129,7 +129,7 @@ export async function buildCompressed(config, buildOptions = {}) {
     compressArgs.push(`--target-libc=${libc}`)
   }
   // Shell required on Windows for the compression script to spawn executables
-  await exec(process.execPath, compressArgs, { cwd: PACKAGE_ROOT })
+  await execBuildStep(process.execPath, compressArgs, { cwd: PACKAGE_ROOT })
 
   const sizeAfterCompress = await getFileSize(outputCompressedBinary)
   logger.log(`Size after compression: ${sizeAfterCompress}`)

@@ -4,7 +4,7 @@
  */
 
 import { which } from '@socketsecurity/lib-stable/exe/path/which'
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { errorMessage } from '@socketsecurity/lib-stable/errors/message'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -49,7 +49,7 @@ export async function runCommand(
 
   const result = await spawn(command, args, {
     cwd,
-    shell: WIN32,
+    shell: isWin32(),
     stdio: 'inherit',
   })
 
@@ -74,7 +74,7 @@ export async function runParallel(
 ) {
   const promises = commands.map(({ args = [], command, options = {} }) =>
     spawn(command, args, {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'inherit',
       ...globalOptions,
       ...options,
@@ -139,7 +139,7 @@ export async function runPnpmScript(
   const pnpmArgs = ['--filter', packageName, 'run', scriptName, ...args]
 
   return spawn(pnpmPath, pnpmArgs, {
-    shell: WIN32,
+    shell: isWin32(),
     stdio: 'inherit',
     ...spawnOptions,
   })
@@ -169,7 +169,7 @@ export async function runPnpmScriptAll(
   const pnpmArgs = ['run', '-r', scriptName, ...args]
 
   return spawn(pnpmPath, pnpmArgs, {
-    shell: WIN32,
+    shell: isWin32(),
     stdio: 'inherit',
     ...spawnOptions,
   })
@@ -187,7 +187,7 @@ export async function runPnpmScriptAll(
 export async function runQuiet(command: string, options: CommandOptions = {}) {
   const { args = [], ...spawnOptions } = options
   return spawn(command, args, {
-    shell: WIN32 === true,
+    shell: isWin32() === true,
     ...spawnOptions,
   })
 }
@@ -219,7 +219,7 @@ export async function runSequence(
 
     // eslint-disable-next-line no-await-in-loop
     const result = await spawn(command, args, {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'inherit',
       ...globalOptions,
       ...options,
@@ -256,7 +256,7 @@ export const pnpm = {
       : ['run', '-r', 'build']
 
     return spawn(pnpmPath, args, {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'inherit',
       ...spawnOptions,
     })
@@ -276,7 +276,7 @@ export const pnpm = {
       throw new Error(PNPM_NOT_FOUND_MSG)
     }
     return spawn(pnpmPath, ['install', '--frozen-lockfile'], {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'inherit',
       ...options,
     })
@@ -301,7 +301,7 @@ export const pnpm = {
       : ['run', '-r', 'test']
 
     return spawn(pnpmPath, args, {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'inherit',
       ...spawnOptions,
     })

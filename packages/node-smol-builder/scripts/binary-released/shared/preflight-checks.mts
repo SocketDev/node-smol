@@ -10,7 +10,7 @@ import {
   checkDiskSpace,
   checkNetworkConnectivity,
   checkPythonVersion,
-  exec,
+  execBuildStep,
 } from 'local-build-infra/lib/build-steps'
 import { printError } from 'local-build-infra/lib/build-output'
 import {
@@ -149,7 +149,7 @@ export async function checkBuildEnvironment(buildDir) {
 export async function checkXcodeVersion() {
   logger.log('Checking Xcode version…')
   try {
-    const result = await exec('xcodebuild', ['-version'], {
+    const result = await execBuildStep('xcodebuild', ['-version'], {
       encoding: 'utf8',
       shell: false,
     })

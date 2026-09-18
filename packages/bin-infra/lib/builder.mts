@@ -29,7 +29,7 @@ import {
 } from 'local-build-infra/lib/platform-mappings'
 import { runCommand } from 'local-build-infra/lib/script-runner'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -93,7 +93,7 @@ export async function buildBinSuitePackage(config: BuildBinSuitePackageConfig) {
     const buildDir = getPlatformBuildDir(packageDir, platformArch)
 
     // Determine binary name and path
-    const binaryName = WIN32 ? `${packageName}.exe` : packageName
+    const binaryName = isWin32() ? `${packageName}.exe` : packageName
     const binaryPath = path.join(
       buildDir,
       'out',
@@ -177,7 +177,7 @@ export async function buildBinSuitePackage(config: BuildBinSuitePackageConfig) {
       const result = await spawn('make', args, {
         cwd: packageDir,
         env: makeEnv,
-        shell: WIN32,
+        shell: isWin32(),
         stdio: 'inherit',
       })
       if (result.code !== 0) {
@@ -303,7 +303,7 @@ export function selectMakefile() {
   if (process.platform === 'linux') {
     return 'Makefile.linux'
   }
-  if (WIN32) {
+  if (isWin32()) {
     return 'Makefile.win'
   }
   return 'Makefile.macos'

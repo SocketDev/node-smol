@@ -12,7 +12,7 @@ import { getPythonCommand } from 'local-build-infra/lib/python-installer'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { which } from '@socketsecurity/lib-stable/exe/path/which'
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -96,7 +96,7 @@ export async function downloadModel(config) {
         }
         cliArgs.push('--local-dir', `${modelsDir}/${modelKey}`)
         const cliResult = await spawn(hfPath, cliArgs, {
-          shell: WIN32,
+          shell: isWin32(),
           stdio: 'inherit',
         })
 

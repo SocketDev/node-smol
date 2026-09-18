@@ -22,7 +22,10 @@ import {
 import path from 'node:path'
 import process from 'node:process'
 
-import { DARWIN, WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import {
+  isDarwin,
+  isWin32,
+} from '@socketsecurity/lib-stable/constants/platform'
 import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { isErrnoException } from '@socketsecurity/lib-stable/errors/predicates'
 import {
@@ -300,7 +303,7 @@ export async function createCheckpoint(
     const randomId = crypto.randomBytes(8).toString('hex')
     const tempTarballPath = `${tarballPath}.tmp.${process.pid}.${Date.now()}.${randomId}`
     const relativeTempTarballPath = path.relative(tarDir, tempTarballPath)
-    const tarOutputPath = WIN32
+    const tarOutputPath = isWin32()
       ? toUnixPath(relativeTempTarballPath)
       : relativeTempTarballPath
 
@@ -369,7 +372,9 @@ export async function createCheckpoint(
           // On macOS, COPYFILE_DISABLE=1 prevents tar from including
           // AppleDouble resource fork files (._* files) which cause
           // compilation errors when extracted on Linux.
-          env: DARWIN ? { ...process.env, COPYFILE_DISABLE: '1' } : process.env,
+          env: isDarwin()
+            ? { ...process.env, COPYFILE_DISABLE: '1' }
+            : process.env,
           cwd: tarDir,
           stdio: 'pipe',
         })

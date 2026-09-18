@@ -7,7 +7,7 @@
 
 import path from 'node:path'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { toUnixPath } from '@socketsecurity/lib-stable/paths/normalize'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -80,8 +80,8 @@ export async function extractTarball(
   }
 
   const tarBin = await whichRequired('tar')
-  const unixTarballPath = WIN32 ? toUnixPath(tarballPath) : tarballPath
-  const unixExtractDir = WIN32 ? toUnixPath(extractDir) : extractDir
+  const unixTarballPath = isWin32() ? toUnixPath(tarballPath) : tarballPath
+  const unixExtractDir = isWin32() ? toUnixPath(extractDir) : extractDir
 
   // Build extraction arguments.
   const tarArgs = ['-xzf', unixTarballPath, '-C', unixExtractDir]
@@ -116,7 +116,7 @@ export async function validateTarballPaths(
   tarballPath: string,
 ): Promise<string[]> {
   const tarBin = await whichRequired('tar')
-  const unixTarballPath = WIN32 ? toUnixPath(tarballPath) : tarballPath
+  const unixTarballPath = isWin32() ? toUnixPath(tarballPath) : tarballPath
 
   // List tarball contents.
   const listResult = await spawn(tarBin, ['-tzf', unixTarballPath], {

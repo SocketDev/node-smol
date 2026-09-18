@@ -24,7 +24,7 @@ import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -89,13 +89,13 @@ export async function buildInDocker() {
     result = await spawn(
       'depot',
       ['build', '-f', dockerfile, ...buildArgs, rootDir],
-      { cwd: rootDir, shell: WIN32 },
+      { cwd: rootDir, shell: isWin32() },
     )
   } else {
     result = await spawn(
       'docker',
       ['buildx', 'build', '-f', dockerfile, ...buildArgs, rootDir],
-      { cwd: rootDir, shell: WIN32 },
+      { cwd: rootDir, shell: isWin32() },
     )
   }
 
@@ -136,7 +136,7 @@ export async function runTests() {
   const testFile = 'test/integration/linux-x64-docker.test.mts'
   const result = await spawn('pnpm', ['vitest', 'run', testFile], {
     cwd: packageDir,
-    shell: WIN32,
+    shell: isWin32(),
   })
 
   if (result.code !== 0) {

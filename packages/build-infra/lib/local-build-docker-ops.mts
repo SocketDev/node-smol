@@ -6,7 +6,7 @@
  * and image-tag mappings live in local-build-setup.mts.
  */
 
-import { getArch, WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { getArch, isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { printError, printInfo, printSuccess } from './build-output.mts'
@@ -54,7 +54,7 @@ export async function buildBuilderImage(target, options = {}) {
       ['compose', '-f', 'docker-compose.yml', 'build', serviceName],
       {
         cwd: DOCKER_DIR,
-        shell: WIN32,
+        shell: isWin32(),
         stdio: 'inherit',
       },
     )
@@ -86,7 +86,7 @@ export async function ensureBuildxBuilder() {
       'docker',
       ['buildx', 'inspect', builderName],
       {
-        shell: WIN32,
+        shell: isWin32(),
         stdio: 'pipe',
       },
     )
@@ -94,7 +94,7 @@ export async function ensureBuildxBuilder() {
     if (inspectResult.code === 0) {
       // Builder exists, use it
       await spawn('docker', ['buildx', 'use', builderName], {
-        shell: WIN32,
+        shell: isWin32(),
         stdio: 'pipe',
       })
       return true
@@ -119,7 +119,7 @@ export async function ensureBuildxBuilder() {
         '--bootstrap',
       ],
       {
-        shell: WIN32,
+        shell: isWin32(),
         stdio: 'pipe',
       },
     )
@@ -232,7 +232,7 @@ export async function setupQemuEmulation() {
       'docker',
       ['run', '--privileged', '--rm', 'tonistiigi/binfmt', '--install', 'all'],
       {
-        shell: WIN32,
+        shell: isWin32(),
         stdio: 'pipe',
       },
     )

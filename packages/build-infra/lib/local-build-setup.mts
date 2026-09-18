@@ -12,8 +12,8 @@ import { fileURLToPath } from 'node:url'
 
 import {
   getArch,
-  getPlatform,
-  WIN32,
+  getOs,
+  isWin32,
 } from '@socketsecurity/lib-stable/constants/platform'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -167,7 +167,7 @@ export function getComposeServiceName(target) {
  * @returns {{ platform: string; arch: string; target: string | undefined }}
  */
 export function getHostInfo() {
-  const platform = getPlatform()
+  const platform = getOs()
   const arch = getArch()
 
   // Determine the native target for this host
@@ -200,7 +200,7 @@ export async function hasBuilderImage(target) {
 
   try {
     const result = await spawn('docker', ['image', 'inspect', imageTag], {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'pipe',
     })
     return result.code === 0
@@ -217,7 +217,7 @@ export async function hasBuilderImage(target) {
 export async function isBuildxAvailable() {
   try {
     const result = await spawn('docker', ['buildx', 'version'], {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'pipe',
     })
     return result.code === 0
@@ -234,7 +234,7 @@ export async function isBuildxAvailable() {
 export async function isDockerAvailable() {
   try {
     const result = await spawn('docker', ['--version'], {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'pipe',
     })
     return result.code === 0
@@ -251,7 +251,7 @@ export async function isDockerAvailable() {
 export async function isDockerRunning() {
   try {
     const result = await spawn('docker', ['info'], {
-      shell: WIN32,
+      shell: isWin32(),
       stdio: 'pipe',
     })
     return result.code === 0
@@ -279,7 +279,7 @@ export async function verifyBuilderImage(target) {
       'docker',
       ['run', '--rm', imageTag, 'sh', '-c', 'node --version && pnpm --version'],
       {
-        shell: WIN32,
+        shell: isWin32(),
         stdio: 'pipe',
       },
     )

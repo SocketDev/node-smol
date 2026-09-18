@@ -10,7 +10,10 @@ import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import { DARWIN, WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import {
+  isDarwin,
+  isWin32,
+} from '@socketsecurity/lib-stable/constants/platform'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
@@ -229,7 +232,7 @@ export async function buildWithDocker(config) {
  * @returns {Promise<number>} Number of files removed
  */
 export async function cleanAppleDoubleFiles(dir) {
-  if (!DARWIN) {
+  if (!isDarwin()) {
     return 0
   }
 
@@ -357,7 +360,7 @@ export async function runInDocker(config) {
   if (interactive) {
     try {
       const result = await spawn('docker', args, {
-        shell: WIN32,
+        shell: isWin32(),
         stdio: 'inherit',
       })
       return {
@@ -378,7 +381,7 @@ export async function runInDocker(config) {
 
   // For non-interactive mode, stream output while capturing it
   const result = spawn('docker', args, {
-    shell: WIN32,
+    shell: isWin32(),
     stdio: 'pipe',
   })
 
@@ -425,7 +428,7 @@ export async function testBinaryForTarget(binaryPath, target) {
     // Direct execution test
     try {
       const result = await spawn(binaryPath, ['--version'], {
-        shell: WIN32,
+        shell: isWin32(),
         stdio: 'pipe',
       })
       return result.code === 0

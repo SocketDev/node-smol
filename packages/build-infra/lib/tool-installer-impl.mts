@@ -11,7 +11,7 @@ import process from 'node:process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import binPkg, { which } from '@socketsecurity/lib-stable/exe/path/which'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
@@ -379,7 +379,7 @@ export function resolvePinnedArtifact(tool, version) {
     return {
       __proto__: null,
       ...artifact,
-      binary: WIN32 ? `${tool}.exe` : tool,
+      binary: isWin32() ? `${tool}.exe` : tool,
       archiveFormat: artifact.url.endsWith('.zip') ? 'zip' : 'tar.xz',
     }
   } catch {

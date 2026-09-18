@@ -19,7 +19,7 @@ import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 import { ensureLief } from 'local-lief-builder/lib/ensure-lief'
 
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { isCI as isCIEnvironment } from '@socketsecurity/lib-stable/env/ci'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
@@ -70,7 +70,7 @@ async function main() {
     // Check if binary already exists (from checkpoint restoration).
     // Binary lives at build/<mode>/<platform-arch>/out/Final/.
     const platformArch = await getCurrentPlatformArch()
-    const binaryExt = WIN32 ? '.exe' : ''
+    const binaryExt = isWin32() ? '.exe' : ''
     const binaryPath = path.join(
       packageRoot,
       'build',

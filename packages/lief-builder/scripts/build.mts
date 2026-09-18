@@ -37,7 +37,7 @@ import { getSubmoduleVersion } from 'local-build-infra/lib/tool-versions'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
 
 import { which } from '@socketsecurity/lib-stable/exe/path/which'
-import { WIN32 } from '@socketsecurity/lib-stable/constants/platform'
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import {
@@ -415,7 +415,7 @@ export async function copyLiefSource(sourceDir) {
   await safeMkdir(path.dirname(sourceDir))
 
   logger.info('Copying LIEF source to build directory…')
-  if (WIN32) {
+  if (isWin32()) {
     // Windows: use robocopy
     // robocopy exit codes: 0=no change, 1=files copied, 2-7=other success states, 8+=errors
     logger.info('Running: robocopy (copying LIEF source)')
@@ -949,7 +949,7 @@ async function main() {
 
           // Extract arch from platformArch for checkpoint (e.g., "darwin-arm64" -> "arm64")
           const targetArch = getEnvValue('TARGET_ARCH') || process.arch
-          const targetPlatform = WIN32 ? 'win' : process.platform
+          const targetPlatform = isWin32() ? 'win' : process.platform
 
           await createCheckpoint(
             buildDir,
@@ -1072,7 +1072,7 @@ async function main() {
     // and force a slim archive. Skip for musl (different toolchain) and
     // other platforms.
     const isLinuxGlibc =
-      process.platform === 'linux' && !(await isMusl()) && !WIN32
+      process.platform === 'linux' && !(await isMusl()) && !isWin32()
     if (isLinuxGlibc) {
       const ltoFlags = '-flto -ffat-lto-objects'
       cmakeArgs.push(
@@ -1099,7 +1099,7 @@ async function main() {
 
     // On Windows, use gcc/MinGW for consistent ABI (CI and binsuite)
     // LIEF must use the same compiler/ABI as binject to avoid linker errors
-    if (WIN32) {
+    if (isWin32()) {
       // Support cross-compilation via TARGET_ARCH environment variable.
       const targetArch = getEnvValue('TARGET_ARCH')
       const isCrossCompileArm64 =
@@ -1307,7 +1307,7 @@ async function main() {
 
     // Create checkpoint.
     const lbTargetArch = getEnvValue('TARGET_ARCH') || process.arch
-    const lbTargetPlatform = WIN32 ? 'win' : process.platform
+    const lbTargetPlatform = isWin32() ? 'win' : process.platform
     await createCheckpoint(
       buildDir,
       CHECKPOINTS.LIEF_BUILT,
