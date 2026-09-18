@@ -1,5 +1,5 @@
-name: 📦 Publish prebake pack
-run-name: Publish prebake pack
+name: 'publish: prebake pack'
+run-name: 'publish: prebake pack'
 
 # Generic repo-owned prebake publisher: bakes every image declared in the
 # repo's own `.config/repo/socket-wheelhouse.json` `docker.prebakes` section
@@ -61,8 +61,8 @@ jobs:
       - name: Checkout
         uses: ./.github/actions/fleet/checkout
         with:
-          payload-token-client-id: ${{ secrets.SOCKET_PR_CLIENT_ID }}
-          payload-token-private-key: ${{ secrets.SOCKET_PR_APP_PRIVATE_KEY }}
+          payload-token-client-id: ${{ secrets.SOCKET_RELEASE_CLIENT_ID || vars.SOCKET_RELEASE_CLIENT_ID }}
+          payload-token-private-key: ${{ secrets.SOCKET_RELEASE_APP_PRIVATE_KEY }}
 
       - name: Setup QEMU
         env:
