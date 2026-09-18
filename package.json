@@ -171,7 +171,9 @@
     "check:deps": "node scripts/fleet/check.mts --category=deps",
     "check:hooks": "node scripts/fleet/check.mts --category=hooks",
     "check:types": "node scripts/fleet/check.mts --category=types",
-    "npm:trust:browser": "node scripts/fleet/registry-infra/npm/settings/trusted-publisher/browser.mts"
+    "npm:trust:browser": "node scripts/fleet/registry-infra/npm/settings/trusted-publisher/browser.mts",
+    "check:native": "node scripts/repo/check-native.mts",
+    "upstream:hydrate": "node scripts/fleet/git-partial-submodule.mts clone"
   },
   "devDependencies": {
     "@bcoe/v8-coverage": "catalog:",
