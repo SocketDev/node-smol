@@ -32,11 +32,28 @@ jobs:
       - name: Set up and install
         uses: ./.github/actions/fleet/setup-and-install
         with:
-          payload-token-client-id: ${{ vars.SOCKET_PR_CLIENT_ID }}
-          payload-token-private-key: ${{ secrets.SOCKET_PR_APP_PRIVATE_KEY }}
+          payload-token-client-id: ${{ secrets.SOCKET_RELEASE_CLIENT_ID || vars.SOCKET_RELEASE_CLIENT_ID }}
+          payload-token-private-key: ${{ secrets.SOCKET_RELEASE_APP_PRIVATE_KEY }}
           socket-api-token: ${{ secrets.SOCKET_API_TOKEN_FOR_CLI_AND_SFW }}
+      - name: Mint source read token
+        id: source-token
+        uses: ./.github/actions/fleet/github-payload-app-token
+        with:
+          client-id: ${{ secrets.SOCKET_RELEASE_CLIENT_ID || vars.SOCKET_RELEASE_CLIENT_ID }}
+          private-key: ${{ secrets.SOCKET_RELEASE_APP_PRIVATE_KEY }}
+          repositories: stuie
       - name: Hydrate pinned sources
-        run: pnpm run upstream:hydrate
+        shell: bash
+        env:
+          SOURCE_TOKEN: ${{ steps.source-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          AUTH_B64="$(printf 'x-access-token:%s' "${SOURCE_TOKEN}" | base64 | tr -d '\n')"
+          echo "::add-mask::${AUTH_B64}"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.https://github.com/SocketDev/.extraheader
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${AUTH_B64}"
+          pnpm run upstream:hydrate
       - name: Build native runtime
         run: pnpm run build:repo --target binary
       - name: Verify native terminal operations
