@@ -41,3 +41,9 @@ jobs:
         run: pnpm run build:repo --target binary
       - name: Verify native terminal operations
         run: pnpm run check:native
+      - name: Upload verified runtime
+        uses: ./.github/actions/fleet/upload-artifact
+        with:
+          name: node-smol-${{ runner.os }}-${{ runner.arch }}
+          path: build/release
+          if-no-files-found: error

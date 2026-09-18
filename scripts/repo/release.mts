@@ -1,24 +1,3 @@
-/*
- * @file Repo release-assembly lane. Assembles GitHub release assets from a
- *   built output directory, writes a SHA-256 `checksums.txt` manifest, and
- *   cuts a DRAFT release via `gh release create --draft`. Honesty rules:
- *
- *   - DRY-RUN IS THE DEFAULT. Without `--publish` it prints the exact `gh release
- *     create` command, the computed per-asset digests, and every precondition —
- *     nothing is uploaded.
- *   - The repo has ZERO releases today and no binary build lane
- *     (`scripts/repo/build.mts --target binary` names what is missing), so
- *     until that lane is ported the asset directory must be populated by hand
- *     or by CI — this script fails loud when it is empty rather than cutting an
- *     assetless release.
- *   - The release is created as a DRAFT. Undrafting via `gh release edit <tag>
- *     --draft=false` is a separate deliberate act — fleet releases are
- *     immutable once public, and the github-release workflow's order rule
- *     applies: publish gates run before the final release marker exists. USAGE:
- *     node scripts/repo/release.mts --tag v0.1.0 [--dir build/release]
- *     [--notes-file <path>] [--publish]
- */
-
 import crypto from 'node:crypto'
 import {
   createReadStream,
@@ -95,10 +74,8 @@ const EMPTY_DIR_MESSAGE = (dir: string) =>
   What:  the assembly step needs built platform artifacts to upload.
   Where: ${dir}
   Saw:   directory missing or contains no files.
-  Fix:   this repo has no binary build lane yet — run
-         node scripts/repo/build.mts --target binary for exactly what is
-         missing and where the socket-btm sources are. Once artifacts exist,
-         place them under the directory above (or pass --dir) and re-run.`
+  Fix:   run pnpm run build:repo --target binary, then pnpm run check:native
+         to verify and stage the platform binary before release assembly.`
 
 async function collectReleaseDigests(
   assets: string[],

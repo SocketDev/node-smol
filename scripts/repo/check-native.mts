@@ -1,4 +1,7 @@
 import process from 'node:process'
+import path from 'node:path'
+import { copyFile, mkdir } from 'node:fs/promises'
+import { RELEASE_ASSETS_DIR } from './paths.mts'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { getCurrentPlatformArch } from '../../packages/build-infra/lib/platform-mappings.mts'
@@ -31,6 +34,14 @@ export async function main(): Promise<void> {
       `Native TUI verification failed at ${outputFinalBinary}. Expected ANSI and width operations. Rebuild node-smol with TUI enabled.`,
     )
   }
+  await mkdir(RELEASE_ASSETS_DIR, { recursive: true })
+  await copyFile(
+    outputFinalBinary,
+    path.join(
+      RELEASE_ASSETS_DIR,
+      `node-${target}${process.platform === 'win32' ? '.exe' : ''}`,
+    ),
+  )
   logger.log(
     process.argv.includes('--json')
       ? JSON.stringify({ ok: true, target })
