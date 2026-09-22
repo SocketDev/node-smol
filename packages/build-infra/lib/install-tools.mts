@@ -15,6 +15,15 @@ import { getToolVersion } from './pinned-versions.mts'
 
 const logger = getDefaultLogger()
 
+export function brewInstallEnvironment() {
+  const environment = {
+    ...process.env,
+    HOMEBREW_NO_ANALYTICS: '1',
+    HOMEBREW_CASK_OPTS_REQUIRE_SHA: '',
+  }
+  return environment
+}
+
 const platform = os.platform()
 const WIN32 = platform === 'win32'
 const DARWIN = platform === 'darwin'
@@ -177,7 +186,7 @@ export async function installTool(toolName, options = {}) {
 
   try {
     await spawn(command, args, {
-      env: { ...process.env, HOMEBREW_NO_ANALYTICS: '1' },
+      env: brewInstallEnvironment(),
       stdio: 'inherit',
     })
     logger.success(`${toolName} installed successfully`)
