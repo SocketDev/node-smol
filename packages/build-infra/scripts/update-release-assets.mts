@@ -25,20 +25,20 @@ import {
   stringifyWithFormatting,
 } from '@socketsecurity/lib-stable/json/format'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
+import { isPlainObject } from '@socketsecurity/lib-stable/objects/predicates'
 import { getLatestRelease } from '@socketsecurity/lib-stable/releases/github-listing'
 import { downloadReleaseAsset } from '@socketsecurity/lib-stable/releases/github-downloads'
 import { SOCKET_BTM_REPO } from '@socketsecurity/lib-stable/releases/socket-btm'
 
 import { errorMessage } from '../lib/error-utils.mts'
-import { parseChecksums } from '../lib/release-checksums/core.mts'
+import { RELEASE_ASSETS_MANIFEST_PATH } from '../lib/paths.mts'
+import { parseChecksums } from '../../../scripts/fleet/build/infra/lib/release-checksums/core.mts'
 
 const logger = getDefaultLogger()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const packageRoot = path.join(__dirname, '..')
-
-const CHECKSUMS_FILE = path.join(packageRoot, 'release-assets.json')
 
 /**
  * Tools to sync checksums for (only packages with GitHub releases).
@@ -109,6 +109,97 @@ export async function fetchToolChecksums(tool) {
   }
 }
 
+type ReleaseAssetStatus = 'updated' | 'unchanged' | 'skipped' | 'failed'
+type ReleaseAssetData = Record<string, unknown>
+
+function readReleaseAssets(): ReleaseAssetData {
+  if (!existsSync(RELEASE_ASSETS_MANIFEST_PATH)) {
+    return { __proto__: null }
+  }
+  try {
+    const currentData: unknown = JSON.parse(
+      readFileSync(RELEASE_ASSETS_MANIFEST_PATH, 'utf8'),
+    )
+    if (isPlainObject(currentData)) {
+      return currentData
+    }
+    logger.warn(
+      `Failed to parse ${RELEASE_ASSETS_MANIFEST_PATH}: expected a JSON object.`,
+    )
+  } catch (error) {
+    logger.warn(
+      `Failed to parse ${RELEASE_ASSETS_MANIFEST_PATH}: ${errorMessage(error)}`,
+    )
+  }
+  return { __proto__: null }
+}
+
+async function syncToolReleaseAssets(
+  tool: string,
+  currentData: ReleaseAssetData,
+  options?: { force?: boolean | undefined } | undefined,
+): Promise<ReleaseAssetStatus> {
+  const opts = { __proto__: null, ...options } as typeof options
+  const force = opts?.force ?? false
+  logger.info(`Fetching checksums for ${tool}...`)
+  const result = await fetchToolChecksums(tool)
+  if (!result) {
+    return 'skipped'
+  }
+
+  const { checksums, tag } = result
+  const checksumCount = Object.keys(checksums).length
+  if (checksumCount === 0) {
+    logger.warn(`  No checksums found in release ${tag}`)
+    return 'failed'
+  }
+
+  const currentValue = currentData[tool]
+  const current = isPlainObject(currentValue) ? currentValue : undefined
+  const currentTag = typeof current?.tag === 'string' ? current.tag : undefined
+  const currentChecksums = isPlainObject(current?.checksums)
+    ? current.checksums
+    : {}
+  const currentCount = Object.keys(currentChecksums).length
+  const tagChanged = currentTag !== tag
+  const checksumsChanged =
+    JSON.stringify(checksums) !== JSON.stringify(currentChecksums)
+
+  if (!force && !tagChanged && !checksumsChanged) {
+    logger.info(`  ${tool}: unchanged (${tag}, ${checksumCount} checksums)`)
+    return 'unchanged'
+  }
+
+  currentData[tool] = {
+    ...current,
+    description: releaseAssetDescription(current, tool),
+    tag,
+    checksums,
+  }
+
+  if (tagChanged) {
+    logger.success(
+      `  ${tool}: ${currentTag || '(none)'} -> ${tag} (${checksumCount} checksums)`,
+    )
+  } else {
+    logger.success(
+      `  ${tool}: updated checksums (${currentCount} -> ${checksumCount})`,
+    )
+  }
+  return 'updated'
+}
+
+function releaseAssetDescription(
+  current: Record<string, unknown> | undefined,
+  tool: string,
+): string {
+  const description = current?.description
+  if (typeof description === 'string' && description) {
+    return description
+  }
+  return `${tool} binaries`
+}
+
 /**
  * Main sync function.
  */
@@ -129,119 +220,57 @@ async function main() {
 
   const toolsToSync = toolFilter ? [toolFilter] : TOOLS
 
-  // Load current checksums file.
-  let currentData = { __proto__: null }
-  if (existsSync(CHECKSUMS_FILE)) {
-    try {
-      currentData = JSON.parse(readFileSync(CHECKSUMS_FILE, 'utf8'))
-    } catch (e) {
-      logger.warn(`Failed to parse ${CHECKSUMS_FILE}: ${errorMessage(e)}`)
-    }
-  }
+  const currentData = readReleaseAssets()
 
   logger.info(`Syncing checksums for ${toolsToSync.length} tool(s)...`)
   logger.info('')
 
-  let updated = 0
-  let unchanged = 0
-  let skipped = 0
-  let failed = 0
+  const totals: Record<ReleaseAssetStatus, number> = {
+    updated: 0,
+    unchanged: 0,
+    skipped: 0,
+    failed: 0,
+  }
 
   for (let i = 0, { length } = toolsToSync; i < length; i += 1) {
-    const tool = toolsToSync[i]
-    logger.info(`Fetching checksums for ${tool}...`)
-
-    const result = await fetchToolChecksums(tool)
-    if (!result) {
-      // No release found — not an error, tool hasn't been released yet.
-      skipped++
-      continue
-    }
-
-    const { checksums, tag } = result
-    const checksumCount = Object.keys(checksums).length
-
-    if (checksumCount === 0) {
-      logger.warn(`  No checksums found in release ${tag}`)
-      failed++
-      continue
-    }
-
-    // Check if update is needed.
-    const current = currentData[tool]
-    const currentTag = current?.tag
-    const currentChecksums = current?.checksums || {}
-    const currentCount = Object.keys(currentChecksums).length
-
-    const tagChanged = currentTag !== tag
-    const checksumsChanged =
-      JSON.stringify(checksums) !== JSON.stringify(currentChecksums)
-
-    if (!force && !tagChanged && !checksumsChanged) {
-      logger.info(`  ${tool}: unchanged (${tag}, ${checksumCount} checksums)`)
-      unchanged++
-      continue
-    }
-
-    // Update the data.
-    if (!currentData[tool]) {
-      currentData[tool] = { __proto__: null }
-    }
-    currentData[tool].description = current?.description || `${tool} binaries`
-    currentData[tool].tag = tag
-    currentData[tool].checksums = checksums
-
-    if (tagChanged) {
-      logger.success(
-        `  ${tool}: ${currentTag || '(none)'} -> ${tag} (${checksumCount} checksums)`,
-      )
-    } else {
-      logger.success(
-        `  ${tool}: updated checksums (${currentCount} -> ${checksumCount})`,
-      )
-    }
-    updated++
+    const tool = toolsToSync[i]!
+    const status = await syncToolReleaseAssets(tool, currentData, { force })
+    totals[status] += 1
   }
 
   logger.info('')
 
   // Write updated file.
-  if (updated > 0 && !dryRun) {
-    // Destructure existing $schema/$comment out of currentData so our
-    // canonical values take precedence instead of being silently
-    // overridden by the spread. The old `delete output[Symbol.for(...)]`
-    // lines were no-ops — JSON.parse produces string keys, never
-    // Symbol ones — so the canonical text was effectively dead code.
-    const { $schema: _s, $comment: _c, ...rest } = currentData
+  if (totals.updated > 0 && !dryRun) {
     const output = {
+      ...currentData,
       $schema: './release-assets.schema.json',
       $comment:
         "SHA-256 checksums for GitHub release assets. Run 'pnpm --filter build-infra update-release-assets' to update.",
-      ...rest,
     }
 
     await fs.writeFile(
-      CHECKSUMS_FILE,
+      RELEASE_ASSETS_MANIFEST_PATH,
       stringifyWithFormatting(output, getDefaultFormatting()),
       'utf8',
     )
-    logger.success(`Updated ${CHECKSUMS_FILE}`)
-  } else if (dryRun && updated > 0) {
+    logger.success(`Updated ${RELEASE_ASSETS_MANIFEST_PATH}`)
+  } else if (dryRun && totals.updated > 0) {
     logger.info('Dry run - no changes written')
   }
 
   // Summary.
   logger.info('')
-  const parts = [`${updated} updated`, `${unchanged} unchanged`]
-  if (skipped > 0) {
-    parts.push(`${skipped} skipped (no release)`)
+  const parts = [`${totals.updated} updated`, `${totals.unchanged} unchanged`]
+  if (totals.skipped > 0) {
+    parts.push(`${totals.skipped} skipped (no release)`)
   }
-  if (failed > 0) {
-    parts.push(`${failed} failed`)
+  if (totals.failed > 0) {
+    parts.push(`${totals.failed} failed`)
   }
   const summary = parts.join(', ')
 
-  if (failed > 0) {
+  if (totals.failed > 0) {
     logger.warn(`Summary: ${summary}`)
     process.exitCode = 1
   } else {

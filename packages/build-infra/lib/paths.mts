@@ -10,7 +10,12 @@
 
 import path from 'node:path'
 
-import { BUILD_STAGES } from './constants.mts'
+import { BUILD_STAGES, PACKAGE_ROOT } from './constants.mts'
+
+export const RELEASE_ASSETS_MANIFEST_PATH = path.join(
+  PACKAGE_ROOT,
+  'release-assets.json',
+)
 
 /**
  * Get the canonical download cache directory for a package.

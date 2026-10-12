@@ -23,11 +23,12 @@ import {
   getPlatformBuildDir,
 } from 'local-build-infra/lib/constants'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
+import { RELEASE_ASSETS_MANIFEST_PATH } from 'local-build-infra/lib/paths'
 // logTransientErrorHelp loaded lazily inside catch block below (see
 // curl-builder/scripts/build.mts for full rationale on the
 // http-request/convenience CJS/ESM interop crash).
 import { tarSupportsNoAbsoluteNames } from 'local-build-infra/lib/platform-mappings'
-import { verifyReleaseChecksum } from 'local-build-infra/lib/release-checksums/core'
+import { verifyReleaseChecksum } from '../../../scripts/fleet/build/infra/lib/release-checksums/core.mts'
 import { ensureCurl } from 'local-curl-builder/lib/ensure-curl'
 
 import { envAsBoolean } from '@socketsecurity/lib-stable/env/boolean'
@@ -158,11 +159,12 @@ export async function downloadPrebuiltStub(
 
     // Verify SHA256 checksum to detect corrupt/truncated downloads.
     logger.info('Verifying archive checksum…')
-    const checksumResult = await verifyReleaseChecksum(
-      tarballPath,
+    const checksumResult = await verifyReleaseChecksum({
+      manifestPath: RELEASE_ASSETS_MANIFEST_PATH,
+      filePath: tarballPath,
       assetName,
-      'stubs',
-    )
+      tool: 'stubs',
+    })
     if (!checksumResult.valid) {
       await safeDelete(tarballPath)
       throw new Error(

@@ -31,8 +31,8 @@ import { errorMessage } from './error-utils.mts'
 // fires at module-load time. Lazy-loading defers the resolution to
 // the actual error-handling path, where a failure to load it
 // degrades gracefully (the transient-error hint is omitted).
-import { getDownloadedDir } from './paths.mts'
-import { verifyReleaseChecksum } from './release-checksums/core.mts'
+import { getDownloadedDir, RELEASE_ASSETS_MANIFEST_PATH } from './paths.mts'
+import { verifyReleaseChecksum } from '../../../scripts/fleet/build/infra/lib/release-checksums/core.mts'
 import {
   detectLibc,
   downloadSocketBtmRelease,
@@ -217,11 +217,12 @@ export function createPrebuiltApi(config: PrebuiltConfig): PrebuiltApi {
     assetName: string,
   ): Promise<void> {
     logger.info('Verifying archive checksum…')
-    const result = await verifyReleaseChecksum(
-      downloadedArchive,
+    const result = await verifyReleaseChecksum({
+      manifestPath: RELEASE_ASSETS_MANIFEST_PATH,
+      filePath: downloadedArchive,
       assetName,
-      name,
-    )
+      tool: name,
+    })
     if (!result.valid) {
       await deleteArchiveState(downloadedArchive, extractDir)
       throw new Error(

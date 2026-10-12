@@ -5,12 +5,12 @@ import {
   NODE_SMOL_BUILD_ENTRY,
   REPO_ROOT,
 } from '../../../scripts/repo/paths.mts'
-import { runInherit } from '../../../scripts/fleet/registry-infra/shared.mts'
+import { runInherit } from '../../../scripts/fleet/registry/shared.mts'
 
 const originalArgv = process.argv
 const originalExitCode = process.exitCode
 
-vi.mock(import('../../../scripts/fleet/registry-infra/shared.mts'), () => ({
+vi.mock(import('../../../scripts/fleet/registry/shared.mts'), () => ({
   runCapture: vi.fn(),
   runInherit: vi.fn().mockResolvedValue(0),
 }))

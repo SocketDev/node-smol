@@ -18,10 +18,11 @@ import {
   getPlatformBuildDir,
 } from 'local-build-infra/lib/constants'
 import { getCurrentPlatformArch } from 'local-build-infra/lib/platform-mappings'
-import { verifyReleaseChecksum } from 'local-build-infra/lib/release-checksums/core'
+import { verifyReleaseChecksum } from '../../../scripts/fleet/build/infra/lib/release-checksums/core.mts'
 import { extractTarball } from 'local-build-infra/lib/tarball-utils'
 import { getSubmoduleVersion } from 'local-build-infra/lib/tool-versions'
 import { errorMessage } from 'local-build-infra/lib/error-utils'
+import { RELEASE_ASSETS_MANIFEST_PATH } from 'local-build-infra/lib/paths'
 
 import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
@@ -108,7 +109,12 @@ export function libpqExistsAt(dir) {
  * }>}
  */
 export async function verifyArchiveChecksum(archivePath, assetName) {
-  return verifyReleaseChecksum(archivePath, assetName, 'libpq')
+  return verifyReleaseChecksum({
+    manifestPath: RELEASE_ASSETS_MANIFEST_PATH,
+    filePath: archivePath,
+    assetName,
+    tool: 'libpq',
+  })
 }
 
 async function deleteArchiveState(downloadedArchive, versionFile) {

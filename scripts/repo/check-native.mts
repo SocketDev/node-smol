@@ -7,7 +7,7 @@ import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 import { getCurrentPlatformArch } from '../../packages/build-infra/lib/platform-mappings.mts'
 import { getBuildPaths } from '../../packages/node-smol-builder/scripts/paths.mts'
 import { isMainModule } from '../fleet/process/is-main-module.mts'
-import { runMain } from '../fleet/process/run-main.mts'
+import { runMain } from '../fleet/process/main/run.mts'
 
 const logger = getDefaultLogger()
 
