@@ -14,8 +14,8 @@ import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import { isMainModule } from '../fleet/process/is-main-module.mts'
-import { runMain } from '../fleet/process/run-main.mts'
-import type { ScriptMeta } from '../fleet/process/run-main.mts'
+import { runMain } from '../fleet/process/main/run.mts'
+import type { ScriptMeta } from '../fleet/process/main/run.mts'
 
 const SCRIPT_META: ScriptMeta = {
   describe: 'Run the owned tests for one smol-ai workspace.',

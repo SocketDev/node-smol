@@ -9,8 +9,8 @@ import {
   repositoryContainsTarget,
   repositoryRealPath,
 } from '../../../../.git-hooks/_shared/repo-containment.mts'
-import { parseBlocks, resolveAll } from '../../../fleet/gen/gitmodules-hash.mts'
-import type { Block } from '../../../fleet/gen/gitmodules-hash.mts'
+import { parseBlocks, resolveAll } from '../../../fleet/gitmodules/hash.mts'
+import type { Block } from '../../../fleet/gitmodules/hash.mts'
 
 export function readStuieSourcePin(
   repoRoot: string,

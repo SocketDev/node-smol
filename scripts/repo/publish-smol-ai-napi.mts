@@ -23,11 +23,11 @@ import { getEnvValue } from '@socketsecurity/lib-stable/env/rewire'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { REPO_ROOT } from '../fleet/paths.mts'
-import { uploadNpmPackage } from '../fleet/registry-infra/npm/publish-command.mts'
-import { isAlreadyPublished } from '../fleet/registry-infra/npm/registry.mts'
-import { listStagedPackages } from '../fleet/registry-infra/npm/shared.mts'
-import { verifyStagedEntry } from '../fleet/registry-infra/npm/staged.mts'
-import { runInherit } from '../fleet/registry-infra/shared.mts'
+import { uploadNpmPackage } from '../fleet/registry/npm/publish-command.mts'
+import { isAlreadyPublished } from '../fleet/registry/npm/registry.mts'
+import { listStagedPackages } from '../fleet/registry/npm/shared.mts'
+import { verifyStagedEntry } from '../fleet/registry/npm/staged.mts'
+import { runInherit } from '../fleet/registry/shared.mts'
 
 const logger = getDefaultLogger()
 

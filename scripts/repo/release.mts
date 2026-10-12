@@ -13,9 +13,9 @@ import { parseArgs } from 'node:util'
 import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
 
 import { isMainModule } from '../fleet/process/is-main-module.mts'
-import { runMain } from '../fleet/process/run-main.mts'
-import type { ScriptMeta } from '../fleet/process/run-main.mts'
-import { runCapture, runInherit } from '../fleet/registry-infra/shared.mts'
+import { runMain } from '../fleet/process/main/run.mts'
+import type { ScriptMeta } from '../fleet/process/main/run.mts'
+import { runCapture, runInherit } from '../fleet/registry/shared.mts'
 import { RELEASE_ASSETS_DIR, REPO_ROOT } from './paths.mts'
 
 const logger = getDefaultLogger()

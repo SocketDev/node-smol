@@ -10,7 +10,7 @@ vi.mock(
   async original => ({ ...(await original()), spawnSync: mocks.spawn }),
 )
 vi.mock(
-  import('../../../../../scripts/fleet/gen/gitmodules-hash.mts'),
+  import('../../../../../scripts/fleet/gitmodules/hash.mts'),
   async original => ({ ...(await original()), resolveAll: mocks.resolve }),
 )
 
