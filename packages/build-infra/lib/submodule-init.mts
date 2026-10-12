@@ -9,7 +9,7 @@
  * This repo tracks NO gitlinks: upstream trees are untracked-by-default
  * (docs/agents.md/fleet/untracked-by-default.md) and restored from the
  * `.gitmodules` ref/branch/sparse metadata by
- * `scripts/fleet/git-partial-submodule.mts clone`. A raw
+ * `scripts/fleet/git/submodule/partial.mts clone`. A raw
  * `git submodule update --init` has no index entry to read and fails with
  * "pathspec did not match any file(s) known to git", so this helper must
  * always go through the fleet tool.
@@ -58,7 +58,11 @@ export async function ensureSubmodule({
     return
   }
 
-  const cloneCommand = `node scripts/fleet/git-partial-submodule.mts clone ${submodulePath}`
+  const cloneScript = path.join(
+    monorepoRoot,
+    'scripts/fleet/git/submodule/partial.mts',
+  )
+  const cloneCommand = `node ${cloneScript} clone ${submodulePath}`
   const gitDir = path.join(monorepoRoot, '.git')
   if (!existsSync(gitDir)) {
     throw new Error(
@@ -75,11 +79,7 @@ export async function ensureSubmodule({
   try {
     result = await spawn(
       process.execPath,
-      [
-        path.join(monorepoRoot, 'scripts/fleet/git-partial-submodule.mts'),
-        'clone',
-        submodulePath,
-      ],
+      [cloneScript, 'clone', submodulePath],
       { cwd: monorepoRoot, stdio: 'inherit' },
     )
   } catch (e) {
