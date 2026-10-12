@@ -9,7 +9,8 @@
  * node scripts/update-release-assets.mts [--tool=<tool>] [--force]
  *
  * Options: --tool=<name> Only sync specific tool (lief, curl, stubs, binpress,
- * binflate, binject) --force Force update even if checksums haven't changed
+ * binflate, binject, boringssl, node-smol, ink, iocraft, onnxruntime, models,
+ * yoga-layout, opentui) --force Force update even if checksums haven't changed
  * --dry-run Show what would be updated without writing.
  */
 
@@ -50,6 +51,7 @@ const TOOLS = [
   'binpress',
   'binflate',
   'binject',
+  'boringssl',
   'node-smol',
   'ink',
   'iocraft',

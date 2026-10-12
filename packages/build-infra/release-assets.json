@@ -161,5 +161,17 @@
       "yoga-sync-20260425-6aae187.mjs": "3fdab1db563b3af110758f57fd626fb91daf6d8859daddda3628c3286d5865ac",
       "yoga-sync-20260425-6aae187.cjs": "922f6a7f13e5dbd147ae1a5eb065f902537f124c29c4ba31eafc48d3ef2fdbc2"
     }
+  },
+  "boringssl": {
+    "description": "boringssl binaries",
+    "tag": "boringssl-20260601-5bf44e1",
+    "checksums": {
+      "boringssl-darwin-arm64.tar.gz": "43bb7d2a0dfdf149a77c94805b9c0f3d7167b2798ebd188cf6d3d9324ae2da0d",
+      "boringssl-darwin-x64.tar.gz": "8cfa8f18c1021fe44283715e084e90f6af17c9b53e85d5bc62d53d5236acfa7f",
+      "boringssl-linux-arm64.tar.gz": "e7224388a3786f6071e715db45c31c7838f2f075d7be7741aac93d4a290102e3",
+      "boringssl-linux-x64.tar.gz": "ab6c7cd79bdd60dfdb6908e830464761ded9295d24ebd121a429995c21ace199",
+      "boringssl-win32-arm64.tar.gz": "113010b42db3b9a8655efc854e44514252b72208090e7635c4cbd9a345cdf832",
+      "boringssl-win32-x64.tar.gz": "d8828fa003f0917e725bafdb972ef8b658c7efe41261ca233f15b7890e2ee3d7"
+    }
   }
 }

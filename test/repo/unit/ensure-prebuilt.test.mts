@@ -66,6 +66,26 @@ async function createApi() {
 }
 
 describe('prebuilt release checksum adapter', () => {
+  it('provides pinned checksums for published BoringSSL platforms', async () => {
+    const manifest = JSON.parse(
+      await readFile(RELEASE_ASSETS_MANIFEST_PATH, 'utf8'),
+    )
+    expect(manifest.boringssl.tag).toMatch(/^boringssl-\d{8}-[a-f0-9]+$/u)
+    const platforms = [
+      'darwin-arm64',
+      'darwin-x64',
+      'linux-arm64',
+      'linux-x64',
+      'win32-arm64',
+      'win32-x64',
+    ]
+    for (const platform of platforms) {
+      expect(
+        manifest.boringssl.checksums[`boringssl-${platform}.tar.gz`],
+      ).toMatch(/^[a-f0-9]{64}$/u)
+    }
+  })
+
   it('uses the member manifest and accepts a valid archive', async () => {
     checksum.mockResolvedValue({
       valid: true,

@@ -123,7 +123,7 @@ catalog:
   '@vitest/ui': 5.0.3
   'sharp': 0.35.5
   c8: 12.0.0
-  experimental-fast-webstreams: 0.0.19
+  experimental-fast-webstreams: https://codeload.github.com/vercel-labs/fast-webstreams/tar.gz/3d901b4279b1a3e7a60d3ae69a0426380d5bc5ce # v0.0.19
   onnxruntime-node: 1.20.1
   snappy: 7.3.3
 

@@ -246,8 +246,8 @@ catalogs:
       specifier: 0.18.1
       version: 0.18.1
     experimental-fast-webstreams:
-      specifier: 0.0.19
-      version: 0.0.19
+      specifier: https://codeload.github.com/vercel-labs/fast-webstreams/tar.gz/3d901b4279b1a3e7a60d3ae69a0426380d5bc5ce
+      version: https://codeload.github.com/vercel-labs/fast-webstreams/tar.gz/3d901b4279b1a3e7a60d3ae69a0426380d5bc5ce
     fallow:
       specifier: 3.31.0
       version: 3.31.0
@@ -4480,7 +4480,7 @@ importers:
         version: 8.3.5
       experimental-fast-webstreams:
         specifier: 'catalog:'
-        version: 0.0.19
+        version: https://codeload.github.com/vercel-labs/fast-webstreams/tar.gz/3d901b4279b1a3e7a60d3ae69a0426380d5bc5ce
       octokit:
         specifier: 'catalog:'
         version: 5.0.5
@@ -6209,8 +6209,9 @@ packages:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
     engines: {node: '>=12.0.0'}
 
-  experimental-fast-webstreams@0.0.19:
-    resolution: {integrity: sha512-eusjWLdD8q1zNEQL4YC70sqwf0E30sheZ0ztUV7MtqJC0LurT09DNi50QFL2kwphI5JlYY0DeHBbtX5PcWYxIA==}
+  experimental-fast-webstreams@https://codeload.github.com/vercel-labs/fast-webstreams/tar.gz/3d901b4279b1a3e7a60d3ae69a0426380d5bc5ce:
+    resolution: {gitHosted: true, integrity: sha512-Tx7ULxFGU6Q9zFA0iU405vJhFJs47dp6bJx6Na6SVll0vb7Zw4w6/pt0wMOypm2ZtDmwcsDx9e1hqOx3d3QT+w==, tarball: https://codeload.github.com/vercel-labs/fast-webstreams/tar.gz/3d901b4279b1a3e7a60d3ae69a0426380d5bc5ce}
+    version: 0.0.19
     engines: {node: '>=20'}
 
   express-rate-limit@8.7.0:
@@ -8830,7 +8831,7 @@ snapshots:
 
   expect-type@1.4.0: {}
 
-  experimental-fast-webstreams@0.0.19: {}
+  experimental-fast-webstreams@https://codeload.github.com/vercel-labs/fast-webstreams/tar.gz/3d901b4279b1a3e7a60d3ae69a0426380d5bc5ce: {}
 
   express-rate-limit@8.7.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0):
     dependencies:
