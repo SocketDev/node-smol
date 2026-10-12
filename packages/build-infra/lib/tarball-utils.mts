@@ -7,9 +7,8 @@
 
 import path from 'node:path'
 
-import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
 import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
-import { toUnixPath } from '@socketsecurity/lib-stable/paths/normalize'
+import { normalizePath } from '@socketsecurity/lib-stable/paths/normalize'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
 import {
@@ -17,7 +16,6 @@ import {
   tarSupportsOverwrite,
 } from './platform-mappings.mts'
 import { whichRequired } from './which-required.mts'
-import { normalizePath } from '@socketsecurity/lib-stable/paths/normalize'
 
 /**
  * Securely extract a tarball to a directory. Archive paths are validated
@@ -80,11 +78,11 @@ export async function extractTarball(
   }
 
   const tarBin = await whichRequired('tar')
-  const unixTarballPath = isWin32() ? toUnixPath(tarballPath) : tarballPath
-  const unixExtractDir = isWin32() ? toUnixPath(extractDir) : extractDir
+  const normalizedTarballPath = normalizePath(tarballPath)
+  const normalizedExtractDir = normalizePath(extractDir)
 
   // Build extraction arguments.
-  const tarArgs = ['-xzf', unixTarballPath, '-C', unixExtractDir]
+  const tarArgs = ['-xzf', normalizedTarballPath, '-C', normalizedExtractDir]
 
   // Strip leading path components if requested.
   if (stripComponents > 0) {
@@ -116,10 +114,10 @@ export async function validateTarballPaths(
   tarballPath: string,
 ): Promise<string[]> {
   const tarBin = await whichRequired('tar')
-  const unixTarballPath = isWin32() ? toUnixPath(tarballPath) : tarballPath
+  const normalizedTarballPath = normalizePath(tarballPath)
 
   // List tarball contents.
-  const listResult = await spawn(tarBin, ['-tzf', unixTarballPath], {
+  const listResult = await spawn(tarBin, ['-tzf', normalizedTarballPath], {
     stdio: 'pipe',
   })
 
