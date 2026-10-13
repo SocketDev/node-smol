@@ -45,5 +45,5 @@ pnpm run check
 pnpm run test
 ```
 
-See [native development](native-development.md) for code layout and
-validation boundaries.
+The full platform binary lane and native checks remain prerequisites before
+release assets can be assembled.
