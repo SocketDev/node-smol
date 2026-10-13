@@ -30,6 +30,7 @@ export type {
 const logger = getDefaultLogger()
 
 const PATCH_NOT_FOUND_MSG = 'patch not found in PATH'
+const PATCH_DIAGNOSTIC_LIMIT = 2000
 
 /**
  * The subset of a spawn result / spawn error the patch runners inspect.
@@ -82,7 +83,11 @@ export async function applyPatch(
 
   const exitCode = result.code ?? 0
   if (exitCode !== 0) {
-    throw new Error(`Failed to apply patch: ${patchFile}`)
+    throw new Error(
+      `Failed to apply patch: ${patchFile} (exit ${exitCode})` +
+        formatPatchDiagnostic('stderr', result.stderr) +
+        formatPatchDiagnostic('stdout', result.stdout),
+    )
   }
 }
 
@@ -192,6 +197,21 @@ export async function createPatchFromGit(
   await fs.writeFile(outputFile, stdout, 'utf8')
 
   logger.info(`Created patch: ${path.basename(outputFile)}`)
+}
+
+export function formatPatchDiagnostic(
+  label: 'stderr' | 'stdout',
+  output: string | Buffer | undefined,
+): string {
+  if (!output) {
+    return ''
+  }
+  const text = String(output)
+  const excerpt =
+    text.length > PATCH_DIAGNOSTIC_LIMIT
+      ? `${text.slice(-PATCH_DIAGNOSTIC_LIMIT)}\n[${text.length - PATCH_DIAGNOSTIC_LIMIT} characters omitted]`
+      : text
+  return `\n${label}: ${excerpt}`
 }
 
 /**
