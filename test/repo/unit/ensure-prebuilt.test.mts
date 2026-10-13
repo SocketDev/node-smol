@@ -1,17 +1,24 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { downloadSocketBtmRelease } from '@socketsecurity/lib-stable/releases/socket-btm'
 import { createPrebuiltApi } from '../../../packages/build-infra/lib/ensure-prebuilt.mts'
 import { RELEASE_ASSETS_MANIFEST_PATH } from '../../../packages/build-infra/lib/paths.mts'
 
-const checksum = vi.hoisted(() => vi.fn())
+const { checksum, embeddedChecksum } = vi.hoisted(() => ({
+  checksum: vi.fn(),
+  embeddedChecksum: vi.fn<() => { checksum: string; tag: string } | undefined>(
+    () => ({ checksum: 'sha256-expected', tag: 'fixture-builder-pinned' }),
+  ),
+}))
 
 vi.mock(
   '../../../scripts/fleet/build/infra/lib/release-checksums/core.mts',
   () => ({
+    getEmbeddedChecksum: embeddedChecksum,
     verifyReleaseChecksum: checksum,
   }),
 )
@@ -22,10 +29,17 @@ vi.mock('@socketsecurity/lib-stable/releases/socket-btm', async () => {
   return {
     detectLibc: vi.fn(),
     downloadSocketBtmRelease: vi.fn(
-      async (name: string, options: { asset: string; downloadDir: string }) => {
+      async (
+        name: string,
+        options: { asset: string; downloadDir: string; tag: string },
+      ) => {
+        void name
         const archive = path.join(options.downloadDir, options.asset)
         await fs.writeFile(archive, Buffer.from([0x1f, 0x8b]))
-        await fs.writeFile(path.join(options.downloadDir, '.version'), name)
+        await fs.writeFile(
+          path.join(options.downloadDir, '.version'),
+          options.tag,
+        )
         return archive
       },
     ),
@@ -50,16 +64,20 @@ afterEach(async () => {
     tempDirs.splice(0).map(dir => rm(dir, { recursive: true, force: true })),
   )
   vi.clearAllMocks()
+  embeddedChecksum.mockReturnValue({
+    checksum: 'sha256-expected',
+    tag: 'fixture-builder-pinned',
+  })
 })
 
-async function createApi() {
+async function createApi(platformArch = 'darwin-arm64') {
   const packageRoot = await mkdtemp(path.join(os.tmpdir(), 'ensure-prebuilt-'))
   tempDirs.push(packageRoot)
   return createPrebuiltApi({
     name: 'fixture-builder',
     packageRoot,
     requiredFiles: ['artifact.bin'],
-    getCurrentPlatformArch: () => 'darwin-arm64',
+    getCurrentPlatformArch: () => platformArch,
     getLocalBuildDir: platformArch =>
       path.join(packageRoot, 'build', platformArch),
   })
@@ -105,6 +123,114 @@ describe('prebuilt release checksum adapter', () => {
       assetName: 'fixture-builder-darwin-arm64.tar.gz',
       tool: 'fixture-builder',
     })
+    expect(embeddedChecksum).toHaveBeenCalledWith(
+      'fixture-builder',
+      'fixture-builder-darwin-arm64.tar.gz',
+      { manifestPath: RELEASE_ASSETS_MANIFEST_PATH },
+    )
+    expect(downloadSocketBtmRelease).toHaveBeenCalledWith('fixture-builder', {
+      asset: 'fixture-builder-darwin-arm64.tar.gz',
+      downloadDir: api.getDownloadedDir('darwin-arm64'),
+      tag: 'fixture-builder-pinned',
+    })
+  })
+
+  it('does not download when the manifest has no checksum entry', async () => {
+    embeddedChecksum.mockReturnValue(undefined)
+    const api = await createApi()
+
+    await expect(
+      api.downloadPrebuilt({ platformArch: 'darwin-arm64' }),
+    ).resolves.toBeUndefined()
+    expect(downloadSocketBtmRelease).not.toHaveBeenCalled()
+  })
+
+  it('does not download when the manifest has no release tag', async () => {
+    embeddedChecksum.mockReturnValue({ checksum: 'sha256-expected', tag: '  ' })
+    const api = await createApi()
+
+    await expect(api.ensure()).rejects.toThrow(/Failed to ensure/u)
+    expect(downloadSocketBtmRelease).not.toHaveBeenCalled()
+  })
+
+  it('does not download an unsupported musl asset', async () => {
+    embeddedChecksum.mockReturnValue(undefined)
+    const api = await createApi('linux-x64-musl')
+
+    await expect(api.ensure()).rejects.toThrow(/Failed to ensure/u)
+    expect(downloadSocketBtmRelease).not.toHaveBeenCalled()
+  })
+
+  it.each(['stale', 'missing'])(
+    'revalidates existing extracted files with a %s .version marker',
+    async versionState => {
+      checksum.mockResolvedValue({
+        valid: true,
+        expected: 'sha256-expected',
+        actual: 'sha256-actual',
+      })
+      const api = await createApi()
+      const staleDir = api.getDownloadedDir('darwin-arm64')
+      await mkdir(staleDir, { recursive: true })
+      await writeFile(path.join(staleDir, 'artifact.bin'), 'stale')
+      if (versionState === 'stale') {
+        await writeFile(path.join(staleDir, '.version'), 'old-release')
+      }
+
+      await expect(api.ensure()).resolves.toBe(staleDir)
+      expect(downloadSocketBtmRelease).toHaveBeenCalledTimes(1)
+      expect(checksum).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('retries the pinned download instead of accepting a stale extracted artifact', async () => {
+    const downloadMock = vi.mocked(downloadSocketBtmRelease)
+    const originalDownload = downloadMock.getMockImplementation()
+    downloadMock
+      .mockRejectedValueOnce(new Error('first download failed'))
+      .mockRejectedValueOnce(new Error('second download failed'))
+    const api = await createApi()
+    const staleDir = api.getDownloadedDir('darwin-arm64')
+    await mkdir(staleDir, { recursive: true })
+    await writeFile(path.join(staleDir, 'artifact.bin'), 'stale')
+    await writeFile(path.join(staleDir, '.version'), 'old-release')
+
+    try {
+      await expect(api.ensure()).rejects.toThrow(/Failed to ensure/u)
+      await expect(api.ensure()).rejects.toThrow(/Failed to ensure/u)
+      expect(downloadMock).toHaveBeenCalledTimes(2)
+    } finally {
+      if (originalDownload) {
+        downloadMock.mockImplementation(originalDownload)
+      }
+    }
+  })
+
+  it('removes a corrupt downloaded archive', async () => {
+    vi.mocked(downloadSocketBtmRelease).mockImplementationOnce(
+      async (name, options) => {
+        void name
+        const archive = path.join(options.downloadDir, options.asset)
+        await writeFile(archive, 'corrupt')
+        await writeFile(path.join(options.downloadDir, '.version'), options.tag)
+        return archive
+      },
+    )
+    const api = await createApi()
+    const staleDir = api.getDownloadedDir('darwin-arm64')
+    await mkdir(staleDir, { recursive: true })
+    await writeFile(path.join(staleDir, 'artifact.bin'), 'stale')
+
+    await expect(api.ensure()).rejects.toThrow(/Failed to ensure/u)
+    expect(checksum).not.toHaveBeenCalled()
+    await expect(
+      readFile(
+        path.join(
+          api.getDownloadedDir('darwin-arm64'),
+          'fixture-builder-darwin-arm64.tar.gz',
+        ),
+      ),
+    ).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
   it('rejects invalid checksums and removes the downloaded archive state', async () => {

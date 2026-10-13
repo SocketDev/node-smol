@@ -5,11 +5,11 @@
  * yoga-layout, codet5-models, minilm) exposes the same
  * shape of public API:
  *
- * EnsureX(options?)        — local-build → downloaded → fetch-prebuilt
+ * EnsureX(options?)        — local-build → pinned prebuilt download
  * existsAt(dir)            — required-files validation
  * verifyAt(dir)            — same, with the missing-files list
  * getDownloadedDir(arch)   — where downloads land
- * downloadPrebuiltX(opts?) — pulls the latest gh release tarball.
+ * downloadPrebuiltX(opts?) — pulls the manifest-pinned release tarball.
  *
  * Without this factory each builder reimplements ~200 LOC of
  * download/verify/extract logic. The factory centralizes the
@@ -32,7 +32,10 @@ import { errorMessage } from './error-utils.mts'
 // the actual error-handling path, where a failure to load it
 // degrades gracefully (the transient-error hint is omitted).
 import { getDownloadedDir, RELEASE_ASSETS_MANIFEST_PATH } from './paths.mts'
-import { verifyReleaseChecksum } from '../../../scripts/fleet/build/infra/lib/release-checksums/core.mts'
+import {
+  getEmbeddedChecksum,
+  verifyReleaseChecksum,
+} from '../../../scripts/fleet/build/infra/lib/release-checksums/core.mts'
 import {
   detectLibc,
   downloadSocketBtmRelease,
@@ -73,7 +76,7 @@ export interface PrebuiltConfig {
   /**
    * Resolve the local build directory for a given platform-arch.
    * This is the "if the user already built locally" path checked
-   * before falling through to the download cache. Returns the
+   * before trying the pinned prebuilt release download. Returns the
    * directory that should contain `requiredFiles`.
    */
   getLocalBuildDir: (platformArch: string) => string
@@ -109,7 +112,7 @@ export interface PrebuiltApi {
    */
   getDownloadedDir: (platformArch: string) => string
   /**
-   * Fetch the latest published release tarball for the given platform.
+   * Fetch the manifest-pinned release tarball for the given platform.
    * Returns the extract directory on success, `undefined` on failure
    * (network error, checksum mismatch, missing release, onExtracted
    * rejection). Callers fall through to a from-source build.
@@ -302,11 +305,20 @@ export function createPrebuiltApi(config: PrebuiltConfig): PrebuiltApi {
 
     try {
       logger.info(`Checking for prebuilt ${name} releases…`)
+      const pinnedRelease = getEmbeddedChecksum(name, assetName, {
+        manifestPath: RELEASE_ASSETS_MANIFEST_PATH,
+      })
+      if (!pinnedRelease?.checksum || !pinnedRelease.tag.trim()) {
+        throw new Error(
+          `No pinned checksum and release tag found for ${name} asset ${assetName}.`,
+        )
+      }
       await safeMkdir(targetDir)
       logger.info(`Downloading ${assetName}...`)
       const downloadedArchive = await downloadSocketBtmRelease(name, {
         asset: assetName,
         downloadDir: targetDir,
+        tag: pinnedRelease.tag,
       })
       const extractDir = path.dirname(downloadedArchive)
       if (!existsSync(downloadedArchive)) {
@@ -371,14 +383,8 @@ export function createPrebuiltApi(config: PrebuiltConfig): PrebuiltApi {
       return localDir
     }
 
-    // 2. Already-downloaded version.
-    const downloadedDir = getDownloadedDirForArch(resolvedPlatformArch)
-    if (!force && existsAt(downloadedDir)) {
-      logger.info(`Using downloaded ${name} at ${downloadedDir}`)
-      return downloadedDir
-    }
-
-    // 3. Fetch prebuilt from gh releases.
+    // 2. Fetch the manifest-pinned prebuilt. The downloader reuses an archive
+    // only when its .version matches the pinned release tag.
     logger.info(`${name} not found locally, downloading prebuilt…`)
     const extracted = await downloadPrebuilt({
       platformArch: resolvedPlatformArch,
