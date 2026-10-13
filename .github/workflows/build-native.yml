@@ -41,7 +41,7 @@ jobs:
         with:
           client-id: ${{ secrets.SOCKET_RELEASE_CLIENT_ID || vars.SOCKET_RELEASE_CLIENT_ID }}
           private-key: ${{ secrets.SOCKET_RELEASE_APP_PRIVATE_KEY }}
-          repositories: stuie
+          repositories: stuie,sockeye
       - name: Hydrate pinned sources
         shell: bash
         env:

@@ -271,3 +271,12 @@
 	# Reference-only checkout: parser_uv.cc lock-step audits read this cone;
 	# no build step consumes it.
 	verify = none
+# sockeye-keystore-snapshot (2026-09-18) sha256:59fa23636c46a13177a7efc15137f4644c39dde67a02a33b55f33c94a2048711
+# no-release-tag: repo publishes no release tags
+[submodule "upstream/sockeye"]
+	ref = c187ad8db1c3346b25fbe8f0b082f6b629fd56bc
+	path = upstream/sockeye
+	url = https://github.com/SocketDev/sockeye.git
+	ignore = dirty
+	shallow = true
+	sparse-checkout = packages/keystore-infra/src/socketsecurity/keystore-infra/

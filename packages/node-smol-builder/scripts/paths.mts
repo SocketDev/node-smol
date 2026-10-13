@@ -418,8 +418,10 @@ export const TEMPORAL_INFRA_DIR = path.join(
 export const TUI_INFRA_DIR = path.join(PACKAGE_ROOT, '..', 'tui-infra')
 export const LSQUIC_INFRA_DIR = path.join(PACKAGE_ROOT, '..', 'lsquic-infra')
 export const KEYSTORE_INFRA_DIR = path.join(
-  PACKAGE_ROOT,
-  '..',
+  MONOREPO_ROOT,
+  'upstream',
+  'sockeye',
+  'packages',
   'keystore-infra',
 )
 export const LANGUAGE_MODEL_INFRA_DIR = path.join(
