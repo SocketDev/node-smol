@@ -30,16 +30,12 @@ export type {
 const logger = getDefaultLogger()
 
 const PATCH_NOT_FOUND_MSG = 'patch not found in PATH'
+const PATCH_WINDOWS_NOT_FOUND_MSG =
+  'No supported GNU patch (version 2.7 or newer) found in PATH. ' +
+  'Install GNU patch 2.7 or newer and ensure it is available in PATH.'
 const PATCH_DIAGNOSTIC_LIMIT = 2000
-
-/**
- * The subset of a spawn result / spawn error the patch runners inspect.
- */
-export interface PatchSpawnOutcome {
-  code?: number | undefined
-  stderr?: string | Buffer | undefined
-  stdout?: string | Buffer | undefined
-}
+const PATCH_VERSION_PROBE_TIMEOUT = 5000
+const PATCH_VERSION_PROBE_MAX_BUFFER = 64 * 1024
 
 /**
  * Apply a patch file.
@@ -55,10 +51,7 @@ export async function applyPatch(
 ): Promise<void> {
   logger.info(`Applying ${path.basename(patchFile)}`)
 
-  const patchPath = await which('patch', { nothrow: true })
-  if (typeof patchPath !== 'string') {
-    throw new Error(PATCH_NOT_FOUND_MSG)
-  }
+  const patchPath = await resolvePatchExecutable()
 
   // Resolve to absolute path since we're changing cwd
   const absolutePatchFile = path.resolve(patchFile)
@@ -199,6 +192,32 @@ export async function createPatchFromGit(
   logger.info(`Created patch: ${path.basename(outputFile)}`)
 }
 
+/**
+ * The subset of a spawn result / spawn error the patch runners inspect.
+ */
+export interface PatchSpawnOutcome {
+  code?: number | undefined
+  stderr?: string | Buffer | undefined
+  stdout?: string | Buffer | undefined
+}
+
+export interface PatchExecutableResolverDependencies {
+  platform?: NodeJS.Platform | undefined
+  locate?: typeof which | undefined
+  probe?: typeof spawn | undefined
+}
+
+export async function findWindowsPatchCandidates(
+  locate: typeof which,
+): Promise<string[]> {
+  try {
+    const candidates = await locate('patch', { all: true, nothrow: true })
+    return Array.isArray(candidates) ? candidates : []
+  } catch {
+    return []
+  }
+}
+
 export function formatPatchDiagnostic(
   label: 'stderr' | 'stdout',
   output: string | Buffer | undefined,
@@ -212,6 +231,69 @@ export function formatPatchDiagnostic(
       ? `${text.slice(-PATCH_DIAGNOSTIC_LIMIT)}\n[${text.length - PATCH_DIAGNOSTIC_LIMIT} characters omitted]`
       : text
   return `\n${label}: ${excerpt}`
+}
+
+export function isSupportedGnuPatchVersion(versionOutput: string): boolean {
+  // The version line has a GNU patch label, major, minor, and optional patch.
+  const versionMatch = /\bGNU patch\s+(\d+)\.(\d+)(?:\.(\d+))?/i.exec(
+    versionOutput,
+  )
+  if (!versionMatch) {
+    return false
+  }
+  const majorVersion = Number(versionMatch[1])
+  const minorVersion = Number(versionMatch[2])
+  return majorVersion > 2 || (majorVersion === 2 && minorVersion >= 7)
+}
+
+export async function isSupportedPatchCandidate(
+  candidate: string,
+  probe: typeof spawn,
+): Promise<boolean> {
+  if (!path.win32.isAbsolute(candidate)) {
+    return false
+  }
+  try {
+    const result = await probe(candidate, ['--version'], {
+      encoding: 'utf8',
+      maxBuffer: PATCH_VERSION_PROBE_MAX_BUFFER,
+      timeout: PATCH_VERSION_PROBE_TIMEOUT,
+    })
+    if (result.code !== 0) {
+      return false
+    }
+    const versionOutput = `${String(result.stdout ?? '')}\n${String(result.stderr ?? '')}`
+    return isSupportedGnuPatchVersion(versionOutput)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Resolve patch from PATH, selecting a supported GNU patch on Windows.
+ */
+export async function resolvePatchExecutable(
+  dependencies: PatchExecutableResolverDependencies = {},
+): Promise<string> {
+  const platform = dependencies.platform ?? process.platform
+  const locate = dependencies.locate ?? which
+  if (platform !== 'win32') {
+    const patchPath = await locate('patch', { nothrow: true })
+    if (typeof patchPath !== 'string') {
+      throw new Error(PATCH_NOT_FOUND_MSG)
+    }
+    return patchPath
+  }
+
+  const probe = dependencies.probe ?? spawn
+  const candidates = await findWindowsPatchCandidates(locate)
+  for (const candidate of candidates) {
+    if (await isSupportedPatchCandidate(candidate, probe)) {
+      return candidate
+    }
+  }
+
+  throw new Error(PATCH_WINDOWS_NOT_FOUND_MSG)
 }
 
 /**
@@ -228,10 +310,7 @@ export async function revertPatch(
 ): Promise<void> {
   logger.info(`Reverting ${path.basename(patchFile)}`)
 
-  const patchPath = await which('patch', { nothrow: true })
-  if (typeof patchPath !== 'string') {
-    throw new Error(PATCH_NOT_FOUND_MSG)
-  }
+  const patchPath = await resolvePatchExecutable()
 
   // Resolve to absolute path since we're changing cwd
   const absolutePatchFile = path.resolve(patchFile)
@@ -273,10 +352,7 @@ export async function testPatchApplication(
   targetDir: string,
 ): Promise<boolean> {
   try {
-    const patchPath = await which('patch', { nothrow: true })
-    if (typeof patchPath !== 'string') {
-      return false
-    }
+    const patchPath = await resolvePatchExecutable()
 
     // Resolve to absolute path
     const absolutePatchFile = path.resolve(patchFile)
@@ -319,11 +395,7 @@ export async function validatePatch(
   targetDir: string,
 ): Promise<boolean> {
   try {
-    const patchPath = await which('patch', { nothrow: true })
-    if (typeof patchPath !== 'string') {
-      printError(PATCH_NOT_FOUND_MSG)
-      return false
-    }
+    const patchPath = await resolvePatchExecutable()
 
     // Resolve to absolute path
     const absolutePatchFile = path.resolve(patchFile)

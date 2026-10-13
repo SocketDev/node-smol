@@ -22,6 +22,7 @@ const VENDORED_GYPI_BUNDLES: ReadonlyArray<{
   readonly walkRoot: string
   // gypi output path, relative to additions/source-patched/.
   readonly gypiOut: string
+  readonly required?: boolean | undefined
   // Each extension is matched against file suffix. .c + .cpp = sources;
   // .h headers aren't compile units so they're excluded.
   readonly extensions: readonly string[]
@@ -100,6 +101,7 @@ const VENDORED_GYPI_BUNDLES: ReadonlyArray<{
     name: 'lshpack',
     walkRoot: 'deps/lsquic/src/lshpack',
     gypiOut: 'deps/lshpack.gypi',
+    required: true,
     extensions: ['.c'],
     skipSubstrings: ['/test/', '/tests/', '/bin/', '/lshpack/deps/'],
     defines: ['XXH_INLINE_ALL', 'XXH_HEADER_NAME="xxhash.h"'],
@@ -175,15 +177,19 @@ async function walkSources(
  * `'includes':`. Filesystem walk → emit decouples the source list from
  * the patch, so a new upstream file appears in the build automatically.
  */
-export async function generateVendoredGypi(): Promise<void> {
+export async function generateVendoredGypi(
+  sourceRoot = ADDITIONS_SOURCE_PATCHED_DIR,
+): Promise<void> {
   logger.step('Generating vendored-dep gypi manifests')
   for (let i = 0, { length } = VENDORED_GYPI_BUNDLES; i < length; i += 1) {
     const bundle = VENDORED_GYPI_BUNDLES[i]!
-    const absoluteWalkRoot = path.join(
-      ADDITIONS_SOURCE_PATCHED_DIR,
-      bundle.walkRoot,
-    )
+    const absoluteWalkRoot = path.join(sourceRoot, bundle.walkRoot)
     if (!existsSync(absoluteWalkRoot)) {
+      if (bundle.required) {
+        throw new Error(
+          `Required vendored source is missing: ${bundle.walkRoot}. Expected lshpack sources. Run git -C packages/lsquic-infra/upstream/lsquic submodule update --init --depth 1 -- src/lshpack, then rerun source preparation.`,
+        )
+      }
       logger.substep(
         `${bundle.name}: walk root absent (${bundle.walkRoot}); skipping`,
       )
@@ -196,6 +202,11 @@ export async function generateVendoredGypi(): Promise<void> {
       bundle.skipBasenames,
     )
     if (sources.length === 0) {
+      if (bundle.required) {
+        throw new Error(
+          `Required vendored source is empty: ${bundle.walkRoot}. Expected lshpack.c. Run git -C packages/lsquic-infra/upstream/lsquic submodule update --init --depth 1 -- src/lshpack, then rerun source preparation.`,
+        )
+      }
       logger.substep(
         `${bundle.name}: no sources found under ${bundle.walkRoot}`,
       )
@@ -207,9 +218,7 @@ export async function generateVendoredGypi(): Promise<void> {
     // paths must be relative to <source>/deps/, not <source>/. Strip
     // the gypi's parent dir from the source path. Emit forward-slash
     // paths; gyp normalizes per-host.
-    const gypiParent = path.dirname(
-      path.join(ADDITIONS_SOURCE_PATCHED_DIR, bundle.gypiOut),
-    )
+    const gypiParent = path.dirname(path.join(sourceRoot, bundle.gypiOut))
     const relSources = sources.map(s =>
       path.relative(gypiParent, s).split(path.sep).join('/'),
     )
@@ -240,7 +249,7 @@ export async function generateVendoredGypi(): Promise<void> {
       lines.push('  ],')
     }
     lines.push('}')
-    const outPath = path.join(ADDITIONS_SOURCE_PATCHED_DIR, bundle.gypiOut)
+    const outPath = path.join(sourceRoot, bundle.gypiOut)
     await fs.mkdir(path.dirname(outPath), { recursive: true })
     await fs.writeFile(outPath, lines.join('\n') + '\n', 'utf8')
     logger.substep(

@@ -54,6 +54,15 @@ jobs:
           export GIT_CONFIG_KEY_0=http.https://github.com/SocketDev/.extraheader
           export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${AUTH_B64}"
           pnpm run upstream:hydrate
+      - name: Hydrate lsquic hpack source
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          git -C packages/lsquic-infra/upstream/lsquic submodule update --init --depth 1 -- src/lshpack
+          test -f packages/lsquic-infra/upstream/lsquic/src/lshpack/lshpack.c
+          test -f packages/lsquic-infra/upstream/lsquic/src/lshpack/lshpack.h
+          test -f packages/lsquic-infra/upstream/lsquic/src/lshpack/deps/xxhash/xxhash.h
       - name: Install Linux keychain build dependencies
         if: runner.os == 'Linux'
         shell: bash
@@ -64,6 +73,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends libsecret-1-dev pkg-config
           pkg-config --cflags --libs libsecret-1
       - name: Build native runtime
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: pnpm run build:repo --target binary
