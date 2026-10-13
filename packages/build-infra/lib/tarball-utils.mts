@@ -11,10 +11,8 @@ import { safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
 import { normalizePath } from '@socketsecurity/lib-stable/paths/normalize'
 import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
 
-import {
-  tarSupportsNoAbsoluteNames,
-  tarSupportsOverwrite,
-} from './platform-mappings.mts'
+import { getTarCapabilities } from './platform-mappings.mts'
+import type { TarCapabilities } from './platform-mappings.mts'
 import { whichRequired } from './which-required.mts'
 
 /**
@@ -42,13 +40,25 @@ export interface ExtractTarballOptions {
 
 export async function appendSupportedTarOptions(
   tarArgs: string[],
-  options: { overwrite?: boolean | undefined } = {},
+  options: {
+    capabilities?: TarCapabilities | undefined
+    overwrite?: boolean | undefined
+    tarBin?: string | undefined
+  } = {},
 ): Promise<void> {
-  const { overwrite = false } = { __proto__: null, ...options }
-  if (await tarSupportsNoAbsoluteNames()) {
+  const {
+    capabilities,
+    overwrite = false,
+    tarBin = 'tar',
+  } = {
+    __proto__: null,
+    ...options,
+  }
+  const tarCapabilities = capabilities ?? (await getTarCapabilities(tarBin))
+  if (tarCapabilities.noAbsoluteNames) {
     tarArgs.push('--no-absolute-names')
   }
-  if (overwrite && (await tarSupportsOverwrite())) {
+  if (overwrite && tarCapabilities.overwrite) {
     tarArgs.push('--overwrite')
   }
 }
@@ -73,23 +83,37 @@ export async function extractTarball(
 
   // Validate tarball paths before extraction.
   let files: string[] = []
+  const tarBin = await whichRequired('tar')
+  const tarCapabilities = await getTarCapabilities(tarBin)
   if (validate) {
-    files = await validateTarballPaths(tarballPath)
+    files = await validateTarballPathsWithTar(
+      tarballPath,
+      tarBin,
+      tarCapabilities,
+    )
   }
 
-  const tarBin = await whichRequired('tar')
   const normalizedTarballPath = normalizePath(tarballPath)
   const normalizedExtractDir = normalizePath(extractDir)
 
   // Build extraction arguments.
-  const tarArgs = ['-xzf', normalizedTarballPath, '-C', normalizedExtractDir]
+  const tarArgs = [
+    ...(tarCapabilities.forceLocal ? ['--force-local'] : []),
+    '-xzf',
+    normalizedTarballPath,
+    '-C',
+    normalizedExtractDir,
+  ]
 
   // Strip leading path components if requested.
   if (stripComponents > 0) {
     tarArgs.push(`--strip-components=${stripComponents}`)
   }
 
-  await appendSupportedTarOptions(tarArgs, { overwrite })
+  await appendSupportedTarOptions(tarArgs, {
+    capabilities: tarCapabilities,
+    overwrite,
+  })
 
   // Extract.
   const result = await spawn(tarBin, tarArgs, { stdio })
@@ -114,12 +138,27 @@ export async function validateTarballPaths(
   tarballPath: string,
 ): Promise<string[]> {
   const tarBin = await whichRequired('tar')
+  const tarCapabilities = await getTarCapabilities(tarBin)
+  return validateTarballPathsWithTar(tarballPath, tarBin, tarCapabilities)
+}
+
+export async function validateTarballPathsWithTar(
+  tarballPath: string,
+  tarBin: string,
+  capabilities: TarCapabilities,
+): Promise<string[]> {
   const normalizedTarballPath = normalizePath(tarballPath)
 
   // List tarball contents.
-  const listResult = await spawn(tarBin, ['-tzf', normalizedTarballPath], {
-    stdio: 'pipe',
-  })
+  const listArgs = [
+    ...(capabilities.forceLocal ? ['--force-local'] : []),
+    '-tzf',
+    normalizedTarballPath,
+  ]
+  const listResult = await spawn(tarBin, listArgs, { stdio: 'pipe' })
+  if (listResult.code !== 0) {
+    throw new Error(`tar listing failed with exit code ${listResult.code}`)
+  }
 
   const files = (listResult.stdout || '')
     .split(/\r?\n/)

@@ -316,19 +316,41 @@ export function getRequestedGlibcFloor(): string | undefined {
   )
 }
 
-/**
- * Check if tar supports --no-absolute-names (GNU tar has it, busybox tar
- * doesn't).
- *
- * @returns {Promise<boolean>} True if tar supports --no-absolute-names.
- */
-export async function tarSupportsNoAbsoluteNames(): Promise<boolean> {
+export interface TarCapabilities {
+  forceLocal: boolean
+  noAbsoluteNames: boolean
+  overwrite: boolean
+}
+
+export async function getTarCapabilities(
+  tarBin: string,
+): Promise<TarCapabilities> {
   try {
-    const result = await spawn('tar', ['--help'], { stdio: 'pipe' })
-    return (result.stdout || '').includes('--no-absolute-names')
+    const result = await spawn(tarBin, ['--help'], {
+      killSignal: 'SIGKILL',
+      maxBuffer: 64 * 1024,
+      stdio: 'pipe',
+      timeout: 5000,
+    })
+    const help = result.code === 0 ? result.stdout || '' : ''
+    return {
+      forceLocal: help.includes('--force-local'),
+      noAbsoluteNames: help.includes('--no-absolute-names'),
+      // BSD help may mention overwrite in prose; only a flag line enables it.
+      overwrite: /^\s*--overwrite\b/m.test(help),
+    }
   } catch {
-    return false
+    return { forceLocal: false, noAbsoluteNames: false, overwrite: false }
   }
+}
+
+/**
+ * Check whether tar supports --no-absolute-names.
+ */
+export async function tarSupportsNoAbsoluteNames(
+  tarBin = 'tar',
+): Promise<boolean> {
+  return (await getTarCapabilities(tarBin)).noAbsoluteNames
 }
 
 /**
@@ -336,18 +358,6 @@ export async function tarSupportsNoAbsoluteNames(): Promise<boolean> {
  *
  * @returns {Promise<boolean>} True if tar supports --overwrite.
  */
-export async function tarSupportsOverwrite(): Promise<boolean> {
-  // BSD tar on macOS doesn't support --overwrite.
-  // Quick platform check to avoid spawning tar unnecessarily.
-  if (process.platform === 'darwin') {
-    return false
-  }
-  try {
-    const result = await spawn('tar', ['--help'], { stdio: 'pipe' })
-    // Look for the actual --overwrite flag, not just the word "overwrite"
-    // (BSD tar mentions "overwrite" in the -k flag description but doesn't support --overwrite)
-    return /^\s*--overwrite\b/m.test(result.stdout || '')
-  } catch {
-    return false
-  }
+export async function tarSupportsOverwrite(tarBin = 'tar'): Promise<boolean> {
+  return (await getTarCapabilities(tarBin)).overwrite
 }
