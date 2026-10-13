@@ -35,6 +35,13 @@ Release assembly lives in `scripts/repo/release.mts` (dry-run by default;
 
 ## Usage
 
+### Documentation
+
+- [Build and release guide](docs/build-release.md): current lane status,
+  build targets, artifact checks, and release assembly.
+- [Native development notes](docs/native-development.md): contributor setup
+  and repository checks.
+
 Run the downloaded binary in place of `node`:
 
 ```sh
