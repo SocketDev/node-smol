@@ -9,37 +9,38 @@
         "Installed when SOCKET_API_KEY (or SOCKET_API_TOKEN) is set; otherwise the free flavor (sfw-free) is used. The two flavors share a version and install to the same `sfw` binary name."
       ],
       "description": "Socket Firewall (enterprise tier) — package manager command wrapper",
-      "version": "1.15.1",
+      "version": "1.15.4",
       "repository": "github:SocketDev/firewall-release",
+      "tag": "v1.15.4",
       "binaryName": "sfw",
       "platforms": {
         "darwin-arm64": {
           "asset": "sfw-macos-arm64",
-          "integrity": "sha512-9X5UyqYFC4SdjdF76YmvVRVVJJYa1O6WIvtrRq1vaAH/+8nEuU7ALtv8W04Ft6ntswXeswMtV0pUPrx8DHh6sg=="
+          "integrity": "sha512-rhW6U8/3w7eciriH9mLCE3krMAQuS1xl0CXayw26Xn1kWLh6PwIbpRDjF4QvKFNSpYQKdfEhh9dsBabUxza6sw=="
         },
         "darwin-x64": {
           "asset": "sfw-macos-x86_64",
-          "integrity": "sha512-6nHvZ8u4k3gK0o0goXjJ8JzdjASLMLIx2AmfyMGBw+Mfw7m6JFNTnMUHDaHFJHR15JTxRZYvQMgsFLKLghaeag=="
+          "integrity": "sha512-J+xy3DdHah837x0bIlByCQ2pABtPPu5zkKdthIDpsdwNxLWmeFbPyaZQCwrWV4bzkFQz6p0aqGK0SdvqYXR8lw=="
         },
         "linux-arm64": {
           "asset": "sfw-linux-arm64",
-          "integrity": "sha512-8hQR7e2RytYIC4ymlzcXgAmO9+B2xDPP0exSm02m2gTNxuqz24cXNcdpPYOxPO7Bw7FQKmTs/y6txl5D8P+GlQ=="
+          "integrity": "sha512-+cOHb1eZOGSEnHMNUsrGOk7hUSEMqTNSBQBEX9zOk9bapFe6bFAz41286L5Od3VxOrlPk6+szHP4d+J7XM604A=="
         },
         "linux-arm64-musl": {
           "asset": "sfw-musl-linux-arm64",
-          "integrity": "sha512-xhShMq0bLrx1UYFUM/nxLhACTevKDveRO9oa0hCaSQNCd7AK4Lxiw4IHiz4K3k4nkoj779sO2BQPvQHSgDsFPg=="
+          "integrity": "sha512-wtPmCCSxNIhcTdyIb6eiUN1rK2fCxrH39QAuYgcyxwtPSAS1dEHYb7yHPNJlOQfZm+WnQ3j7VQL4sCrswSIzbQ=="
         },
         "linux-x64": {
           "asset": "sfw-linux-x86_64",
-          "integrity": "sha512-HtWaqw2kAPQ/7vv0DY+jfUdx6Z+66NF5K/YhQO4OjO1qG9yA/pJeDADt7NiG4We8I3iFhyCbdsn19o1emPKheg=="
+          "integrity": "sha512-Kxuztnz5CkV/Jt5hMZnyjkwrUwlnzjnxt9oBQMAnUdfoPebDJ64s6PSa/WF3xxM9mIIt0k462+oC+ykzMTdzag=="
         },
         "linux-x64-musl": {
           "asset": "sfw-musl-linux-x86_64",
-          "integrity": "sha512-+Xd2LUGA/xqD/0e1WAdiasRY0EA1ROovm448YlnFaiYTqs0sP3MphLFmanY7HpK+GxTQuaaOmRN7fjwr0cN7VQ=="
+          "integrity": "sha512-pz7rsn/WAAwEXzhFEcULpB8jfFANGN6g8AQNuTrl9ildDKrb/JTS9MbXylzCIc3GUWL1mE1olekPnBAkb8/A+w=="
         },
         "win32-x64": {
           "asset": "sfw-windows-x86_64.exe",
-          "integrity": "sha512-vZdptPsQPYnBvRR3S+6bikfk3WdkE+0d1a0CoPmSY8QPdfOG3jC4JxdTMN0FvHUzwR5iZQhfomJWq73F/PDWgg=="
+          "integrity": "sha512-zi2isECucghnSVLVDjTaABKr/2nsmiUHVGEELcj1/7DRLbFIYLq+m3zpcfRJTLstElWbht2PjIJQuHWtnrzLrw=="
         }
       },
       "origin": "gh-asset"
@@ -50,45 +51,47 @@
         "Installed when neither SOCKET_API_KEY nor SOCKET_API_TOKEN is set; the enterprise flavor (sfw-enterprise) is selected when one of those is present. The two flavors share a version and install to the same `sfw` binary name."
       ],
       "description": "Socket Firewall (free tier) — package manager command wrapper",
-      "version": "1.15.1",
+      "version": "1.15.4",
       "repository": "github:SocketDev/sfw-free",
+      "tag": "v1.15.4",
       "binaryName": "sfw",
       "platforms": {
         "darwin-arm64": {
           "asset": "sfw-free-macos-arm64",
-          "integrity": "sha512-WmTGyJa3O56uX0elw06UX0al/3S/Is0xWDkxb+rdrdW1s/Ud86fQi0XIwFdh77AGdDg568mDbzTdo5bucPobfQ=="
+          "integrity": "sha512-r+J3NSFkpqzlXVCPohISrPoDU33y0eTWcSNmvPQRyQTV2D05eF6H/LzJRS4b7ONuKQIpu/t5KgXyoPkyGiAEgg=="
         },
         "darwin-x64": {
           "asset": "sfw-free-macos-x86_64",
-          "integrity": "sha512-EVBcuWNBwQZ0G7dRwYPMSgFNC16i/fYa40XHgDy/oOPLNFP5lkRJq4mZGe9a0gmf79ghIkZCCINRZZ3ZrkobeQ=="
+          "integrity": "sha512-Owc7IfGNh+ZQfDKhuUa7TtBWpnPQJWYbTzALDFsss+s3d8g9rISTcsdx4rhjM18e3TLG6QM3bHLYw2G3bYJTng=="
         },
         "linux-arm64": {
           "asset": "sfw-free-linux-arm64",
-          "integrity": "sha512-YkiVl7cpvwsqszMEqWs4EQK2iQUViu7Y7k/JNjz74GtuJycmoo+7ZXVAXeaaMUVg69cy5v1aWO5+r8tUY8wuHQ=="
+          "integrity": "sha512-6jIeFfwMO3RRM0t8Fdpj2BBAREgSWwdaj1dAjTE+9rAYP1PyWDT+ZxJWoDHKCqePYrhvGANVs9GlQdLptLN3OQ=="
         },
         "linux-arm64-musl": {
           "asset": "sfw-free-musl-linux-arm64",
-          "integrity": "sha512-ZMVyhhUxTamnQkIAhwjOx1vp3syFwl6nWqDL5ydL8YAdiMHC6280K28W+KPP7yeUlXekcKueNO0Sd/N4LIkSmQ=="
+          "integrity": "sha512-kMO5ZgMG9Xq+dbnwTueQ/kO/sx6+CGdGd+Lo0zTMoyvUtbeeO4xk5UKg9N3k7lG7KoBtcf5f4yQV4w1tNlSNxA=="
         },
         "linux-x64": {
           "asset": "sfw-free-linux-x86_64",
-          "integrity": "sha512-vi3s1mQ6YXoSBii8KWL/2nJ15judW6KTZKxY+nzp60VVSNR36lUAmLYfW+PH2Ta4jYu8+zHeZwXZvzWImBQFcQ=="
+          "integrity": "sha512-mOxJNA9c3jsOzxXE2grwWYGv/3BN8cj4t9Kfiu7z6Q0Z4p2UcEuR5ldHoZkMReD08F3hV13+c/YuHFtR9K5Bfw=="
         },
         "linux-x64-musl": {
           "asset": "sfw-free-musl-linux-x86_64",
-          "integrity": "sha512-RwsULiuR2DM6lepxNTzdMcAZvMAunMg/ccsfnccxNKBAtHIUZkriPbbAJAHUUrLG7BhgKFHr3V+P4juwrfKoEQ=="
+          "integrity": "sha512-Z1kyV0D0WP6P2N9FCmpITviITiGSE7vcdvBBJXUGNghtfZRVhhanwGf5FkS0UNDAXHziqE+rISs4Ve++sZj8tg=="
         },
         "win32-x64": {
           "asset": "sfw-free-windows-x86_64.exe",
-          "integrity": "sha512-ZRuz2N0CmEXJuyhADFyqXU3bBDPp6UmDuXBSMoxcFyzUO/q3/5QRgVCimyOU09cG1XS9TRGvPSyL5y6sFN6D2A=="
+          "integrity": "sha512-kh7yWn5TzLGI+rpujGwzX+HIaVa1/BHTVpJ58cBAYnwPSuYRhgUciX0vqKKoK3P3nYYMGrN7IvhZ4L91krsYLw=="
         }
       },
       "origin": "gh-asset"
     },
     "zizmor": {
       "description": "GitHub Actions security linter — audits .github/ for workflow-injection / credential-leak patterns.",
-      "version": "1.30.0",
+      "version": "1.30.1",
       "repository": "github:zizmorcore/zizmor",
+      "tag": "v1.30.1",
       "notes": [
         "Required: CI (blocks merges on medium+ findings)",
         "Installed by the setup-and-install composite; SRI-verified (sha512) per platform"
@@ -96,23 +99,23 @@
       "platforms": {
         "darwin-arm64": {
           "asset": "zizmor-aarch64-apple-darwin.tar.gz",
-          "integrity": "sha512-kkaQ+tzBju3cQu4TMiobDw0gcdsYKLliOfdDh0LiAvm+FFXuMdYoRyqalMD1Fcpvs6hcJB2OOcrY5VbScyazpA=="
+          "integrity": "sha512-0SJEhWNir4QzfGwrT2oX4w/4UJZp8CqDo2RK2bkcfHCilayAZkpvu/fq6rHo+X+gbJICazQBNRE2bo91mmNAKA=="
         },
         "darwin-x64": {
           "asset": "zizmor-x86_64-apple-darwin.tar.gz",
-          "integrity": "sha512-6DobW4UdYS1ZZuZNLRjtZGD+1t01WtUDuPN9xImViS2AZsfFK5GvC48KZOEJ4uMNi+1LIrTNJdFoKAJ+wLRwDA=="
+          "integrity": "sha512-QqPld71wwABqcLyxkJ02nItUczTQrtpAAT6xiDvyyBySuywAFGW4mUU7iO2Kcwg+CDY5ZLvkd/vNm76GqqbwXw=="
         },
         "linux-arm64": {
           "asset": "zizmor-aarch64-unknown-linux-gnu.tar.gz",
-          "integrity": "sha512-nhJOFX1+nCyTjVXBNVW5sfkN+iyOnppcY0sc4aCd4qUO9tfI/ASNzYn/0/AeruOGhAk5UkyLhuiKSpQ6MdbrQA=="
+          "integrity": "sha512-7AfMKqT+4SoyYRE4Ke7Ar5H+1SoU7QUuifuSKGjJIb7Qep29+oP0IrMsEMwjqAxpiGbEPyxSMgO7ghDlHhNsNQ=="
         },
         "linux-x64": {
           "asset": "zizmor-x86_64-unknown-linux-gnu.tar.gz",
-          "integrity": "sha512-MF8BdJuZLNboRUPXRUJjicZs14PDjfflIDRM87ji8E0eNbwmyH7lZ/cdclITjhcz1iK+z3u33w16dEp7fVCIgA=="
+          "integrity": "sha512-sMHocgA1Rg12S12/szGaRumgmlAEjaeU5EIdGTczLNldhGFptlctCFqogoebWvE/PFioGlZ2vcSxoCZW3BegYg=="
         },
         "win32-x64": {
           "asset": "zizmor-x86_64-pc-windows-msvc.zip",
-          "integrity": "sha512-4dB8Yp+jq60z7omGw5W8CdA+1yLaqK0BWIMgjFXNv+k0wewldPoIcZj8LGSFgjUmxlGYXdkIvJ3RzRyKVixctQ=="
+          "integrity": "sha512-cYagZJ5fG+8UQ/Fr0LshEt7A6CXQgWeeBHlsztvzCepX661rrW9h3h//hedNUu7yM215f+fqDXE0++6MjuLgJg=="
         }
       },
       "origin": "gh-asset"
