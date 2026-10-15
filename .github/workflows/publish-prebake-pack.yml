@@ -30,7 +30,7 @@ permissions:
 jobs:
   bake:
     name: Bake + push prebakes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 180
     steps:
       - name: Bootstrap checkout
