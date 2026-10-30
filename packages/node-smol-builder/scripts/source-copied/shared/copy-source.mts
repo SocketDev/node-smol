@@ -1,0 +1,199 @@
+/**
+ * Source extraction phase for Node.js.
+ *
+ * Extracts Node.js source from git upstream to build directory.
+ */
+
+import { existsSync, promises as fs } from 'node:fs'
+import path from 'node:path'
+
+import {
+  cleanCheckpoint,
+  createCheckpoint,
+} from 'build-infra/lib/build-steps'
+import { printError } from 'build-infra/lib/build-output'
+import {
+  getCheckpointData,
+  shouldRun,
+} from 'build-infra/lib/checkpoint-manager'
+import { CHECKPOINTS } from 'build-infra/lib/constants'
+
+import { safeDelete, safeMkdir } from '@socketsecurity/lib-stable/fs/safe'
+import { getDefaultLogger } from '@socketsecurity/lib-stable/logger/default'
+import { spawn } from '@socketsecurity/lib-stable/process/spawn/child'
+
+import { UPSTREAM_PATH } from './paths.mts'
+import { normalizePath } from '@socketsecurity/lib-stable/paths/normalize'
+
+const logger = getDefaultLogger()
+
+/**
+ * Extract Node.js source code from upstream.
+ *
+ * @param {object} options - Extract options.
+ * @param {string} options.nodeVersion - Node.js version to extract.
+ * @param {string} options.nodeSha - Expected commit SHA.
+ * @param {string} options.sharedBuildDir - Shared build directory.
+ * @param {string} options.sharedSourceDir - Target source directory.
+ * @param {string} options.packageName - Package name.
+ * @param {boolean} options.cleanBuild - Force clean build.
+ */
+export async function cloneNodeSource(config) {
+  const {
+    cleanBuild,
+    nodeSha,
+    nodeVersion,
+    packageName,
+    sharedBuildDir,
+    sharedSourceDir,
+  } = { __proto__: null, ...config } as typeof config
+
+  const needsClone = await shouldRun(
+    sharedBuildDir,
+    packageName,
+    CHECKPOINTS.SOURCE_COPIED,
+    cleanBuild,
+  )
+
+  const versionMismatch = needsClone
+    ? false
+    : await detectNodeSourceMismatch({
+        nodeSha,
+        nodeVersion,
+        packageName,
+        sharedBuildDir,
+      })
+
+  if (!needsClone && !versionMismatch) {
+    logger.log('')
+    return
+  }
+
+  if (!existsSync(sharedSourceDir) || cleanBuild || versionMismatch) {
+    if (existsSync(sharedSourceDir) && (cleanBuild || versionMismatch)) {
+      logger.step('Clean Build Requested')
+      logger.log('Removing existing shared Node.js source directory…')
+      await safeDelete(sharedSourceDir, { recursive: true })
+      await cleanCheckpoint(sharedBuildDir, packageName)
+      logger.success('Cleaned shared source directory')
+      logger.log('')
+    }
+
+    // Check if upstream exists in package directory.
+    const upstreamPath = UPSTREAM_PATH
+
+    if (!existsSync(upstreamPath)) {
+      printError(
+        'Upstream Not Initialized',
+        'Node.js source upstream is not initialized.',
+        [
+          'Run the following command to initialize the upstream:',
+          '  node scripts/fleet/git-partial-submodule.mts clone packages/node-smol-builder/upstream/node',
+          '',
+          'Or if you just cloned the repository:',
+          '  pnpm install',
+        ],
+      )
+      throw new Error('Node.js source upstream not initialized')
+    }
+
+    logger.step('Extracting Node.js Source from Upstream')
+    logger.substep(
+      `Version: ${nodeVersion}${nodeSha ? ` (${nodeSha.slice(0, 8)})` : ''}`,
+    )
+    logger.substep(`Source: ${upstreamPath}`)
+    logger.log('')
+    logger.info('Copying pristine source from upstream to build directory…')
+    logger.log('')
+
+    await verifyNodeUpstreamSha(upstreamPath, nodeSha)
+
+    // Copy upstream to shared source directory.
+    await safeMkdir(path.dirname(sharedSourceDir))
+    await fs.cp(upstreamPath, sharedSourceDir, {
+      filter: sourcePath => {
+        // Skip .git directory to avoid copying upstream git metadata.
+        return !normalizePath(sourcePath).includes('/.git')
+      },
+      force: true,
+      recursive: true,
+    })
+
+    logger.success('Node.js source extracted from upstream')
+    logger.log('Creating shared checkpoint (pristine source for dev/prod)...')
+    await createCheckpoint(
+      sharedBuildDir,
+      CHECKPOINTS.SOURCE_COPIED,
+      async () => {
+        const configureScript = path.join(sharedSourceDir, 'configure')
+        if (!existsSync(configureScript)) {
+          throw new Error(`Configure script not found: ${configureScript}`)
+        }
+        logger.substep('Source directory validated')
+      },
+      {
+        artifactPath: sharedSourceDir,
+        nodeSha,
+        nodeVersion,
+        packageName,
+      },
+    )
+    logger.log('')
+  } else if (needsClone && existsSync(sharedSourceDir)) {
+    await recoverNodeSourceCheckpoint(config)
+  }
+}
+
+export async function detectNodeSourceMismatch({
+  nodeSha,
+  nodeVersion,
+  packageName,
+  sharedBuildDir,
+}) {
+  const checkpointData = await getCheckpointData(
+    sharedBuildDir,
+    packageName,
+    CHECKPOINTS.SOURCE_COPIED,
+  )
+  if (!checkpointData) {
+    return false
+  }
+  if (checkpointData.nodeVersion !== nodeVersion) {
+    logger.log(
+      `Node version changed from ${checkpointData.nodeVersion} to ${nodeVersion}, re-cloning…`,
+    )
+    return true
+  }
+  if (checkpointData.nodeSha !== nodeSha) {
+    logger.log(
+      `Node SHA changed from ${checkpointData.nodeSha?.slice(0, 8)} to ${nodeSha.slice(0, 8)}, re-cloning…`,
+    )
+    return true
+  }
+  return false
+}
+
+export async function recoverNodeSourceCheckpoint(config) {
+  await verifyNodeUpstreamSha(UPSTREAM_PATH, config.nodeSha)
+  await cloneNodeSource({ ...config, cleanBuild: true })
+}
+
+export async function verifyNodeUpstreamSha(upstreamPath, nodeSha) {
+  if (!nodeSha) {
+    throw new Error('Node source verification requires the pinned upstream commit SHA.')
+  }
+  const result = await spawn('git', ['-C', upstreamPath, 'rev-parse', 'HEAD'], {
+    stdio: 'pipe',
+  })
+  if (result.code !== 0) {
+    throw new Error('Failed to verify upstream commit SHA')
+  }
+  const upstreamSha = result.stdout.trim()
+  if (upstreamSha !== nodeSha) {
+    throw new Error(
+      `Upstream SHA mismatch: expected ${nodeSha}, got ${upstreamSha}. ` +
+        `Please update the upstream to the correct commit: cd ${upstreamPath} && git checkout ${nodeSha}`,
+    )
+  }
+  logger.success(`Upstream SHA verified (${nodeSha.slice(0, 8)})`)
+}

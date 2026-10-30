@@ -1,0 +1,87 @@
+name: 'build: native'
+run-name: 'build: native'
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  native:
+    name: Native node (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Bootstrap checkout
+        shell: bash
+        env:
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          TRIGGER_REF: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git init -q
+          git remote add origin "${SERVER_URL}/${REPOSITORY}"
+          git fetch --no-tags --depth 1 origin "${TRIGGER_REF}"
+          git checkout -q --detach FETCH_HEAD
+      - name: Set up and install
+        uses: ./.github/actions/fleet/setup-and-install
+        with:
+          payload-token-client-id: ${{ secrets.SOCKET_RELEASE_CLIENT_ID || vars.SOCKET_RELEASE_CLIENT_ID }}
+          payload-token-private-key: ${{ secrets.SOCKET_RELEASE_APP_PRIVATE_KEY }}
+          socket-api-token: ${{ secrets.SOCKET_API_TOKEN_FOR_CLI_AND_SFW }}
+      - name: Mint source read token
+        id: source-token
+        uses: ./.github/actions/fleet/github-payload-app-token
+        with:
+          client-id: ${{ secrets.SOCKET_RELEASE_CLIENT_ID || vars.SOCKET_RELEASE_CLIENT_ID }}
+          private-key: ${{ secrets.SOCKET_RELEASE_APP_PRIVATE_KEY }}
+          repositories: stuie,sockeye
+      - name: Hydrate pinned sources
+        shell: bash
+        env:
+          SOURCE_TOKEN: ${{ steps.source-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          AUTH_B64="$(printf 'x-access-token:%s' "${SOURCE_TOKEN}" | base64 | tr -d '\n')"
+          echo "::add-mask::${AUTH_B64}"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.https://github.com/SocketDev/.extraheader
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${AUTH_B64}"
+          pnpm run upstream:hydrate
+      - name: Hydrate lsquic hpack source
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          git -C packages/lsquic-infra/upstream/lsquic submodule update --init --depth 1 -- src/lshpack
+          test -f packages/lsquic-infra/upstream/lsquic/src/lshpack/lshpack.c
+          test -f packages/lsquic-infra/upstream/lsquic/src/lshpack/lshpack.h
+          test -f packages/lsquic-infra/upstream/lsquic/src/lshpack/deps/xxhash/xxhash.h
+      - name: Install Linux keychain build dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libsecret-1-dev pkg-config
+          pkg-config --cflags --libs libsecret-1
+      - name: Build native runtime
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm run build:repo --target binary --prod
+      - name: Verify native terminal operations
+        run: pnpm run check:native
+      - name: Upload verified runtime
+        uses: ./.github/actions/fleet/upload-artifact
+        with:
+          name: node-smol-${{ runner.os }}-${{ runner.arch }}
+          path: build/release
+          if-no-files-found: error

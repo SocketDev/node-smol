@@ -1,0 +1,70 @@
+#!/usr/bin/env node
+/**
+ * @file Package-scoped Vitest entrypoint for the three smol-ai workspaces. The
+ *   pinned llama.cpp tree contains its own frontend tests, so each package must
+ *   pass an exact owned test list instead of relying on recursive discovery.
+ */
+
+import { readdirSync } from 'node:fs'
+import path from 'node:path'
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+
+import { isWin32 } from '@socketsecurity/lib-stable/constants/platform'
+import { spawnSync } from '@socketsecurity/lib-stable/process/spawn/child'
+
+import { isMainModule } from '../fleet/process/is-main-module.mts'
+import { runMain } from '../fleet/process/main/run.mts'
+import type { ScriptMeta } from '../fleet/process/main/run.mts'
+
+const SCRIPT_META: ScriptMeta = {
+  describe: 'Run the owned tests for one smol-ai workspace.',
+  help: 'Usage: node scripts/repo/run-smol-ai-tests.mts <package> [--json]',
+  json: 'result',
+}
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+)
+
+const packageRoots = new Map([
+  ['@node-smol/ai', path.join(repoRoot, 'packages', 'npm', '@node-smol', 'ai')],
+  ['ai-infra', path.join(repoRoot, 'packages', 'ai-infra')],
+  ['smol-ai-builder', path.join(repoRoot, 'packages', 'smol-ai-builder')],
+])
+
+export function main(): void {
+  const packageName = process.argv[2]
+  const packageRoot = packageName ? packageRoots.get(packageName) : undefined
+  if (!packageRoot) {
+    throw new Error(
+      `Unknown smol-ai test package: ${packageName ?? '<missing>'}`,
+    )
+  }
+  const testDir = path.join(packageRoot, 'test')
+  const testFiles = readdirSync(testDir)
+    .filter(file => file.endsWith('.test.mts'))
+    .map(file => path.join('test', file))
+    .toSorted()
+  if (testFiles.length === 0) {
+    throw new Error(`No owned test files found under ${testDir}`)
+  }
+  const vitest = path.join(
+    repoRoot,
+    'node_modules',
+    '.bin',
+    isWin32() ? 'vitest.cmd' : 'vitest',
+  )
+  const result = spawnSync(vitest, ['run', ...testFiles], {
+    cwd: packageRoot,
+    shell: isWin32(),
+    stdio: 'inherit',
+  })
+  process.exitCode = result.status ?? 1
+}
+
+if (isMainModule(import.meta.url)) {
+  runMain(main, SCRIPT_META)
+}

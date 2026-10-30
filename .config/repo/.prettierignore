@@ -1,0 +1,12 @@
+# Repo overlay for the oxfmt `--ignore-path`, concatenated onto the fleet
+# canonical `.config/fleet/.prettierignore` by `pickIgnorePath`.
+
+# The patched Node source overlay. Everything here mirrors Node's own tree
+# (deps/, doc/, lib/, src/, typings/) and is applied as patches against it, so
+# it has to keep upstream's shape rather than the fleet's: reflowing a file
+# changes the patch and invites conflicts on the next Node bump.
+#
+# The typings are load-bearing beyond style — `smol-sql.test.mts` asserts on the
+# usage examples inside their doc comments, and reformatting them broke that
+# test.
+**/additions/source-patched/**

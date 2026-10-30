@@ -1,0 +1,59 @@
+# @node-versions: v26.13.0
+# @description: Register smol_vfs binding and smol modules in realm
+#
+# This patch:
+# 1. Adds smol_vfs to the process binding allow list in the bootstrap realm,
+#    enabling VFS (Virtual File System) functionality for single executable
+#    applications.
+# 2. Adds every smol-* module to builtinModulePolicies as scheme-only entries,
+#    so each requires the node: prefix (e.g. node:smol-http).
+#    Includes the smol-ffi/node and smol-ffi/bun compat subpaths so they
+#    can only be loaded as `node:smol-ffi/node` / `node:smol-ffi/bun`,
+#    mirroring the schemelessness of the parent `smol-ffi` module.
+#
+# Files modified:
+# - lib/internal/bootstrap/realm.js: smol_vfs binding + smol-* schemelessBlockList
+#
+--- a/lib/internal/bootstrap/realm.js
++++ b/lib/internal/bootstrap/realm.js
+@@ -101,6 +101,7 @@ const processBindingAllowList = new SafeSet([
+   'os',
+   'pipe_wrap',
+   'process_wrap',
++  'smol_vfs',
+   'spawn_sync',
+   'stream_wrap',
+   'tcp_wrap',
+@@ -199,9 +200,32 @@ const builtinModulePolicies = [
+   ['ffi', true, '--experimental-ffi'],
+   ['sea', true, null],
+   ['sqlite', true, '--experimental-sqlite'],
++  ['smol-ai', true, null],
++  ['smol-ffi', true, null],
++  ['smol-ffi/bun', true, null],
++  ['smol-ffi/node', true, null],
++  ['smol-http', true, null],
++  ['smol-https', true, null],
++  ['smol-ilp', true, null],
++  ['smol-keychain', true, null],
++  ['smol-keymap', true, null],
++  ['smol-manifest', true, null],
++  ['smol-markdown', true, null],
++  ['smol-power', true, null],
++  ['smol-primordial', true, null],
++  ['smol-purl', true, null],
++  ['smol-qrcode', true, null],
++  ['smol-quic', true, null],
++  ['smol-sql', true, null],
++  ['smol-tree-sitter', true, null],
++  ['smol-tui', true, null],
++  ['smol-util', true, null],
++  ['smol-vfs', true, null],
++  ['smol-versions', true, null],
++  ['smol-webgpu', true, null],
+   ['quic', true, '--experimental-quic'],
+   ['stream/iter', false, '--experimental-stream-iter'],
+   ['test', true, null],
+   ['test/reporters', true, null],
+   ['vfs', true, '--experimental-vfs'],
+   ['zlib/iter', false, '--experimental-stream-iter'],
