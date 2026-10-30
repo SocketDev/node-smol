@@ -185,7 +185,7 @@
 
 ## 🏗️ node-smol-Specific
 
-- node-smol owns Socket's customized Node.js distribution: source patches, builtins, SEA packaging, platform artifacts, and release assembly; binaries ship as GitHub release assets, never npm.
+- node-smol owns Socket's customized Node.js distribution: source patches, builtins, SEA packaging, and platform artifacts; GHCR is the configured binary channel, with publishing and Socket CLI download support still in progress. [`release-build-pipeline`](docs/repo/agents.md/release-build-pipeline.md)
 - Native capabilities stay Rust-canonical in their owner repos; the stuie pin is branch-only for now - see [`native-capability-pins`](docs/repo/agents.md/native-capability-pins.md).
 - 🚨 Binary stubs exec with the live `environ`, never a captured `envp` - pinned by the bin-stub-builder environ tests. [`stub-environ-regression`](docs/repo/agents.md/stub-environ-regression.md)
 - Each Node source patch owns one canonical target path; static and dynamic patches cannot override or share a target. [`node-smol-build-flags`](docs/repo/agents.md/node-smol-build-flags.md)

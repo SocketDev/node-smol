@@ -9,8 +9,18 @@
     "type": "mono"
   },
   "build": {
-    "from": "github-release",
+    "from": "ghcr",
     "type": "binary"
+  },
+  "ghcr": {
+    "enabled": true,
+    "registry": "ghcr.io/socketdev",
+    "visibility": "private"
+  },
+  "release": {
+    "github": false,
+    "ghcrWorkflow": "build-native.yml",
+    "publishedPackages": []
   },
   "docker": {
     "prebakes": {
