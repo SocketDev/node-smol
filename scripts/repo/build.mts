@@ -200,7 +200,7 @@ async function runBaseTarget(
       logger.log(
         '  preconditions: docker CLI + buildx plugin installed;' +
           ' the FROM image (FLEET_BASE arg default,' +
-          ' ghcr.io/socketdev/socket-wheelhouse/c-base:latest) must be pullable',
+          ' ghcr.io/socketdev/socket-wheelhouse/private/prebake/base/cpp:build-d31d0b3ae11fca77e69927193f92b5051b1552f0553d6a593cd61949a1e20c3e@sha256:e143a3b4e7e51cfc5da36382e36d5a2e949f1f2c59ec52e7f8037ef20083a61d) must be pullable',
       )
       if (push) {
         logger.log(

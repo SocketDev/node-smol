@@ -1,18 +1,16 @@
 # syntax=docker/dockerfile:1
 #
 # node-smol/base — the heavy Node.js/V8 compile environment, FROM the wheelhouse
-# c-base (ghcr.io/socketdev/socket-wheelhouse/c-base). Repo-owned: the recipe +
+# c-base (ghcr.io/socketdev/socket-wheelhouse/private/prebake/base/cpp). Repo-owned: the recipe +
 # the bake workflow (.github/workflows/prebake-publish.yml) live here; the shared
 # parent layers (base → c-base) stay wheelhouse-owned. Split into its own layer
 # for CACHE LOCALITY: the toolchain rarely changes, the Node source changes every
 # version bump, so isolating them keeps c-base warm for the small native parts.
 # The .mts driver's node comes via
-# `COPY --from=ghcr.io/socketdev/socket-wheelhouse/node-base`, not a runtime
+# `COPY --from=ghcr.io/socketdev/socket-wheelhouse/private/prebake/base/node`, not a runtime
 # baked here.
-# Digest resolved from c-base:latest on 2026-08-07 via
-# `docker buildx imagetools inspect`; refresh the pin when the wheelhouse
-# republishes c-base.
-ARG FLEET_BASE=ghcr.io/socketdev/socket-wheelhouse/c-base:latest@sha256:a625cbaa4212cdde97207b4bc11395cbd6359e8800bdf30acda30a4cccd46d8f
+# Immutable digest pin for the Wheelhouse C++ prebake.
+ARG FLEET_BASE=ghcr.io/socketdev/socket-wheelhouse/private/prebake/base/cpp:build-d31d0b3ae11fca77e69927193f92b5051b1552f0553d6a593cd61949a1e20c3e@sha256:e143a3b4e7e51cfc5da36382e36d5a2e949f1f2c59ec52e7f8037ef20083a61d
 FROM ${FLEET_BASE}
 
 ENV DEBIAN_FRONTEND=noninteractive
